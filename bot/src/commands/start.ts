@@ -8,21 +8,31 @@ export async function startCommand(ctx: Context) {
   } catch (e) { console.error('Upsert user error:', e); }
 
   const miniAppUrl = process.env.MINI_APP_URL!;
+  const channelUrl = process.env.CHANNEL_URL || 'https://t.me/adwabingo';
+  const supportUrl = process.env.SUPPORT_URL || 'https://t.me/adwabingo_support';
+
+  // Generate invite link
+  const botUsername = 'adwabingo_bot';
+  const inviteLink = `https://t.me/${botUsername}?start=ref_${user.id}`;
+
   await ctx.reply(
-    `🎱 *Welcome to ADWA Bingo, ${user.first_name}!*\n\n` +
-    `Play Bingo with your friends right here on Telegram!\n\n` +
-    `*📋 Commands:*\n` +
-    `🆕 /newgame — Create a bingo room\n` +
-    `🎮 /join CODE — Join a room\n` +
-    `▶️ /startgame — Start (host only)\n` +
-    `❓ /help — Help & rules\n\n` +
-    `Ready to play? 🎲`,
+    `🎉 *እንኳን በደህና መጡ, ${user.first_name}!*\n\n` +
+    `🎱 *ADWA Bingo* ላይ እንኳን ደህና መጡ!\n\n` +
+    `ከጓደኞችዎ ጋር ቢንጎ ይጫወቱ፣ ታላላቅ ሸልማቶችን ያሸንፉ! 🏆\n\n` +
+    `*Victory in Every Ball • Ethiopia 🇪🇹*`,
     {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
-          [{ text: '🎮 Open Bingo App', web_app: { url: miniAppUrl } }],
-          [{ text: '🆕 Create New Game', callback_data: 'btn_newgame' }, { text: '❓ Help', callback_data: 'btn_help' }],
+          [{ text: '🎱 START PLAYING!', web_app: { url: miniAppUrl } }],
+          [
+            { text: '💬 Get Support', url: supportUrl },
+            { text: '📢 Join Channel', url: channelUrl },
+          ],
+          [
+            { text: '👥 Invite Friend', url: inviteLink },
+            { text: '🆕 New Game', callback_data: 'btn_newgame' },
+          ],
         ],
       },
     }
