@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   adwabingo-bot:
     build:
@@ -22,12 +20,3 @@ services:
       - "3002:3002"
     env_file:
       - ./api/.env
-
-  adwabingo-miniapp:
-    build:
-      context: ./miniapp
-      dockerfile: Dockerfile
-    container_name: adwabingo-miniapp
-    restart: unless-stopped
-    ports:
-      - "3003:80"
