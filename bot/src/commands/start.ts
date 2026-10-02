@@ -23,7 +23,7 @@ export async function startCommand(ctx: Context) {
       [{ text: '🎱 START PLAYING!', web_app: { url: miniAppUrl } }],
       [
         { text: '💬 Get Support', url: supportUrl },
-        { text: '👥 Join Group', url: channelUrl },
+        { text: '📢 Join Channel', url: channelUrl },
       ],
       [
         { text: '👥 Invite Friend', url: inviteLink },
