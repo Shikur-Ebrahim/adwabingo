@@ -1,5 +1,10 @@
 import { Context } from 'grammy';
+import { InputFile } from 'grammy';
 import { upsertUser } from '../services/game';
+import path from 'path';
+
+// Cache the file_id after first upload so we don't re-upload every time
+let bannerFileId: string | null = null;
 
 export async function startCommand(ctx: Context) {
   const user = ctx.from!;
@@ -34,17 +39,30 @@ export async function startCommand(ctx: Context) {
     `*Victory in Every Ball • Ethiopia 🇪🇹*`;
 
   try {
-    // Send banner image with caption and buttons
-    await ctx.replyWithPhoto(
-      'https://i.ibb.co/placeholder/adwabingo.jpg', // replace with your image URL
-      {
+    let msg;
+    if (bannerFileId) {
+      // Use cached file_id (fast, no re-upload)
+      msg = await ctx.replyWithPhoto(bannerFileId, {
         caption,
         parse_mode: 'Markdown',
         reply_markup: { inline_keyboard: keyboard.inline_keyboard },
+      });
+    } else {
+      // First time: upload from local file
+      const bannerPath = path.join(__dirname, '../../assets/banner.jpg');
+      msg = await ctx.replyWithPhoto(new InputFile(bannerPath), {
+        caption,
+        parse_mode: 'Markdown',
+        reply_markup: { inline_keyboard: keyboard.inline_keyboard },
+      });
+      // Cache the file_id for next time
+      if (msg.photo && msg.photo.length > 0) {
+        bannerFileId = msg.photo[msg.photo.length - 1].file_id;
       }
-    );
-  } catch {
-    // Fallback: text only if image fails
+    }
+  } catch (e) {
+    console.error('Photo send error:', e);
+    // Fallback: text only
     await ctx.reply(caption, {
       parse_mode: 'Markdown',
       reply_markup: { inline_keyboard: keyboard.inline_keyboard },
