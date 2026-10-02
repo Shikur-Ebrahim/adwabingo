@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  adwabingo-bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: adwabingo-bot
+    restart: unless-stopped
+    env_file:
+      - ./bot/.env
+    depends_on:
+      - adwabingo-api
+
+  adwabingo-api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: adwabingo-api
+    restart: unless-stopped
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./api/.env
+
+  adwabingo-miniapp:
+    build:
+      context: ./miniapp
+      dockerfile: Dockerfile
+    container_name: adwabingo-miniapp
+    restart: unless-stopped
+    ports:
+      - "3003:80"
