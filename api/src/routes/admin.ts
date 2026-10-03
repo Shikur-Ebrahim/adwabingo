@@ -414,6 +414,98 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   });
 });
 
+// ─── USER MANAGEMENT ──────────────────────────────────────────────────────────
+
+router.get('/users', async (req, res) => {
+  const { search = '', page = '1', limit = '20' } = req.query;
+  const pageNum = Math.max(1, parseInt(page as string));
+  const limitNum = Math.min(50, parseInt(limit as string));
+  const offset = (pageNum - 1) * limitNum;
+
+  let query = supabase
+    .from('users')
+    .select('id, telegram_id, username, first_name, last_name, role, main_balance, bonus_balance, total_games, total_wins, created_at', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limitNum - 1);
+
+  if (search) {
+    query = query.or(`username.ilike.%${search}%,first_name.ilike.%${search}%,telegram_id.eq.${search}`);
+  }
+
+  const { data, error, count } = await query;
+  if (error) { res.status(500).json({ error: error.message }); return; }
+
+  const telegramIds = (data || []).map((u: any) => u.telegram_id);
+  let statsMap: Record<string, { totalDeposited: number; depositCount: number }> = {};
+  if (telegramIds.length > 0) {
+    const { data: depositStats } = await supabase
+      .from('deposits').select('telegram_id, amount, status')
+      .in('telegram_id', telegramIds).eq('status', 'approved');
+    for (const d of depositStats || []) {
+      if (!statsMap[d.telegram_id]) statsMap[d.telegram_id] = { totalDeposited: 0, depositCount: 0 };
+      statsMap[d.telegram_id].totalDeposited += Number(d.amount);
+      statsMap[d.telegram_id].depositCount += 1;
+    }
+  }
+
+  const enriched = (data || []).map((u: any) => ({
+    ...u,
+    totalDeposited: statsMap[u.telegram_id]?.totalDeposited || 0,
+    depositCount: statsMap[u.telegram_id]?.depositCount || 0,
+  }));
+
+  res.json({ users: enriched, total: count || 0, page: pageNum, limit: limitNum });
+});
+
+router.get('/users/:telegramId', async (req, res) => {
+  const { data: user, error } = await supabase.from('users').select('*').eq('telegram_id', req.params.telegramId).single();
+  if (error || !user) { res.status(404).json({ error: 'User not found' }); return; }
+
+  const [dRes, wRes] = await Promise.all([
+    supabase.from('deposits').select('*').eq('telegram_id', req.params.telegramId).order('created_at', { ascending: false }).limit(20),
+    supabase.from('withdrawals').select('*').eq('telegram_id', req.params.telegramId).order('created_at', { ascending: false }).limit(20),
+  ]);
+
+  const totalDeposited = (dRes.data || []).filter((d: any) => d.status === 'approved').reduce((s: number, d: any) => s + Number(d.amount), 0);
+  const totalWithdrawn = (wRes.data || []).filter((w: any) => w.status === 'approved').reduce((s: number, w: any) => s + Number(w.amount), 0);
+
+  res.json({ user, deposits: dRes.data || [], withdrawals: wRes.data || [], totalDeposited, totalWithdrawn });
+});
+
+router.put('/users/:telegramId/balance', async (req, res) => {
+  const { field, amount, note } = req.body;
+  if (!field || amount === undefined) { res.status(400).json({ error: 'field and amount required' }); return; }
+  if (!['main_balance', 'bonus_balance'].includes(field)) { res.status(400).json({ error: 'Invalid field' }); return; }
+
+  const { data: user } = await supabase.from('users').select('main_balance, bonus_balance').eq('telegram_id', req.params.telegramId).single();
+  if (!user) { res.status(404).json({ error: 'User not found' }); return; }
+
+  const current = Number(user[field] || 0);
+  const newValue = Math.max(0, current + Number(amount));
+  const { error } = await supabase.from('users').update({ [field]: newValue }).eq('telegram_id', req.params.telegramId);
+  if (error) { res.status(500).json({ error: error.message }); return; }
+
+  try {
+    const label = field === 'main_balance' ? 'Main Balance' : 'Bonus Balance';
+    const sign = Number(amount) >= 0 ? '+' : '';
+    const msg = `💼 *Balance Adjustment*\n\nYour ${label} has been adjusted by *${sign}${Number(amount).toLocaleString('en-US')} ETB*.\n${note ? `📝 Note: ${note}` : ''}\n\n💰 New ${label}: *${newValue.toLocaleString('en-US')} ETB*`;
+    await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: req.params.telegramId, text: msg, parse_mode: 'Markdown' })
+    });
+  } catch (e) { console.error('Notify failed:', e); }
+
+  res.json({ success: true, newValue });
+});
+
+router.put('/users/:telegramId/role', async (req, res) => {
+  const { role } = req.body;
+  if (!['user', 'admin', 'worker'].includes(role)) { res.status(400).json({ error: 'Invalid role' }); return; }
+  const { error } = await supabase.from('users').update({ role }).eq('telegram_id', req.params.telegramId);
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ success: true });
+});
+
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
 
 // GET /admin/settings — return all key/value settings

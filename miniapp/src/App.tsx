@@ -82,6 +82,7 @@ import AdminDeposits from './pages/AdminDeposits';
 import AdminWithdrawals from './pages/AdminWithdrawals';
 import AdminSettings from './pages/AdminSettings';
 import AdminTxReport from './pages/AdminTxReport';
+import AdminUsers from './pages/AdminUsers';
 
 import DepositHistory from './pages/DepositHistory';
 import WithdrawHistory from './pages/WithdrawHistory';
@@ -129,6 +130,7 @@ function App() {
           <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/tx-report" element={<AdminTxReport />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/worker" element={<Worker />} />
         </Routes>
         <Profile />
