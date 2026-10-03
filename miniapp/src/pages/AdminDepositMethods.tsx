@@ -238,17 +238,42 @@ export default function AdminDepositMethods() {
             
             <form onSubmit={handleSubmit} className="p-5 space-y-5">
               
-              {/* Custom Dropdown Trigger */}
+              {/* Custom Dropdown */}
               <div className="relative">
                 <label className="block text-[10px] font-black text-slate-400 tracking-wider mb-2">METHOD TYPE</label>
                 <button
                   type="button"
-                  onClick={() => setShowTypeSelect(true)}
+                  onClick={() => setShowTypeSelect(!showTypeSelect)}
                   className="w-full bg-slate-50 border border-gray-200 rounded-xl px-4 py-3.5 text-sm font-bold text-slate-700 flex justify-between items-center text-left focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                 >
                   <span>{methodNames[formData.type as keyof typeof methodNames]}</span>
-                  <ChevronDown size={18} className="text-slate-400" />
+                  <ChevronDown size={18} className={`text-slate-400 transition-transform ${showTypeSelect ? 'rotate-180' : ''}`} />
                 </button>
+
+                {showTypeSelect && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-hidden">
+                    <div className="flex flex-col">
+                      {(Object.entries(methodNames)).map(([key, name]) => (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() => {
+                            setFormData({...formData, type: key as any});
+                            setShowTypeSelect(false);
+                          }}
+                          className={`w-full text-left px-5 py-4 font-bold flex items-center justify-between transition-colors border-b border-gray-50 last:border-0 ${
+                            formData.type === key 
+                              ? 'bg-blue-50/50 text-blue-600' 
+                              : 'bg-white text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>{name}</span>
+                          {formData.type === key && <CheckCircle2 size={18} className="text-blue-500" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -315,36 +340,6 @@ export default function AdminDepositMethods() {
                 {isSubmitting ? <span>Saving...</span> : <><Save size={18} /> <span>Save Method</span></>}
               </button>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Custom Bottom Sheet Select for Method Type */}
-      {showTypeSelect && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[60] flex items-end">
-          <div className="bg-white w-full rounded-t-3xl pb-safe pt-2 px-4 pb-8 animate-slide-up">
-            <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6"></div>
-            <h3 className="font-black text-lg text-slate-800 mb-4 px-2">Select Method Type</h3>
-            <div className="space-y-2">
-              {(Object.entries(methodNames)).map(([key, name]) => (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => {
-                    setFormData({...formData, type: key as any});
-                    setShowTypeSelect(false);
-                  }}
-                  className={`w-full text-left px-5 py-4 rounded-2xl font-bold flex items-center justify-between transition-colors ${
-                    formData.type === key 
-                      ? 'bg-blue-50 text-blue-600 border border-blue-200' 
-                      : 'bg-slate-50 text-slate-700 border border-transparent hover:bg-slate-100'
-                  }`}
-                >
-                  <span>{name}</span>
-                  {formData.type === key && <CheckCircle2 size={20} />}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       )}
