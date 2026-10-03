@@ -23,8 +23,22 @@ export async function startCommand(ctx: Context) {
   } catch (e) { console.error('Upsert user error:', e); }
 
   const miniAppUrl = process.env.MINI_APP_URL || 'https://adwabingo.vercel.app';
-  const channelUrl = process.env.CHANNEL_URL || 'https://t.me/adwabingo';
-  const supportUrl = process.env.SUPPORT_URL || 'https://t.me/adwabingo_support';
+  
+  // Fetch dynamic links from Supabase settings
+  let supportUsername = 'adwabingo_admin';
+  let channelLink = 'https://t.me/adwabingo';
+  try {
+    const { supabase } = await import('../services/supabase');
+    const { data: supportData } = await supabase.from('settings').select('value').eq('key', 'support_username').single();
+    const { data: channelData } = await supabase.from('settings').select('value').eq('key', 'channel_link').single();
+    if (supportData) supportUsername = supportData.value;
+    if (channelData) channelLink = channelData.value;
+  } catch (err) {
+    console.error('Failed to fetch settings in bot:', err);
+  }
+
+  const channelUrl = channelLink;
+  const supportUrl = `https://t.me/${supportUsername.replace('@', '')}`;
   const botUsername = 'adwabingo_bot';
   const inviteLink = `https://t.me/${botUsername}?start=ref_${user.id}`;
   const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('🎮 Play ADWA Bingo with me! Join and let\'s win together! 🎱')}`;
