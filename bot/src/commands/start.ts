@@ -27,6 +27,7 @@ export async function startCommand(ctx: Context) {
   const supportUrl = process.env.SUPPORT_URL || 'https://t.me/adwabingo_support';
   const botUsername = 'adwabingo_bot';
   const inviteLink = `https://t.me/${botUsername}?start=ref_${user.id}`;
+  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('🎮 Play ADWA Bingo with me! Join and let\'s win together! 🎱')}`;
 
   const keyboard = {
     inline_keyboard: [
@@ -36,7 +37,7 @@ export async function startCommand(ctx: Context) {
         { text: '📢 Join Channel', url: channelUrl },
       ],
       [
-        { text: '👥 Invite Friend', url: inviteLink },
+        { text: '👥 Invite Friend', url: shareUrl },
         { text: '💰 Deposit', callback_data: 'btn_deposit' },
       ],
     ],

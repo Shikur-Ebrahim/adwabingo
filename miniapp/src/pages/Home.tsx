@@ -1,16 +1,14 @@
 import { useGameStore } from '../store/gameStore';
 import { Gift, ArrowDownToLine, Share2, PlusCircle, Info } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 
 export default function Home() {
   const { user } = useGameStore();
+  const navigate = useNavigate();
 
   const handleInvite = () => {
-    if (user) {
-      const inviteLink = `https://t.me/adwabingo_bot?start=ref_${user.telegram_id}`;
-      WebApp.openTelegramLink(`https://t.me/share/url?url=${inviteLink}&text=Play Bingo with me on ADWA Bingo!`);
-    }
+    navigate('/invite');
   };
 
   const initial = user?.first_name ? user.first_name.charAt(0).toUpperCase() : 'U';
