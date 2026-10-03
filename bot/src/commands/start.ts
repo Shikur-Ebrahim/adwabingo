@@ -29,6 +29,7 @@ export async function startCommand(ctx: Context) {
         { text: '👥 Invite Friend', url: inviteLink },
         { text: '💰 Deposit', callback_data: 'btn_deposit' },
       ],
+      [{ text: '📝 Register', web_app: { url: miniAppUrl } }],
     ],
   };
 
