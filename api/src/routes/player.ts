@@ -98,17 +98,31 @@ router.post('/transfer', validateTelegramAuth, async (req: AuthRequest, res) => 
     res.status(500).json({ error: 'Failed to credit recipient. Transfer rolled back.' }); return;
   }
 
-  // Notify recipient via Telegram bot
+  // Notify recipient and sender via Telegram bot
   try {
     const botToken = process.env.BOT_TOKEN;
     const safeSender = (sender.username || sender.first_name || 'Someone').replace(/[_*[\]]/g, '\\$&');
+    const safeRecipient = (recipient.username || recipient.first_name || 'User').replace(/[_*[\]]/g, '\\$&');
+    
     if (botToken) {
+      // Notify Recipient
       await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: recipient_telegram_id,
           text: `💸 *You received a transfer!*\n\n👤 From: @${safeSender}\n💰 Amount: *${transferAmount.toLocaleString('en-US')} ETB*\n\n✅ Added to your Main Balance.`,
+          parse_mode: 'Markdown'
+        })
+      });
+
+      // Notify Sender
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: senderTelegramId,
+          text: `📤 *Transfer Sent Successfully!*\n\n👤 To: @${safeRecipient}\n💰 Amount: *${transferAmount.toLocaleString('en-US')} ETB*\n\n✅ Deducted from your Main Balance.`,
           parse_mode: 'Markdown'
         })
       });
