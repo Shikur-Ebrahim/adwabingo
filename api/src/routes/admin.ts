@@ -183,14 +183,22 @@ router.delete('/deposits/:id/reject', async (req, res) => {
   res.json({ success: true });
 });
 
-// Get admin stats (pending deposits count)
+// Get admin stats (pending counts)
 router.get('/stats', async (req, res) => {
-  const { count, error } = await supabase
+  const { count: depCount } = await supabase
     .from('deposits')
     .select('*', { count: 'exact', head: true })
     .eq('status', 'pending');
-  if (error) { res.status(500).json({ error: error.message }); return; }
-  res.json({ pendingDeposits: count || 0 });
+    
+  const { count: withCount } = await supabase
+    .from('withdrawals')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'pending');
+    
+  res.json({ 
+    pendingDeposits: depCount || 0,
+    pendingWithdrawals: withCount || 0 
+  });
 });
 
 // ─── WITHDRAWAL MANAGEMENT ───────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, CheckCircle2, XCircle, Clock, User, Phone, RefreshCw } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Clock, User, Phone, RefreshCw, Copy, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 
@@ -47,6 +47,17 @@ export default function AdminWithdrawals() {
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
   const [timeFilter, setTimeFilter] = useState('all');
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopy = (text: string, id: string) => {
+    if (typeof WebApp !== 'undefined' && WebApp.HapticFeedback) {
+      WebApp.HapticFeedback.impactOccurred('light');
+    }
+    navigator.clipboard.writeText(text);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
+
 
   const getHeaders = () => {
     const initData = typeof WebApp !== 'undefined' ? WebApp.initData : '';
@@ -235,9 +246,17 @@ export default function AdminWithdrawals() {
                     <User size={13} className="text-slate-400" />
                     <span className="text-xs font-semibold">{w.account_name}</span>
                   </div>
-                  <div className="flex items-center space-x-2 text-slate-600">
-                    <Phone size={13} className="text-slate-400" />
-                    <span className="text-xs font-mono font-bold">{w.account_number}</span>
+                  <div className="flex items-center justify-between text-slate-600">
+                    <div className="flex items-center space-x-2">
+                      <Phone size={13} className="text-slate-400" />
+                      <span className="text-xs font-mono font-bold">{w.account_number}</span>
+                    </div>
+                    <button
+                      onClick={() => handleCopy(w.account_number, w.id)}
+                      className="p-1.5 rounded-lg bg-slate-50 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                    >
+                      {copiedId === w.id ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                    </button>
                   </div>
                   <p className="text-[11px] text-slate-400">{timeAgo(w.created_at)}</p>
                 </div>

@@ -8,7 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export default function Admin() {
   const { user } = useGameStore();
-  const [stats, setStats] = useState({ pendingDeposits: 0 });
+  const [stats, setStats] = useState({ pendingDeposits: 0, pendingWithdrawals: 0 });
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -104,7 +104,14 @@ export default function Admin() {
                 <div className={`w-12 h-12 rounded-2xl ${mod.bg} ${mod.color} flex items-center justify-center shadow-inner`}>
                   <Icon size={24} strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
+                <div className="flex items-center justify-center space-x-1.5">
+                  <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
+                  {stats.pendingWithdrawals > 0 && (
+                    <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md animate-pulse shadow-sm">
+                      {stats.pendingWithdrawals}
+                    </span>
+                  )}
+                </div>
               </Link>
             )
           }
