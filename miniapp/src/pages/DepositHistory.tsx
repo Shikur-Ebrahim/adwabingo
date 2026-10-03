@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Clock, CheckCircle2, XCircle, ArrowDownToLine, Receipt, ChevronDown, ChevronUp, Image, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useGameStore } from '../store/gameStore';
 import WebApp from '@twa-dev/sdk';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -23,6 +24,12 @@ export default function DepositHistory() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { setProfileOpen } = useGameStore();
+
+  const handleBack = () => {
+    navigate(-1);
+    setTimeout(() => setProfileOpen(true), 50);
+  };
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -66,7 +73,7 @@ export default function DepositHistory() {
       {/* HEADER */}
       <div className="bg-white px-4 pt-6 pb-4 shadow-sm border-b border-gray-100 flex items-center sticky top-0 z-10">
         <button
-          onClick={() => navigate(-1)}
+          onClick={handleBack}
           className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 active:bg-slate-200 transition-colors"
         >
           <ArrowLeft size={20} />
