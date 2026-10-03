@@ -149,20 +149,20 @@ export default function Deposit() {
   // ── STEP: SUCCESS ────────────────────────────────────────────────────────────
   if (step === 'success') {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-        <div className="bg-white w-full max-w-sm rounded-3xl shadow-sm border border-gray-100 p-8 text-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-6">
+        <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 p-8 text-center">
           <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5 border-4 border-emerald-100">
             <CheckCircle2 size={40} className="text-emerald-500" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800">Submitted!</h2>
-          <p className="text-slate-500 font-medium mt-2 leading-relaxed">
-            Your deposit request of <span className="font-black text-slate-700">{parseFloat(amount).toLocaleString('en-US')} ETB</span> is now <span className="text-yellow-600 font-black">pending review</span>.
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">Submitted!</h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium mt-2 leading-relaxed">
+            Your deposit request of <span className="font-black text-slate-700 dark:text-slate-200">{parseFloat(amount).toLocaleString('en-US')} ETB</span> is now <span className="text-yellow-600 font-black">pending review</span>.
           </p>
           <div className="mt-5 bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex items-start space-x-3">
             <Clock size={18} className="text-yellow-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-yellow-700 font-semibold text-left">Your balance will be credited once an admin approves your payment. This usually takes a few minutes.</p>
           </div>
-          <Link to="/" className="mt-3 block w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-4 rounded-xl text-center transition-all active:scale-95">
+          <Link to="/" className="mt-3 block w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-black py-4 rounded-xl text-center transition-all active:scale-95">
             Back to Home
           </Link>
           
@@ -185,14 +185,14 @@ export default function Deposit() {
   // ── STEP: PENDING STATUS ─────────────────────────────────────────────────────
   if (step === 'pending_status') {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-        <div className="bg-white w-full max-w-sm rounded-3xl shadow-sm border border-gray-100 p-8 text-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-6">
+        <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 p-8 text-center">
           <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-5 border-4 border-yellow-100">
             <Clock size={40} className="text-yellow-500" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800">Pending Review</h2>
-          <p className="text-slate-500 font-medium mt-2 leading-relaxed">
-            You already have a deposit of <span className="font-black text-slate-700">{pendingAmount?.toLocaleString('en-US')} ETB</span> waiting for approval.
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">Pending Review</h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium mt-2 leading-relaxed">
+            You already have a deposit of <span className="font-black text-slate-700 dark:text-slate-200">{pendingAmount?.toLocaleString('en-US')} ETB</span> waiting for approval.
           </p>
           <div className="mt-5 bg-blue-50 border border-blue-100 rounded-xl p-4">
             <p className="text-xs text-blue-700 font-semibold text-center">Please wait for an admin to process your current request before making a new one.</p>
@@ -210,7 +210,7 @@ export default function Deposit() {
             </a>
           )}
 
-          <Link to="/" className="mt-3 block w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-4 rounded-xl text-center transition-all active:scale-95">
+          <Link to="/" className="mt-3 block w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-black py-4 rounded-xl text-center transition-all active:scale-95">
             Back to Home
           </Link>
         </div>
@@ -221,38 +221,38 @@ export default function Deposit() {
   // ── STEP: FORM ───────────────────────────────────────────────────────────────
   if (step === 'form' && selected) {
     return (
-      <div className="min-h-screen bg-slate-50 pb-20">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
         {/* Header */}
-        <div className="bg-white px-4 py-4 rounded-b-2xl shadow-sm border-b border-gray-100 flex items-center space-x-3 sticky top-0 z-10">
-          <button onClick={() => setStep('list')} className="p-2 bg-slate-100 rounded-full text-slate-600 hover:bg-slate-200 transition-colors">
+        <div className="bg-white dark:bg-slate-900 px-4 py-4 rounded-b-2xl shadow-sm border-b border-gray-100 dark:border-slate-800 flex items-center space-x-3 sticky top-0 z-10">
+          <button onClick={() => setStep('list')} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors">
             <ArrowLeft size={18} />
           </button>
-          <h1 className="font-black text-slate-800 text-lg">Deposit via {typeLabels[selected.type]}</h1>
+          <h1 className="font-black text-slate-800 dark:text-slate-100 text-lg">Deposit via {typeLabels[selected.type]}</h1>
         </div>
 
         <div className="p-4 space-y-4">
           {/* Method Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-5">
             <p className="text-[10px] font-black text-slate-400 tracking-widest mb-3">SEND MONEY TO</p>
             <div className="flex items-center space-x-4">
               {selected.logo_url ? (
-                <img src={selected.logo_url} alt="logo" className="w-16 h-16 rounded-2xl object-contain bg-slate-50 border border-slate-100 p-1.5" />
+                <img src={selected.logo_url} alt="logo" className="w-16 h-16 rounded-2xl object-contain bg-slate-50 dark:bg-slate-900 border border-slate-100 p-1.5" />
               ) : (
-                <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-xs">NO IMG</div>
+                <div className="w-16 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 font-bold text-xs">NO IMG</div>
               )}
               <div className="flex-1">
                 <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${typeBadge[selected.type]}`}>
                   {selected.type.toUpperCase()}
                 </span>
-                <h3 className="font-black text-slate-800 text-base mt-1 leading-tight">{selected.name}</h3>
+                <h3 className="font-black text-slate-800 dark:text-slate-100 text-base mt-1 leading-tight">{selected.name}</h3>
                 <div className="mt-2 flex items-center space-x-3">
-                  <span className="font-black text-xl text-slate-700 tracking-wider">{selected.account_number}</span>
+                  <span className="font-black text-xl text-slate-700 dark:text-slate-200 tracking-wider">{selected.account_number}</span>
                   <button
                     onClick={() => copyToClipboard(selected.account_number)}
                     className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                       copied
                         ? 'bg-emerald-100 text-emerald-600 border border-emerald-200'
-                        : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'
+                        : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-200'
                     }`}
                   >
                     {copied ? <><Check size={13} strokeWidth={3} /><span>Copied!</span></> : <><Copy size={13} /><span>Copy</span></>}
@@ -261,7 +261,7 @@ export default function Deposit() {
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500">Min Deposit</span>
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Min Deposit</span>
               <span className="font-black text-emerald-600">{selected.min_deposit.toLocaleString('en-US')} ETB</span>
             </div>
           </div>
@@ -280,14 +280,14 @@ export default function Deposit() {
           </div>
 
           {/* Amount Input */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-5">
             <label className="block text-[10px] font-black text-slate-400 tracking-widest mb-3">AMOUNT YOU SENT (ETB)</label>
             <div className="relative">
               <input
                 type="number"
                 min={selected.min_deposit}
                 placeholder={`Min ${selected.min_deposit.toLocaleString()} ETB`}
-                className="w-full bg-slate-50 border-2 border-gray-200 rounded-xl px-4 py-4 text-xl font-black outline-none focus:border-yellow-400 focus:bg-white transition-all"
+                className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-gray-200 rounded-xl px-4 py-4 text-xl font-black outline-none focus:border-yellow-400 focus:bg-white dark:bg-slate-900 transition-all"
                 value={amount}
                 onChange={(e) => { setAmount(e.target.value); setError(''); }}
               />
@@ -296,11 +296,11 @@ export default function Deposit() {
           </div>
 
           {/* Screenshot Upload */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-5">
             <label className="block text-[10px] font-black text-slate-400 tracking-widest mb-3">PAYMENT SCREENSHOT</label>
             {file ? (
               <div className="relative">
-                <img src={URL.createObjectURL(file)} alt="Receipt" className="w-full max-h-52 object-cover rounded-xl border border-gray-100" />
+                <img src={URL.createObjectURL(file)} alt="Receipt" className="w-full max-h-52 object-cover rounded-xl border border-gray-100 dark:border-slate-800" />
                 <button
                   onClick={() => setFile(null)}
                   className="absolute top-2 right-2 bg-rose-500 text-white p-1.5 rounded-full shadow-md"
@@ -313,7 +313,7 @@ export default function Deposit() {
                 <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-3">
                   <UploadCloud size={24} className="text-blue-500" />
                 </div>
-                <p className="font-bold text-slate-600">Tap to upload screenshot</p>
+                <p className="font-bold text-slate-600 dark:text-slate-300">Tap to upload screenshot</p>
                 <p className="text-xs text-slate-400 mt-1">JPG, PNG supported</p>
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] || null); setError(''); }} />
               </label>
@@ -343,14 +343,14 @@ export default function Deposit() {
 
   // ── STEP: LIST ───────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-20">
       {/* Header */}
-      <div className="bg-white px-4 py-4 rounded-b-2xl shadow-sm border-b border-gray-100 flex items-center space-x-3 sticky top-0 z-10">
-        <Link to="/" className="p-2 bg-slate-100 rounded-full text-slate-600 hover:bg-slate-200 transition-colors">
+      <div className="bg-white dark:bg-slate-900 px-4 py-4 rounded-b-2xl shadow-sm border-b border-gray-100 dark:border-slate-800 flex items-center space-x-3 sticky top-0 z-10">
+        <Link to="/" className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors">
           <ArrowLeft size={18} />
         </Link>
         <div>
-          <h1 className="font-black text-slate-800 text-lg leading-tight">Deposit</h1>
+          <h1 className="font-black text-slate-800 dark:text-slate-100 text-lg leading-tight">Deposit</h1>
           <p className="text-xs text-slate-400 font-semibold">Choose a payment method</p>
         </div>
       </div>
@@ -359,12 +359,12 @@ export default function Deposit() {
         {loading ? (
           <div className="space-y-3 mt-2">
             {[1, 2, 3].map(i => (
-              <div key={i} className="bg-white rounded-2xl h-24 animate-pulse border border-gray-100" />
+              <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl h-24 animate-pulse border border-gray-100 dark:border-slate-800" />
             ))}
           </div>
         ) : methods.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-10 text-center mt-4">
-            <p className="text-slate-500 font-medium">No deposit methods available.</p>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-10 text-center mt-4">
+            <p className="text-slate-500 dark:text-slate-400 font-medium">No deposit methods available.</p>
             <p className="text-xs text-slate-400 mt-1">Please check back later.</p>
           </div>
         ) : (
@@ -374,20 +374,20 @@ export default function Deposit() {
               <button
                 key={method.id}
                 onClick={() => selectMethod(method)}
-                className="w-full bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center justify-between transition-all hover:shadow-md active:scale-[0.98]"
+                className="w-full bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-4 flex items-center justify-between transition-all hover:shadow-md active:scale-[0.98]"
               >
                 <div className="flex items-center space-x-4">
                   {method.logo_url ? (
-                    <img src={method.logo_url} alt="logo" className="w-14 h-14 rounded-2xl object-contain bg-slate-50 border border-slate-100 p-1.5" />
+                    <img src={method.logo_url} alt="logo" className="w-14 h-14 rounded-2xl object-contain bg-slate-50 dark:bg-slate-900 border border-slate-100 p-1.5" />
                   ) : (
-                    <div className="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 text-[10px] font-bold">NO IMG</div>
+                    <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 text-[10px] font-bold">NO IMG</div>
                   )}
                   <div className="text-left">
                     <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${typeBadge[method.type]}`}>
                       {method.type.toUpperCase()}
                     </span>
-                    <h3 className="font-black text-slate-800 mt-1 leading-tight">{typeLabels[method.type]}</h3>
-                    <p className="text-xs text-slate-500 font-semibold mt-0.5">
+                    <h3 className="font-black text-slate-800 dark:text-slate-100 mt-1 leading-tight">{typeLabels[method.type]}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
                       Min: <span className="text-emerald-600 font-black">{method.min_deposit.toLocaleString('en-US')} ETB</span>
                     </p>
                   </div>

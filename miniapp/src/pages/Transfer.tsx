@@ -73,18 +73,18 @@ export default function Transfer() {
   // ─── SUCCESS ──────────────────────────────────────────────
   if (step === 'success') {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-6 pb-24">
-        <div className="bg-white rounded-[2rem] p-8 shadow-sm border border-gray-100 text-center w-full max-w-sm">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center px-6 pb-24">
+        <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 shadow-sm border border-gray-100 dark:border-slate-800 text-center w-full max-w-sm">
           <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
             <CheckCircle2 size={40} className="text-emerald-500" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 mb-1">Transfer Sent!</h2>
-          <p className="text-slate-500 text-sm mb-4">
-            <span className="font-bold text-slate-700">{Number(amount).toLocaleString('en-US')} ETB</span> successfully transferred to <span className="font-bold text-slate-700">{recipientName}</span>.
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-1">Transfer Sent!</h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
+            <span className="font-bold text-slate-700 dark:text-slate-200">{Number(amount).toLocaleString('en-US')} ETB</span> successfully transferred to <span className="font-bold text-slate-700 dark:text-slate-200">{recipientName}</span>.
           </p>
           <div className="bg-emerald-50 rounded-2xl p-4 mb-6 text-left">
             <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">New Balance</p>
-            <p className="text-2xl font-black text-slate-800">{(user?.main_balance || 0).toLocaleString('en-US')} <span className="text-xs">ETB</span></p>
+            <p className="text-2xl font-black text-slate-800 dark:text-slate-100">{(user?.main_balance || 0).toLocaleString('en-US')} <span className="text-xs">ETB</span></p>
           </div>
           <button
             onClick={() => { setStep('form'); setRecipientId(''); setAmount(''); }}
@@ -102,19 +102,19 @@ export default function Transfer() {
 
   // ─── MAIN FORM ────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-24">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col pb-24">
 
       {/* HEADER */}
-      <div className="bg-white px-4 pt-6 pb-4 shadow-sm border-b border-gray-100 flex items-center sticky top-0 z-10">
+      <div className="bg-white dark:bg-slate-900 px-4 pt-6 pb-4 shadow-sm border-b border-gray-100 dark:border-slate-800 flex items-center sticky top-0 z-10">
         <button
           onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 active:bg-slate-200 transition-colors"
+          className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 active:bg-slate-200 transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
         <div className="ml-4 flex-1">
-          <h1 className="text-xl font-black text-slate-800 tracking-tight">Transfer</h1>
-          <p className="text-xs text-slate-500 font-medium">Send ETB to another player</p>
+          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Transfer</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Send ETB to another player</p>
         </div>
         <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center">
           <ArrowRightLeft size={18} className="text-emerald-500" />
@@ -129,32 +129,32 @@ export default function Transfer() {
             <p className="text-white/50 text-xs font-semibold mb-1">Your Main Balance</p>
             <p className="text-3xl font-black text-white">{(user?.main_balance || 0).toLocaleString('en-US')} <span className="text-sm">ETB</span></p>
           </div>
-          <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
+          <div className="w-12 h-12 rounded-full bg-white dark:bg-slate-900/10 flex items-center justify-center">
             <User size={24} className="text-white/70" />
           </div>
         </div>
 
         {/* RECIPIENT INPUT */}
-        <div className="bg-white rounded-[1.5rem] p-5 shadow-sm border border-gray-100 space-y-4">
+        <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] p-5 shadow-sm border border-gray-100 dark:border-slate-800 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">User ID</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">User ID</label>
             <input
               type="number"
               inputMode="numeric"
               placeholder="e.g. 7898071735"
               value={recipientId}
               onChange={e => { setRecipientId(e.target.value); setErrorMsg(''); setStep('form'); }}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-bold text-base focus:outline-none focus:border-emerald-400 transition-colors"
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-slate-100 font-bold text-base focus:outline-none focus:border-emerald-400 transition-colors"
             />
             <p className="text-[10px] text-slate-400 font-medium mt-2 ml-1">
               📌 Ask the recipient to copy their ID from their Profile sidebar
             </p>
           </div>
 
-          <div className="h-px bg-slate-100" />
+          <div className="h-px bg-slate-100 dark:bg-slate-800" />
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">Amount (ETB)</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Amount (ETB)</label>
             <div className="relative">
               <input
                 type="number"
@@ -162,7 +162,7 @@ export default function Transfer() {
                 placeholder="Enter amount (Min 10)"
                 value={amount}
                 onChange={e => { setAmount(e.target.value); setErrorMsg(''); setStep('form'); }}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pr-16 text-slate-800 font-bold text-base focus:outline-none focus:border-emerald-400 transition-colors"
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 pr-16 text-slate-800 dark:text-slate-100 font-bold text-base focus:outline-none focus:border-emerald-400 transition-colors"
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">ETB</span>
             </div>

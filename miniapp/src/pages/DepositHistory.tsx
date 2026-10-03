@@ -68,19 +68,19 @@ export default function DepositHistory() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-24">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col pb-24">
 
       {/* HEADER */}
-      <div className="bg-white px-4 pt-6 pb-4 shadow-sm border-b border-gray-100 flex items-center sticky top-0 z-10">
+      <div className="bg-white dark:bg-slate-900 px-4 pt-6 pb-4 shadow-sm border-b border-gray-100 dark:border-slate-800 flex items-center sticky top-0 z-10">
         <button
           onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 active:bg-slate-200 transition-colors"
+          className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 active:bg-slate-200 transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
         <div className="ml-4 flex-1">
-          <h1 className="text-xl font-black text-slate-800 tracking-tight">Deposit History</h1>
-          <p className="text-xs text-slate-500 font-medium">Your recent top-up records</p>
+          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Deposit History</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Your recent top-up records</p>
         </div>
       </div>
 
@@ -93,11 +93,11 @@ export default function DepositHistory() {
           </div>
         ) : history.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
-            <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+            <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
               <Receipt size={32} className="text-slate-300" />
             </div>
-            <h3 className="text-lg font-black text-slate-700 mb-1">No Deposits Yet</h3>
-            <p className="text-sm text-slate-500 mb-6">You haven't made any deposits.</p>
+            <h3 className="text-lg font-black text-slate-700 dark:text-slate-200 mb-1">No Deposits Yet</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">You haven't made any deposits.</p>
             <Link to="/deposit" className="bg-yellow-400 hover:bg-yellow-500 text-yellow-950 px-6 py-3 rounded-xl font-black text-sm shadow-sm active:scale-95 transition-transform">
               Deposit Now
             </Link>
@@ -109,7 +109,7 @@ export default function DepositHistory() {
               const isExpanded = expandedId === deposit.id;
 
               return (
-                <div key={deposit.id} className={`bg-white rounded-[1.25rem] shadow-sm border ${border} overflow-hidden transition-all`}>
+                <div key={deposit.id} className={`bg-white dark:bg-slate-900 rounded-[1.25rem] shadow-sm border ${border} overflow-hidden transition-all`}>
                   {/* MAIN ROW */}
                   <div className="p-4 flex items-center">
                     <div className={`w-12 h-12 rounded-2xl ${bg} flex items-center justify-center shrink-0 mr-3`}>
@@ -117,7 +117,7 @@ export default function DepositHistory() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm text-slate-800 truncate">
+                      <p className="font-bold text-sm text-slate-800 dark:text-slate-100 truncate">
                         {deposit.deposit_methods?.name || 'Bank Transfer'}
                       </p>
                       <div className="flex items-center space-x-1.5 mt-0.5 flex-wrap gap-y-0.5">
@@ -132,7 +132,7 @@ export default function DepositHistory() {
                     </div>
 
                     <div className="text-right pl-2 shrink-0">
-                      <p className="font-black text-slate-800 text-base">+{deposit.amount.toLocaleString('en-US')}</p>
+                      <p className="font-black text-slate-800 dark:text-slate-100 text-base">+{deposit.amount.toLocaleString('en-US')}</p>
                       <p className="text-[10px] font-bold text-slate-400">ETB</p>
                     </div>
                   </div>
@@ -153,7 +153,7 @@ export default function DepositHistory() {
                   {isExpanded && deposit.screenshot_url && (
                     <div className="px-4 pb-4 pt-2">
                       <div
-                        className="rounded-xl overflow-hidden border border-gray-100 cursor-zoom-in"
+                        className="rounded-xl overflow-hidden border border-gray-100 dark:border-slate-800 cursor-zoom-in"
                         onClick={() => setLightboxUrl(deposit.screenshot_url!)}
                       >
                         <img
@@ -179,7 +179,7 @@ export default function DepositHistory() {
           onClick={() => setLightboxUrl(null)}
         >
           <button
-            className="absolute top-5 right-5 text-white bg-white/20 rounded-full w-9 h-9 flex items-center justify-center"
+            className="absolute top-5 right-5 text-white bg-white dark:bg-slate-900/20 rounded-full w-9 h-9 flex items-center justify-center"
             onClick={() => setLightboxUrl(null)}
           >
             <X size={20} />

@@ -128,49 +128,49 @@ export default function AdminDeposits() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-24">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 pb-24">
       {/* Header */}
-      <div className="bg-white px-4 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 z-10">
-        <Link to="/admin" className="p-2 bg-slate-100 rounded-full text-slate-600 hover:bg-slate-200 transition-colors">
+      <div className="bg-white dark:bg-slate-900 px-4 py-4 border-b border-gray-100 dark:border-slate-800 flex items-center justify-between sticky top-0 z-10">
+        <Link to="/admin" className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors">
           <ArrowLeft size={18} />
         </Link>
         <div className="text-center">
-          <h1 className="font-black text-slate-800 text-lg leading-tight">Deposits</h1>
+          <h1 className="font-black text-slate-800 dark:text-slate-100 text-lg leading-tight">Deposits</h1>
           {pendingCount > 0 && (
             <span className="text-xs font-bold text-yellow-600">{pendingCount} pending</span>
           )}
         </div>
         <button
           onClick={() => { setLoading(true); fetchDeposits(); }}
-          className="p-2 bg-slate-100 rounded-full text-slate-600 hover:bg-slate-200 transition-colors"
+          className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors"
         >
           <RefreshCw size={18} />
         </button>
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-white px-4 py-3 space-x-2 border-b border-gray-100">
+      <div className="flex bg-white dark:bg-slate-900 px-4 py-3 space-x-2 border-b border-gray-100 dark:border-slate-800">
         <button 
           onClick={() => setActiveTab('pending')}
-          className={`flex-1 py-2 font-bold text-sm rounded-xl transition-colors ${activeTab === 'pending' ? 'bg-yellow-400 text-yellow-950 shadow-sm' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+          className={`flex-1 py-2 font-bold text-sm rounded-xl transition-colors ${activeTab === 'pending' ? 'bg-yellow-400 text-yellow-950 shadow-sm' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:bg-slate-800'}`}
         >
           Pending
         </button>
         <button 
           onClick={() => setActiveTab('approved')}
-          className={`flex-1 py-2 font-bold text-sm rounded-xl transition-colors ${activeTab === 'approved' ? 'bg-emerald-400 text-emerald-950 shadow-sm' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
+          className={`flex-1 py-2 font-bold text-sm rounded-xl transition-colors ${activeTab === 'approved' ? 'bg-emerald-400 text-emerald-950 shadow-sm' : 'bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:bg-slate-800'}`}
         >
           Approved History
         </button>
       </div>
 
       {/* Filter Chips */}
-      <div className="bg-white border-b border-gray-100 shadow-sm mb-2 rounded-b-2xl overflow-x-auto whitespace-nowrap px-4 py-2 flex space-x-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+      <div className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 shadow-sm mb-2 rounded-b-2xl overflow-x-auto whitespace-nowrap px-4 py-2 flex space-x-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {filters.map(f => (
           <button
             key={f.id}
             onClick={() => setTimeFilter(f.id)}
-            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${timeFilter === f.id ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${timeFilter === f.id ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200'}`}
           >
             {f.label}
           </button>
@@ -180,14 +180,14 @@ export default function AdminDeposits() {
       <div className="p-4 space-y-3">
         {loading ? (
           <div className="space-y-3 mt-2">
-            {[1, 2, 3].map(i => <div key={i} className="bg-white rounded-2xl h-28 animate-pulse border border-gray-100" />)}
+            {[1, 2, 3].map(i => <div key={i} className="bg-white dark:bg-slate-900 rounded-2xl h-28 animate-pulse border border-gray-100 dark:border-slate-800" />)}
           </div>
         ) : filteredDeposits.length === 0 ? (
-          <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center flex flex-col items-center mt-4">
-            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 ${activeTab === 'pending' ? 'bg-emerald-50 text-emerald-400' : 'bg-slate-50 text-slate-300'}`}>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center flex flex-col items-center mt-4">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-3 ${activeTab === 'pending' ? 'bg-emerald-50 text-emerald-400' : 'bg-slate-50 dark:bg-slate-900 text-slate-300'}`}>
               <CheckCircle2 size={28} />
             </div>
-            <p className="text-slate-600 font-bold text-lg">{activeTab === 'pending' ? 'All Clear!' : 'No History'}</p>
+            <p className="text-slate-600 dark:text-slate-300 font-bold text-lg">{activeTab === 'pending' ? 'All Clear!' : 'No History'}</p>
             <p className="text-slate-400 text-sm font-medium mt-1">{activeTab === 'pending' ? 'No pending deposits to review.' : 'No approved deposits yet.'}</p>
           </div>
         ) : (
@@ -197,22 +197,22 @@ export default function AdminDeposits() {
             const methodType = dep.deposit_methods?.type || 'cbe';
 
             return (
-              <div key={dep.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div key={dep.id} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
                 {/* Main Row */}
                 <div className="p-4">
                   <div className="flex items-start justify-between">
                     {/* Left — User + method info */}
                     <div className="flex items-center space-x-3 flex-1">
                       {dep.deposit_methods?.logo_url ? (
-                        <img src={dep.deposit_methods.logo_url} alt="method" className="w-11 h-11 rounded-xl object-contain bg-slate-50 border border-slate-100 p-1 flex-shrink-0" />
+                        <img src={dep.deposit_methods.logo_url} alt="method" className="w-11 h-11 rounded-xl object-contain bg-slate-50 dark:bg-slate-900 border border-slate-100 p-1 flex-shrink-0" />
                       ) : (
-                        <div className="w-11 h-11 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                        <div className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center flex-shrink-0">
                           <ImageIcon size={18} className="text-slate-400" />
                         </div>
                       )}
                       <div>
                         <div className="flex items-center space-x-2">
-                          <p className="font-black text-slate-800 leading-tight">{dep.users?.first_name || 'Unknown'}</p>
+                          <p className="font-black text-slate-800 dark:text-slate-100 leading-tight">{dep.users?.first_name || 'Unknown'}</p>
                           {dep.users?.username && <p className="text-[10px] text-slate-400 font-semibold">@{dep.users.username}</p>}
                         </div>
                         <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${typeBadge[methodType]}`}>
@@ -248,18 +248,18 @@ export default function AdminDeposits() {
                     <img
                       src={dep.screenshot_url}
                       alt="Payment receipt"
-                      className="w-full rounded-xl border border-gray-100 object-contain max-h-72"
+                      className="w-full rounded-xl border border-gray-100 dark:border-slate-800 object-contain max-h-72"
                     />
                   </div>
                 )}
 
                 {/* Action buttons (Only show if pending) */}
                 {activeTab === 'pending' ? (
-                  <div className="grid grid-cols-2 border-t border-gray-100">
+                  <div className="grid grid-cols-2 border-t border-gray-100 dark:border-slate-800">
                     <button
                       onClick={() => handleReject(dep.id)}
                       disabled={isProcessing}
-                      className="flex items-center justify-center space-x-2 py-3.5 text-rose-600 font-black text-sm bg-rose-50 hover:bg-rose-100 transition-colors border-r border-gray-100 disabled:opacity-40"
+                      className="flex items-center justify-center space-x-2 py-3.5 text-rose-600 font-black text-sm bg-rose-50 hover:bg-rose-100 transition-colors border-r border-gray-100 dark:border-slate-800 disabled:opacity-40"
                     >
                       <XCircle size={18} />
                       <span>Reject</span>

@@ -130,10 +130,10 @@ export default function Withdraw() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
         <div className="flex flex-col items-center space-y-3">
           <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-slate-500 font-medium">Loading...</p>
+          <p className="text-slate-500 dark:text-slate-400 font-medium">Loading...</p>
         </div>
       </div>
     );
@@ -142,14 +142,14 @@ export default function Withdraw() {
   // ── STEP: PENDING STATUS ──────────────────────────────────────────────────
   if (step === 'pending_status') {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-        <div className="bg-white w-full max-w-sm rounded-3xl shadow-sm border border-gray-100 p-8 text-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-6">
+        <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 p-8 text-center">
           <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-5 border-4 border-yellow-100">
             <Clock size={40} className="text-yellow-500" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800">Withdrawal Pending</h2>
-          <p className="text-slate-500 font-medium mt-2 leading-relaxed">
-            You have a withdrawal of <span className="font-black text-slate-700">{pendingAmount?.toLocaleString('en-US')} ETB</span> pending review.
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">Withdrawal Pending</h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium mt-2 leading-relaxed">
+            You have a withdrawal of <span className="font-black text-slate-700 dark:text-slate-200">{pendingAmount?.toLocaleString('en-US')} ETB</span> pending review.
           </p>
           <div className="mt-5 bg-blue-50 border border-blue-100 rounded-xl p-4">
             <p className="text-xs text-blue-700 font-semibold text-center">Please wait for admin to process before making a new request.</p>
@@ -166,7 +166,7 @@ export default function Withdraw() {
             </a>
           )}
 
-          <Link to="/" className="mt-3 block w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-4 rounded-xl text-center transition-all active:scale-95">
+          <Link to="/" className="mt-3 block w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-black py-4 rounded-xl text-center transition-all active:scale-95">
             Back to Home
           </Link>
         </div>
@@ -177,14 +177,14 @@ export default function Withdraw() {
   // ── STEP: SUCCESS ────────────────────────────────────────────────────────
   if (step === 'success') {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
-        <div className="bg-white w-full max-w-sm rounded-3xl shadow-sm border border-gray-100 p-8 text-center">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col items-center justify-center p-6">
+        <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 p-8 text-center">
           <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5 border-4 border-green-100">
             <CheckCircle2 size={40} className="text-green-500" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800">Request Submitted!</h2>
-          <p className="text-slate-500 font-medium mt-2 leading-relaxed">
-            Your withdrawal of <span className="font-black text-slate-700">{parseFloat(amount).toLocaleString('en-US')} ETB</span> is being processed.
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">Request Submitted!</h2>
+          <p className="text-slate-500 dark:text-slate-400 font-medium mt-2 leading-relaxed">
+            Your withdrawal of <span className="font-black text-slate-700 dark:text-slate-200">{parseFloat(amount).toLocaleString('en-US')} ETB</span> is being processed.
           </p>
           <div className="mt-5 bg-green-50 border border-green-100 rounded-xl p-4">
             <p className="text-xs text-green-700 font-semibold text-center">Your balance has been debited. Funds will be transferred within a few minutes.</p>
@@ -213,7 +213,7 @@ export default function Withdraw() {
   if (step === 'form' && selected) {
     const gradient = typeColors[selected.type] || 'from-slate-500 to-slate-700';
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
         {/* Header */}
         <div className={`bg-gradient-to-r ${gradient} px-4 pt-6 pb-8`}>
           <div className="flex items-center space-x-3 mb-4">
@@ -224,7 +224,7 @@ export default function Withdraw() {
               {typeEmoji[selected.type]} {typeLabels[selected.type] || selected.type.toUpperCase()}
             </h1>
           </div>
-          <div className="bg-white/20 backdrop-blur rounded-2xl p-4 text-white">
+          <div className="bg-white dark:bg-slate-900/20 backdrop-blur rounded-2xl p-4 text-white">
             <p className="text-white/80 text-sm font-medium">Available Balance</p>
             <p className="text-3xl font-black">{userBalance.toLocaleString('en-US')} <span className="text-xl">ETB</span></p>
             <p className="text-white/70 text-xs mt-1">Min withdrawal: {selected.min_withdrawal.toLocaleString('en-US')} ETB</p>
@@ -233,7 +233,7 @@ export default function Withdraw() {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-4 -mt-4">
-          <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 space-y-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 p-5 space-y-4">
 
             {error && (
               <div className="flex items-start space-x-2 bg-red-50 border border-red-100 rounded-xl p-3">
@@ -244,7 +244,7 @@ export default function Withdraw() {
 
             {/* Amount */}
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Amount (ETB)</label>
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Amount (ETB)</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">ETB</span>
                 <input
@@ -254,7 +254,7 @@ export default function Withdraw() {
                   placeholder="0.00"
                   min={selected.min_withdrawal}
                   max={userBalance}
-                  className="w-full pl-14 pr-4 py-3.5 border-2 border-gray-100 rounded-xl focus:border-blue-400 focus:outline-none text-slate-800 font-bold text-lg bg-slate-50"
+                  className="w-full pl-14 pr-4 py-3.5 border-2 border-gray-100 dark:border-slate-800 rounded-xl focus:border-blue-400 focus:outline-none text-slate-800 dark:text-slate-100 font-bold text-lg bg-slate-50 dark:bg-slate-900"
                   required
                 />
               </div>
@@ -272,7 +272,7 @@ export default function Withdraw() {
 
             {/* Full Name */}
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Full Name</label>
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Full Name</label>
               <div className="relative">
                 <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -280,7 +280,7 @@ export default function Withdraw() {
                   value={accountName}
                   onChange={e => setAccountName(e.target.value)}
                   placeholder="Your full name on the account"
-                  className="w-full pl-10 pr-4 py-3.5 border-2 border-gray-100 rounded-xl focus:border-blue-400 focus:outline-none text-slate-800 font-medium bg-slate-50"
+                  className="w-full pl-10 pr-4 py-3.5 border-2 border-gray-100 dark:border-slate-800 rounded-xl focus:border-blue-400 focus:outline-none text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-900"
                   required
                 />
               </div>
@@ -288,7 +288,7 @@ export default function Withdraw() {
 
             {/* Account / Phone Number */}
             <div>
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                 {selected.type === 'telebirr' || selected.type === 'mpesa' ? 'Phone Number' : 'Account Number'}
               </label>
               <div className="relative">
@@ -298,7 +298,7 @@ export default function Withdraw() {
                   value={accountNumber}
                   onChange={e => setAccountNumber(e.target.value)}
                   placeholder={selected.type === 'telebirr' || selected.type === 'mpesa' ? '09XXXXXXXX' : 'Account number'}
-                  className="w-full pl-10 pr-4 py-3.5 border-2 border-gray-100 rounded-xl focus:border-blue-400 focus:outline-none text-slate-800 font-medium bg-slate-50"
+                  className="w-full pl-10 pr-4 py-3.5 border-2 border-gray-100 dark:border-slate-800 rounded-xl focus:border-blue-400 focus:outline-none text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-900"
                   required
                 />
               </div>
@@ -330,7 +330,7 @@ export default function Withdraw() {
 
   // ── STEP: LIST ────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Header */}
       <div className="bg-gradient-to-r from-slate-800 to-slate-900 px-4 pt-6 pb-8">
         <div className="flex items-center space-x-3 mb-4">
@@ -339,7 +339,7 @@ export default function Withdraw() {
           </Link>
           <h1 className="text-xl font-black text-white">Withdraw</h1>
         </div>
-        <div className="bg-white/10 backdrop-blur rounded-2xl p-4 text-white">
+        <div className="bg-white dark:bg-slate-900/10 backdrop-blur rounded-2xl p-4 text-white">
           <p className="text-white/70 text-sm font-medium">Main Balance</p>
           <p className="text-3xl font-black">{userBalance.toLocaleString('en-US')} <span className="text-xl">ETB</span></p>
           <p className="text-white/60 text-xs mt-1">Only main balance can be withdrawn</p>
@@ -348,9 +348,9 @@ export default function Withdraw() {
 
       {/* Methods */}
       <div className="px-4 -mt-4 pb-8">
-        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-50">
-            <h2 className="font-black text-slate-700 text-sm uppercase tracking-wider">Select Withdrawal Method</h2>
+            <h2 className="font-black text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wider">Select Withdrawal Method</h2>
           </div>
 
           {methods.length === 0 ? (
@@ -370,7 +370,7 @@ export default function Withdraw() {
                   <button
                     key={method.id}
                     onClick={() => { setSelected(method); setError(''); setStep('form'); }}
-                    className="w-full flex items-center px-5 py-4 space-x-4 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+                    className="w-full flex items-center px-5 py-4 space-x-4 hover:bg-slate-50 dark:bg-slate-900 active:bg-slate-100 dark:bg-slate-800 transition-colors"
                   >
                     <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center text-2xl shadow-sm`}>
                       {method.logo_url ? (
@@ -380,7 +380,7 @@ export default function Withdraw() {
                       )}
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-black text-slate-800">{label}</p>
+                      <p className="font-black text-slate-800 dark:text-slate-100">{label}</p>
                       <p className="text-xs text-slate-400 font-medium mt-0.5">Min: {method.min_withdrawal.toLocaleString('en-US')} ETB</p>
                     </div>
                     <ChevronRight size={18} className="text-slate-300" />

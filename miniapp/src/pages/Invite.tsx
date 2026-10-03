@@ -46,18 +46,18 @@ export default function Invite() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-24">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col pb-24">
       {/* HEADER */}
-      <div className="bg-white px-4 pt-6 pb-4 shadow-sm border-b border-gray-100 flex items-center sticky top-0 z-10">
+      <div className="bg-white dark:bg-slate-900 px-4 pt-6 pb-4 shadow-sm border-b border-gray-100 dark:border-slate-800 flex items-center sticky top-0 z-10">
         <button
           onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 active:bg-slate-200 transition-colors"
+          className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 active:bg-slate-200 transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
         <div className="ml-4 flex-1">
-          <h1 className="text-xl font-black text-slate-800 tracking-tight">Invite Friends</h1>
-          <p className="text-xs text-slate-500 font-medium">Earn bonus ETB</p>
+          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Invite Friends</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Earn bonus ETB</p>
         </div>
       </div>
 
@@ -65,8 +65,8 @@ export default function Invite() {
 
         {/* COMPACT HERO BANNER */}
         <div className="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl p-4 text-white shadow-sm relative overflow-hidden flex items-center space-x-4 shrink-0">
-          <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full -mr-8 -mt-8 blur-xl"></div>
-          <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center shrink-0 backdrop-blur-sm z-10">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-white dark:bg-slate-900/10 rounded-full -mr-8 -mt-8 blur-xl"></div>
+          <div className="w-12 h-12 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center shrink-0 backdrop-blur-sm z-10">
             <Gift size={24} className="text-white" />
           </div>
           <div className="z-10">
@@ -78,15 +78,15 @@ export default function Invite() {
         </div>
 
         {/* LINK SECTION (MOVED UP) */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 shrink-0">
-          <label className="block text-xs font-bold text-slate-700 mb-2">Your Invite Link</label>
-          <div className="flex bg-slate-50 border border-slate-200 rounded-xl overflow-hidden p-1 mb-3">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-slate-800 shrink-0">
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Your Invite Link</label>
+          <div className="flex bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden p-1 mb-3">
             <div className="flex-1 px-2 py-2 overflow-x-auto whitespace-nowrap hide-scrollbar flex items-center">
-              <span className="text-[11px] font-medium text-slate-600">{inviteLink}</span>
+              <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">{inviteLink}</span>
             </div>
             <button
               onClick={handleCopy}
-              className={`shrink-0 w-10 h-8 rounded-lg flex items-center justify-center transition-colors ${copied ? 'bg-emerald-500 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'}`}
+              className={`shrink-0 w-10 h-8 rounded-lg flex items-center justify-center transition-colors ${copied ? 'bg-emerald-500 text-white' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:bg-slate-800'}`}
             >
               {copied ? <Check size={14} /> : <Copy size={14} />}
             </button>
@@ -102,28 +102,28 @@ export default function Invite() {
         </div>
 
         {/* COMPACT HOW IT WORKS */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex-1">
-          <h3 className="text-xs font-bold text-slate-800 mb-3">How it works</h3>
+        <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-slate-800 flex-1">
+          <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 mb-3">How it works</h3>
           <div className="space-y-3">
             <div className="flex items-center">
               <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center font-black text-[10px] shrink-0 mr-3">1</div>
               <div>
-                <p className="text-xs font-bold text-slate-700">Share your link</p>
-                <p className="text-[10px] text-slate-500 font-medium mt-0.5">Send your invite link to friends.</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Share your link</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">Send your invite link to friends.</p>
               </div>
             </div>
             <div className="flex items-center">
               <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center font-black text-[10px] shrink-0 mr-3">2</div>
               <div>
-                <p className="text-xs font-bold text-slate-700">Friend joins & deposits</p>
-                <p className="text-[10px] text-slate-500 font-medium mt-0.5">They start the bot and make their 1st deposit.</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Friend joins & deposits</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">They start the bot and make their 1st deposit.</p>
               </div>
             </div>
             <div className="flex items-center">
               <div className="w-7 h-7 rounded-full bg-purple-50 text-purple-500 flex items-center justify-center font-black text-[10px] shrink-0 mr-3">3</div>
               <div>
-                <p className="text-xs font-bold text-slate-700">You get rewarded!</p>
-                <p className="text-[10px] text-slate-500 font-medium mt-0.5">You instantly receive 10% in your Bonus Balance.</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">You get rewarded!</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">You instantly receive 10% in your Bonus Balance.</p>
               </div>
             </div>
           </div>

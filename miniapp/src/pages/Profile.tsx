@@ -10,7 +10,7 @@ import WebApp from '@twa-dev/sdk';
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export default function Profile() {
-  const { user, isProfileOpen, setProfileOpen } = useGameStore();
+  const { user, isProfileOpen, setProfileOpen, isDarkMode, toggleDarkMode } = useGameStore();
   const [supportUsername, setSupportUsername] = useState('adwabingo_admin');
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
@@ -68,7 +68,7 @@ export default function Profile() {
 
       {/* SIDEBAR */}
       <div 
-        className={`fixed top-0 left-0 h-full w-[75%] max-w-[320px] bg-slate-50 z-50 transform transition-transform duration-300 ease-in-out shadow-2xl flex flex-col ${
+        className={`fixed top-0 left-0 h-full w-[75%] max-w-[320px] bg-slate-50 dark:bg-slate-900 dark:bg-slate-900 border-r dark:border-slate-800 z-50 transform transition-transform duration-300 ease-in-out shadow-2xl flex flex-col overflow-hidden ${
           isProfileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -108,14 +108,14 @@ export default function Profile() {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-2.5 border border-white/10 flex flex-col">
+            <div className="bg-white dark:bg-slate-900/10 backdrop-blur-md rounded-xl p-2.5 border border-white/10 flex flex-col">
               <div className="flex items-center space-x-1.5 text-white/70 mb-0.5">
                 <Wallet size={12} />
                 <p className="text-[9px] font-bold uppercase tracking-wider">Main</p>
               </div>
               <p className="text-lg font-black text-white">{formatMoney(user?.main_balance)} <span className="text-[9px]">ETB</span></p>
             </div>
-            <div className="bg-white/10 backdrop-blur-md rounded-xl p-2.5 border border-white/10 flex flex-col">
+            <div className="bg-white dark:bg-slate-900/10 backdrop-blur-md rounded-xl p-2.5 border border-white/10 flex flex-col">
               <div className="flex items-center space-x-1.5 text-purple-300 mb-0.5">
                 <Gift size={12} />
                 <p className="text-[9px] font-bold uppercase tracking-wider">Bonus</p>
@@ -133,87 +133,87 @@ export default function Profile() {
               <PlusCircle size={18} className="mb-0.5" />
               <span className="font-bold text-[10px]">Deposit</span>
             </button>
-            <button onClick={() => navigateTo('/withdraw')} className="bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors text-slate-700 rounded-xl py-2 flex flex-col items-center justify-center shadow-sm border border-gray-100">
+            <button onClick={() => navigateTo('/withdraw')} className="bg-white dark:bg-slate-900 hover:bg-gray-50 active:bg-gray-100 transition-colors text-slate-700 dark:text-slate-200 rounded-xl py-2 flex flex-col items-center justify-center shadow-sm border border-gray-100 dark:border-slate-800">
               <ArrowDownToLine size={18} className="mb-0.5" />
               <span className="font-bold text-[10px]">Withdraw</span>
             </button>
-            <button onClick={handleInvite} className="bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors text-slate-700 rounded-xl py-2 flex flex-col items-center justify-center shadow-sm border border-gray-100">
+            <button onClick={handleInvite} className="bg-white dark:bg-slate-900 hover:bg-gray-50 active:bg-gray-100 transition-colors text-slate-700 dark:text-slate-200 rounded-xl py-2 flex flex-col items-center justify-center shadow-sm border border-gray-100 dark:border-slate-800">
               <Share2 size={18} className="mb-0.5 text-blue-500" />
               <span className="font-bold text-[10px]">Invite</span>
             </button>
-            <button onClick={() => navigateTo('/transfer')} className="bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors text-slate-700 rounded-xl py-2 flex flex-col items-center justify-center shadow-sm border border-gray-100">
+            <button onClick={() => navigateTo('/transfer')} className="bg-white dark:bg-slate-900 hover:bg-gray-50 active:bg-gray-100 transition-colors text-slate-700 dark:text-slate-200 rounded-xl py-2 flex flex-col items-center justify-center shadow-sm border border-gray-100 dark:border-slate-800">
               <ArrowRightLeft size={18} className="mb-0.5 text-emerald-500" />
               <span className="font-bold text-[10px]">Transfer</span>
             </button>
           </div>
 
           {/* VERTICAL LIST */}
-          <div className="bg-white rounded-[1rem] p-1.5 shadow-sm border border-gray-100 flex flex-col flex-1 justify-around">
+          <div className="bg-white dark:bg-slate-900 rounded-[1rem] p-1.5 shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col flex-1 justify-around">
             
-            <button onClick={() => navigateTo('/deposit-history')} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 rounded-lg transition-colors active:bg-slate-100 text-left">
+            <button onClick={() => navigateTo('/deposit-history')} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 dark:bg-slate-900 rounded-lg transition-colors active:bg-slate-100 dark:bg-slate-800 text-left">
               <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center mr-2.5 shrink-0">
                 <History size={14} />
               </div>
-              <span className="flex-1 font-bold text-slate-700 text-[10px]">Deposit History</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Deposit History</span>
               <ChevronRight size={12} className="text-slate-300" />
             </button>
 
-            <button onClick={() => navigateTo('/withdraw-history')} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 rounded-lg transition-colors active:bg-slate-100 text-left">
+            <button onClick={() => navigateTo('/withdraw-history')} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 dark:bg-slate-900 rounded-lg transition-colors active:bg-slate-100 dark:bg-slate-800 text-left">
               <div className="w-7 h-7 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mr-2.5 shrink-0">
                 <History size={14} />
               </div>
-              <span className="flex-1 font-bold text-slate-700 text-[10px]">Withdraw History</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Withdraw History</span>
               <ChevronRight size={12} className="text-slate-300" />
             </button>
 
-            <button onClick={() => { if(typeof WebApp !== 'undefined') WebApp.showAlert('Games Report coming soon!') }} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 rounded-lg transition-colors active:bg-slate-100 text-left">
+            <button onClick={() => { if(typeof WebApp !== 'undefined') WebApp.showAlert('Games Report coming soon!') }} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 dark:bg-slate-900 rounded-lg transition-colors active:bg-slate-100 dark:bg-slate-800 text-left">
               <div className="w-7 h-7 rounded-full bg-teal-50 text-teal-500 flex items-center justify-center mr-2.5 shrink-0">
                 <BarChart2 size={14} />
               </div>
-              <span className="flex-1 font-bold text-slate-700 text-[10px]">Games Report</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Games Report</span>
               <ChevronRight size={12} className="text-slate-300" />
             </button>
 
-            <button onClick={() => navigateTo('/invited')} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 rounded-lg transition-colors active:bg-slate-100 text-left">
+            <button onClick={() => navigateTo('/invited')} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 dark:bg-slate-900 rounded-lg transition-colors active:bg-slate-100 dark:bg-slate-800 text-left">
               <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mr-2.5 shrink-0">
                 <Users size={14} />
               </div>
-              <span className="flex-1 font-bold text-slate-700 text-[10px]">Invite Person</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Invite Person</span>
               <ChevronRight size={12} className="text-slate-300" />
             </button>
 
-            <button onClick={() => { if(typeof WebApp !== 'undefined') WebApp.showAlert('English is currently selected.') }} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 rounded-lg transition-colors active:bg-slate-100 text-left">
+            <button onClick={() => { if(typeof WebApp !== 'undefined') WebApp.showAlert('English is currently selected.') }} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 dark:bg-slate-900 rounded-lg transition-colors active:bg-slate-100 dark:bg-slate-800 text-left">
               <div className="w-7 h-7 rounded-full bg-purple-50 text-purple-500 flex items-center justify-center mr-2.5 shrink-0">
                 <Globe size={14} />
               </div>
-              <span className="flex-1 font-bold text-slate-700 text-[10px]">Language</span>
-              <span className="text-[8px] font-black text-slate-400 mr-2 uppercase bg-slate-100 px-1.5 py-0.5 rounded">EN</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Language</span>
+              <span className="text-[8px] font-black text-slate-400 mr-2 uppercase bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">EN</span>
               <ChevronRight size={12} className="text-slate-300" />
             </button>
 
-            <button onClick={() => { if(typeof WebApp !== 'undefined') WebApp.showAlert('Dark Mode coming soon!') }} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 rounded-lg transition-colors active:bg-slate-100 text-left">
-              <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mr-2.5 shrink-0">
+            <button onClick={toggleDarkMode} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 dark:bg-slate-900 dark:hover:bg-slate-800 rounded-lg transition-colors active:bg-slate-100 dark:bg-slate-800 dark:active:bg-slate-700 text-left">
+              <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 dark:bg-slate-700 text-slate-600 dark:text-slate-300 dark:text-slate-300 flex items-center justify-center mr-2.5 shrink-0">
                 <Moon size={14} />
               </div>
-              <span className="flex-1 font-bold text-slate-700 text-[10px]">Dark Mode</span>
-              <div className="w-6 h-3 bg-slate-200 rounded-full relative mr-2">
-                <div className="w-3 h-3 bg-white rounded-full absolute left-0 shadow-sm border border-slate-200"></div>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 dark:text-slate-200 text-[10px]">Dark Mode</span>
+              <div className={`w-8 h-4 rounded-full relative mr-2 transition-colors ${isDarkMode ? 'bg-violet-500' : 'bg-slate-200'}`}>
+                <div className={`w-3.5 h-3.5 bg-white dark:bg-slate-900 rounded-full absolute top-[1px] shadow-sm transition-all duration-300 ${isDarkMode ? 'left-[17px]' : 'left-[1px]'}`}></div>
               </div>
             </button>
 
-            <button onClick={handleSupport} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 rounded-lg transition-colors active:bg-slate-100 text-left">
+            <button onClick={handleSupport} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 dark:bg-slate-900 rounded-lg transition-colors active:bg-slate-100 dark:bg-slate-800 text-left">
               <div className="w-7 h-7 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center mr-2.5 shrink-0">
                 <Headphones size={14} />
               </div>
-              <span className="flex-1 font-bold text-slate-700 text-[10px]">Support Team</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Support Team</span>
               <ChevronRight size={12} className="text-slate-300" />
             </button>
 
-            <button onClick={handleChannel} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 rounded-lg transition-colors active:bg-slate-100 text-left">
+            <button onClick={handleChannel} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 dark:bg-slate-900 rounded-lg transition-colors active:bg-slate-100 dark:bg-slate-800 text-left">
               <div className="w-7 h-7 rounded-full bg-indigo-50 text-indigo-500 flex items-center justify-center mr-2.5 shrink-0">
                 <Megaphone size={14} />
               </div>
-              <span className="flex-1 font-bold text-slate-700 text-[10px]">Channel</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Channel</span>
               <ChevronRight size={12} className="text-slate-300" />
             </button>
 

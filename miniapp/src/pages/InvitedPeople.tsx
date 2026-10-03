@@ -70,19 +70,19 @@ export default function InvitedPeople() {
   const pendingCount = invited.length - depositedCount;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-6">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex flex-col pb-6">
 
       {/* HEADER */}
-      <div className="bg-white px-4 pt-6 pb-4 shadow-sm border-b border-gray-100 flex items-center sticky top-0 z-10">
+      <div className="bg-white dark:bg-slate-900 px-4 pt-6 pb-4 shadow-sm border-b border-gray-100 dark:border-slate-800 flex items-center sticky top-0 z-10">
         <button
           onClick={handleBack}
-          className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 active:bg-slate-200 transition-colors"
+          className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 active:bg-slate-200 transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
         <div className="ml-4 flex-1">
-          <h1 className="text-xl font-black text-slate-800 tracking-tight">Invited Friends</h1>
-          <p className="text-xs text-slate-500 font-medium">People you brought to ADWA Bingo</p>
+          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Invited Friends</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">People you brought to ADWA Bingo</p>
         </div>
       </div>
 
@@ -90,22 +90,22 @@ export default function InvitedPeople() {
 
         {/* STATS ROW */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 text-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 shadow-sm border border-gray-100 dark:border-slate-800 text-center">
             <div className="w-8 h-8 bg-violet-50 rounded-full flex items-center justify-center mx-auto mb-1.5">
               <Users size={16} className="text-violet-500" />
             </div>
-            <p className="text-2xl font-black text-slate-800">{invited.length}</p>
+            <p className="text-2xl font-black text-slate-800 dark:text-slate-100">{invited.length}</p>
             <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Total Invited</p>
           </div>
-          <div className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100 text-center">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 shadow-sm border border-gray-100 dark:border-slate-800 text-center">
             <div className="w-8 h-8 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-1.5">
               <CheckCircle2 size={16} className="text-emerald-500" />
             </div>
-            <p className="text-2xl font-black text-slate-800">{depositedCount}</p>
+            <p className="text-2xl font-black text-slate-800 dark:text-slate-100">{depositedCount}</p>
             <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Deposited</p>
           </div>
           <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-3 shadow-sm text-center">
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-1.5">
+            <div className="w-8 h-8 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center mx-auto mb-1.5">
               <Gift size={16} className="text-white" />
             </div>
             <p className="text-2xl font-black text-white">{totalEarned.toLocaleString('en-US')}</p>
@@ -121,11 +121,11 @@ export default function InvitedPeople() {
           </div>
         ) : invited.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-52 text-center">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-3">
+            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
               <UserPlus size={28} className="text-slate-300" />
             </div>
-            <h3 className="text-base font-black text-slate-700 mb-1">No Invites Yet</h3>
-            <p className="text-xs text-slate-500 mb-4 max-w-[200px]">Share your invite link to earn 10% bonus from every friend's first deposit!</p>
+            <h3 className="text-base font-black text-slate-700 dark:text-slate-200 mb-1">No Invites Yet</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-[200px]">Share your invite link to earn 10% bonus from every friend's first deposit!</p>
             <button
               onClick={() => navigate('/invite')}
               className="bg-violet-500 text-white px-5 py-2.5 rounded-xl font-black text-sm active:scale-95 transition-transform"
@@ -135,9 +135,9 @@ export default function InvitedPeople() {
           </div>
         ) : (
           <div className="space-y-2.5">
-            <p className="text-xs font-bold text-slate-500 px-1">Friends List ({invited.length})</p>
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1">Friends List ({invited.length})</p>
             {invited.map((user) => (
-              <div key={user.telegram_id} className="bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 flex items-center">
+              <div key={user.telegram_id} className="bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-sm border border-gray-100 dark:border-slate-800 flex items-center">
 
                 {/* AVATAR */}
                 <div className={`w-10 h-10 rounded-full ${getColor(user.telegram_id)} flex items-center justify-center text-white font-black text-base shrink-0 mr-3`}>
@@ -146,7 +146,7 @@ export default function InvitedPeople() {
 
                 {/* INFO */}
                 <div className="flex-1 min-w-0">
-                  <p className="font-black text-sm text-slate-800 truncate">{user.first_name}</p>
+                  <p className="font-black text-sm text-slate-800 dark:text-slate-100 truncate">{user.first_name}</p>
                   <div className="flex items-center space-x-1.5 mt-0.5">
                     {user.has_deposited ? (
                       <span className="flex items-center space-x-0.5 text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">

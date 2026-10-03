@@ -28,7 +28,7 @@ function Navigation() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe z-40">
+    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 pb-safe z-40 transition-colors">
       <div className="flex justify-around items-center h-16">
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -48,7 +48,7 @@ function Navigation() {
                 }
               }}
               className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
-                isActive ? 'text-yellow-600' : 'text-gray-400 hover:text-gray-600'
+                isActive ? 'text-yellow-600 dark:text-yellow-500' : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300'
               }`}
             >
               <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
@@ -88,11 +88,19 @@ import Invite from './pages/Invite';
 import InvitedPeople from './pages/InvitedPeople';
 
 function App() {
-  const { fetchUser, subscribeToBalance } = useGameStore();
+  const { fetchUser, subscribeToBalance, isDarkMode } = useGameStore();
 
   useEffect(() => {
     WebApp.ready();
     WebApp.expand();
+    
+    // Apply dark mode on initial load
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
     fetchUser().then(() => {
       const unsub = subscribeToBalance();
       return unsub;

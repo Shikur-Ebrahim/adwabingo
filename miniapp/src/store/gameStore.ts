@@ -14,7 +14,9 @@ interface GameStore {
   loading: boolean;
   error: string | null;
   isProfileOpen: boolean;
+  isDarkMode: boolean;
   setProfileOpen: (isOpen: boolean) => void;
+  toggleDarkMode: () => void;
   fetchUser: () => Promise<void>;
   subscribeToBalance: () => () => void;
 }
@@ -28,7 +30,14 @@ export const useGameStore = create<GameStore>()(
       loading: false,
       error: null,
       isProfileOpen: false,
+      isDarkMode: false,
       setProfileOpen: (isOpen: boolean) => set({ isProfileOpen: isOpen }),
+      toggleDarkMode: () => set((state) => {
+        const newMode = !state.isDarkMode;
+        if (newMode) document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
+        return { isDarkMode: newMode };
+      }),
 
       fetchUser: async () => {
         try {

@@ -23,7 +23,7 @@ export default function Admin() {
     fetchStats();
   }, []);
 
-  if (user?.role !== 'admin') return <div className="p-10 text-center font-bold text-slate-600">Admin only!</div>;
+  if (user?.role !== 'admin') return <div className="p-10 text-center font-bold text-slate-600 dark:text-slate-300">Admin only!</div>;
 
   const adminModules = [
     { id: 'dep_methods', title: 'Deposit Methods', icon: Landmark, color: 'text-blue-600', bg: 'bg-blue-100' },
@@ -37,7 +37,7 @@ export default function Admin() {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 p-4 pt-6 pb-8">
+    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900 p-4 pt-6 pb-8">
       <div className="grid grid-cols-2 gap-3">
         {adminModules.map((mod) => {
           const Icon = mod.icon;
@@ -47,12 +47,12 @@ export default function Admin() {
               <Link 
                 key={mod.id}
                 to="/admin/deposit-methods" 
-                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
+                className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
               >
                 <div className={`w-12 h-12 rounded-2xl ${mod.bg} ${mod.color} flex items-center justify-center shadow-inner`}>
                   <Icon size={24} strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
+                <span className="font-bold text-sm text-slate-700 dark:text-slate-200 text-center">{mod.title}</span>
               </Link>
             )
           }
@@ -62,12 +62,12 @@ export default function Admin() {
               <Link
                 key={mod.id}
                 to="/admin/withdrawal-methods"
-                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
+                className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
               >
                 <div className={`w-12 h-12 rounded-2xl ${mod.bg} ${mod.color} flex items-center justify-center shadow-inner`}>
                   <Icon size={24} strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
+                <span className="font-bold text-sm text-slate-700 dark:text-slate-200 text-center">{mod.title}</span>
               </Link>
             )
           }
@@ -77,13 +77,13 @@ export default function Admin() {
               <Link
                 key={mod.id}
                 to="/admin/deposits"
-                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
+                className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
               >
                 <div className={`w-12 h-12 rounded-2xl ${mod.bg} ${mod.color} flex items-center justify-center shadow-inner`}>
                   <Icon size={24} strokeWidth={2.5} />
                 </div>
                 <div className="flex items-center justify-center space-x-1.5">
-                  <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
+                  <span className="font-bold text-sm text-slate-700 dark:text-slate-200 text-center">{mod.title}</span>
                   {stats.pendingDeposits > 0 && (
                     <span className="bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md animate-pulse shadow-sm">
                       {stats.pendingDeposits}
@@ -99,13 +99,13 @@ export default function Admin() {
               <Link
                 key={mod.id}
                 to="/admin/withdrawals"
-                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
+                className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
               >
                 <div className={`w-12 h-12 rounded-2xl ${mod.bg} ${mod.color} flex items-center justify-center shadow-inner`}>
                   <Icon size={24} strokeWidth={2.5} />
                 </div>
                 <div className="flex items-center justify-center space-x-1.5">
-                  <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
+                  <span className="font-bold text-sm text-slate-700 dark:text-slate-200 text-center">{mod.title}</span>
                   {stats.pendingWithdrawals > 0 && (
                     <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md animate-pulse shadow-sm">
                       {stats.pendingWithdrawals}
@@ -119,12 +119,12 @@ export default function Admin() {
           return (
             <button 
               key={mod.id} 
-              className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
+              className="bg-white dark:bg-slate-900 p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
             >
               <div className={`w-12 h-12 rounded-2xl ${mod.bg} ${mod.color} flex items-center justify-center shadow-inner`}>
                 <Icon size={24} strokeWidth={2.5} />
               </div>
-              <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
+              <span className="font-bold text-sm text-slate-700 dark:text-slate-200 text-center">{mod.title}</span>
             </button>
           )
         })}
