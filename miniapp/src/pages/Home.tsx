@@ -76,15 +76,18 @@ export default function Home() {
           </button>
         </div>
         
-        <div className="relative rounded-2xl overflow-hidden shadow-md bg-gradient-to-br from-yellow-300 to-yellow-500 h-40 flex flex-col items-center justify-center cursor-pointer transform transition-transform hover:scale-[1.02]">
-          <h1 className="text-4xl font-black text-white drop-shadow-md tracking-widest uppercase">BINGO</h1>
-          <div className="mt-2 bg-slate-900 text-yellow-400 px-6 py-1.5 rounded-full font-bold text-sm shadow-lg">
-            PLAY NOW
+        <div className="relative rounded-2xl overflow-hidden shadow-md h-44 cursor-pointer transform transition-transform hover:scale-[1.02] bg-slate-900">
+          <img 
+            src="/banner.jpg" 
+            alt="Adwa Bingo" 
+            className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+          <div className="absolute bottom-3 left-0 right-0 flex justify-center">
+            <div className="bg-yellow-400 text-yellow-950 px-6 py-1.5 rounded-full font-bold text-sm shadow-lg border border-yellow-300">
+              PLAY NOW
+            </div>
           </div>
-          {/* Decorative circles to look like bingo balls */}
-          <div className="absolute top-4 left-6 w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center font-bold shadow-inner text-xs">B</div>
-          <div className="absolute bottom-6 right-8 w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center font-bold shadow-inner text-sm">O</div>
-          <div className="absolute top-1/2 left-1/4 w-9 h-9 rounded-full bg-green-500 text-white flex items-center justify-center font-bold shadow-inner text-xs">I</div>
         </div>
       </div>
 
