@@ -1,7 +1,30 @@
+import { useState, useEffect } from 'react';
+import { useGameStore } from '../store/gameStore';
 import { Users, UserCog, ArrowDownToLine, ArrowUpFromLine, Landmark, CreditCard, Gamepad2, Receipt } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import WebApp from '@twa-dev/sdk';
+
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export default function Admin() {
+  const { user } = useGameStore();
+  const [stats, setStats] = useState({ pendingDeposits: 0 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const initData = typeof WebApp !== 'undefined' ? WebApp.initData : '';
+        const res = await fetch(`${API_URL}/admin/stats`, {
+          headers: { 'x-telegram-init-data': initData }
+        });
+        if (res.ok) setStats(await res.json());
+      } catch (err) {}
+    };
+    fetchStats();
+  }, []);
+
+  if (user?.role !== 'admin') return <div className="p-10 text-center font-bold text-slate-600">Admin only!</div>;
+
   const adminModules = [
     { id: 'dep_methods', title: 'Deposit Methods', icon: Landmark, color: 'text-blue-600', bg: 'bg-blue-100' },
     { id: 'with_methods', title: 'Withdraw Methods', icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-100' },
@@ -54,8 +77,13 @@ export default function Admin() {
               <Link
                 key={mod.id}
                 to="/admin/deposits"
-                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
+                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95 relative"
               >
+                {stats.pendingDeposits > 0 && (
+                  <div className="absolute top-3 right-3 bg-rose-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-sm animate-pulse">
+                    {stats.pendingDeposits}
+                  </div>
+                )}
                 <div className={`w-12 h-12 rounded-2xl ${mod.bg} ${mod.color} flex items-center justify-center shadow-inner`}>
                   <Icon size={24} strokeWidth={2.5} />
                 </div>

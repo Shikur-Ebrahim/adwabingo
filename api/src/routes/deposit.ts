@@ -28,6 +28,19 @@ router.post('/request', async (req: AuthRequest, res) => {
     return;
   }
 
+  // Check if user already has a pending deposit
+  const { data: existingPending } = await supabase
+    .from('deposits')
+    .select('id')
+    .eq('telegram_id', telegramId)
+    .eq('status', 'pending')
+    .single();
+
+  if (existingPending) {
+    res.status(400).json({ error: 'You already have a pending deposit. Please wait for approval.' });
+    return;
+  }
+
   // Check min deposit
   const { data: method } = await supabase
     .from('deposit_methods')

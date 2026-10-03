@@ -142,4 +142,14 @@ router.delete('/deposits/:id/reject', async (req, res) => {
   res.json({ success: true });
 });
 
+// Get admin stats (e.g. pending deposit count)
+router.get('/stats', async (req, res) => {
+  const { count, error } = await supabase
+    .from('deposits')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'pending');
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ pendingDeposits: count || 0 });
+});
+
 export default router;

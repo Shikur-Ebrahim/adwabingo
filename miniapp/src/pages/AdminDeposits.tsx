@@ -29,6 +29,7 @@ export default function AdminDeposits() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'approved'>('pending');
+  const [timeFilter, setTimeFilter] = useState('all');
 
   const fetchDeposits = useCallback(async () => {
     try {
@@ -96,9 +97,36 @@ export default function AdminDeposits() {
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     return `${Math.floor(diff / 86400)}d ago`;
   };
+  };
 
-  const filteredDeposits = deposits.filter(d => d.status === activeTab);
+  const now = new Date();
+  const filteredDeposits = deposits.filter(d => {
+    if (d.status !== activeTab) return false;
+    if (timeFilter === 'all') return true;
+    
+    const date = new Date(d.created_at);
+    const diffDays = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24);
+    
+    if (timeFilter === 'today') return diffDays <= 1;
+    if (timeFilter === 'week') return diffDays <= 7;
+    if (timeFilter === 'month') return diffDays <= 30;
+    if (timeFilter === '3months') return diffDays <= 90;
+    if (timeFilter === '6months') return diffDays <= 180;
+    if (timeFilter === 'year') return diffDays <= 365;
+    return true;
+  });
+
   const pendingCount = deposits.filter(d => d.status === 'pending').length;
+
+  const filters = [
+    { id: 'all', label: 'All Time' },
+    { id: 'today', label: 'Today' },
+    { id: 'week', label: 'This Week' },
+    { id: 'month', label: 'This Month' },
+    { id: '3months', label: '3 Months' },
+    { id: '6months', label: '6 Months' },
+    { id: 'year', label: '1 Year' },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
@@ -122,7 +150,7 @@ export default function AdminDeposits() {
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-white px-4 py-3 space-x-2 border-b border-gray-100 shadow-sm mb-2 rounded-b-2xl">
+      <div className="flex bg-white px-4 py-3 space-x-2 border-b border-gray-100">
         <button 
           onClick={() => setActiveTab('pending')}
           className={`flex-1 py-2 font-bold text-sm rounded-xl transition-colors ${activeTab === 'pending' ? 'bg-yellow-400 text-yellow-950 shadow-sm' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'}`}
@@ -135,6 +163,19 @@ export default function AdminDeposits() {
         >
           Approved History
         </button>
+      </div>
+
+      {/* Filter Chips */}
+      <div className="bg-white border-b border-gray-100 shadow-sm mb-2 rounded-b-2xl overflow-x-auto whitespace-nowrap px-4 py-2 flex space-x-2 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {filters.map(f => (
+          <button
+            key={f.id}
+            onClick={() => setTimeFilter(f.id)}
+            className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${timeFilter === f.id ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       <div className="p-4 space-y-3">

@@ -28,13 +28,14 @@ const typeBadge: Record<string, string> = {
   mpesa: 'bg-green-100 text-green-700',
 };
 
-type Step = 'list' | 'form' | 'success';
+type Step = 'list' | 'form' | 'success' | 'pending_status';
 
 export default function Deposit() {
   const [methods, setMethods] = useState<DepositMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<DepositMethod | null>(null);
   const [step, setStep] = useState<Step>('list');
+  const [pendingAmount, setPendingAmount] = useState<number | null>(null);
 
   // Form state
   const [amount, setAmount] = useState('');
@@ -55,10 +56,21 @@ export default function Deposit() {
   const fetchMethods = async () => {
     try {
       const initData = typeof WebApp !== 'undefined' ? WebApp.initData : '';
-      const res = await fetch(`${API_URL}/deposit/methods`, {
-        headers: { 'x-telegram-init-data': initData }
-      });
-      if (res.ok) setMethods(await res.json());
+      const [methodsRes, historyRes] = await Promise.all([
+        fetch(`${API_URL}/deposit/methods`, { headers: { 'x-telegram-init-data': initData } }),
+        fetch(`${API_URL}/deposit/history`, { headers: { 'x-telegram-init-data': initData } })
+      ]);
+
+      if (methodsRes.ok) setMethods(await methodsRes.json());
+      
+      if (historyRes.ok) {
+        const history = await historyRes.json();
+        const pending = history.find((d: any) => d.status === 'pending');
+        if (pending) {
+          setPendingAmount(pending.amount);
+          setStep('pending_status');
+        }
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -144,6 +156,29 @@ export default function Deposit() {
             <p className="text-xs text-yellow-700 font-semibold text-left">Your balance will be credited once an admin approves your payment. This usually takes a few minutes.</p>
           </div>
           <Link to="/" className="mt-6 block w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-950 font-black py-4 rounded-xl text-center transition-all active:scale-95">
+            Back to Home
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // ── STEP: PENDING STATUS ─────────────────────────────────────────────────────
+  if (step === 'pending_status') {
+    return (
+      <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
+        <div className="bg-white w-full max-w-sm rounded-3xl shadow-sm border border-gray-100 p-8 text-center">
+          <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-5 border-4 border-yellow-100">
+            <Clock size={40} className="text-yellow-500" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-800">Pending Review</h2>
+          <p className="text-slate-500 font-medium mt-2 leading-relaxed">
+            You already have a deposit of <span className="font-black text-slate-700">{pendingAmount?.toLocaleString('en-US')} ETB</span> waiting for approval.
+          </p>
+          <div className="mt-5 bg-blue-50 border border-blue-100 rounded-xl p-4">
+            <p className="text-xs text-blue-700 font-semibold text-center">Please wait for an admin to process your current request before making a new one.</p>
+          </div>
+          <Link to="/" className="mt-6 block w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-4 rounded-xl text-center transition-all active:scale-95">
             Back to Home
           </Link>
         </div>
