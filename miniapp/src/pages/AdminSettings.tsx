@@ -73,10 +73,15 @@ export default function AdminSettings() {
         showToast('success', 'Saved!');
         if (typeof WebApp !== 'undefined') WebApp.HapticFeedback.notificationOccurred('success');
       } else {
-        showToast('error', 'Failed');
+        try {
+          const d = await res.json();
+          showToast('error', d.error || `Error ${res.status}`);
+        } catch {
+          showToast('error', `HTTP ${res.status} - Update VPS!`);
+        }
       }
-    } catch {
-      showToast('error', 'Error');
+    } catch (err: any) {
+      showToast('error', err.message || 'Network Error');
     } finally {
       setSaving(null);
     }
