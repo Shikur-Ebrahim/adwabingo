@@ -174,7 +174,7 @@ export async function handleMethodSelect(ctx: Context, methodId: string) {
       parse_mode: 'Markdown',
       reply_markup: {
         inline_keyboard: [
-          [{ text: `📋 Copy: ${method.account_number}`, callback_data: `dep_copy_${method.account_number}` }],
+          [{ text: `📋 Copy: ${method.account_number}`, copy_text: { text: method.account_number } as any }],
           [{ text: '❌ Cancel', callback_data: 'dep_cancel' }],
         ],
       },
@@ -194,7 +194,7 @@ export async function handleMethodSelect(ctx: Context, methodId: string) {
   );
 }
 
-// ── Copy account number popup ─────────────────────────────────────────────────
+// ── Copy account number popup (Fallback if needed) ───────────────────────────
 export async function handleCopyAccount(ctx: Context, accountNumber: string) {
   await ctx.answerCallbackQuery({
     text: `Account: ${accountNumber}\n(Long press to copy)`,
@@ -257,7 +257,8 @@ export async function handleDepositScreenshot(ctx: Context) {
 
     // Download from Telegram
     const response = await fetch(fileUrl);
-    const buffer = await response.buffer();
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
     // Upload to R2
     const fileName = `deposits/bot_${userId}_${Date.now()}.jpg`;
