@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Clock, CheckCircle2, XCircle, ArrowDownToLine, Receipt } from 'lucide-react';
+import { ArrowLeft, Clock, CheckCircle2, XCircle, ArrowDownToLine, Receipt, ChevronDown, ChevronUp, Image, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 
@@ -10,6 +10,7 @@ interface Deposit {
   amount: number;
   status: 'pending' | 'approved' | 'rejected';
   created_at: string;
+  screenshot_url?: string;
   deposit_methods?: {
     type: string;
     name: string;
@@ -19,6 +20,8 @@ interface Deposit {
 export default function DepositHistory() {
   const [history, setHistory] = useState<Deposit[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,7 +34,6 @@ export default function DepositHistory() {
             'x-telegram-init-data': initData
           }
         });
-        
         if (res.ok) {
           const data = await res.json();
           setHistory(data);
@@ -42,7 +44,6 @@ export default function DepositHistory() {
         setLoading(false);
       }
     };
-
     fetchHistory();
   }, []);
 
@@ -52,18 +53,19 @@ export default function DepositHistory() {
   };
 
   const getStatusConfig = (status: string) => {
-    switch(status) {
-      case 'approved': return { color: 'text-emerald-500', bg: 'bg-emerald-50', icon: CheckCircle2, label: 'Approved' };
-      case 'rejected': return { color: 'text-rose-500', bg: 'bg-rose-50', icon: XCircle, label: 'Rejected' };
-      default: return { color: 'text-amber-500', bg: 'bg-amber-50', icon: Clock, label: 'Pending' };
+    switch (status) {
+      case 'approved': return { color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: CheckCircle2, label: 'Approved', badgeBg: 'bg-emerald-100 text-emerald-700' };
+      case 'rejected': return { color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: XCircle, label: 'Rejected', badgeBg: 'bg-rose-100 text-rose-700' };
+      default: return { color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', icon: Clock, label: 'Pending', badgeBg: 'bg-amber-100 text-amber-700' };
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-24">
+
       {/* HEADER */}
       <div className="bg-white px-4 pt-6 pb-4 shadow-sm border-b border-gray-100 flex items-center sticky top-0 z-10">
-        <button 
+        <button
           onClick={() => navigate(-1)}
           className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 active:bg-slate-200 transition-colors"
         >
@@ -89,48 +91,100 @@ export default function DepositHistory() {
             </div>
             <h3 className="text-lg font-black text-slate-700 mb-1">No Deposits Yet</h3>
             <p className="text-sm text-slate-500 mb-6">You haven't made any deposits.</p>
-            <Link to="/deposit" className="bg-yellow-400 hover:bg-yellow-500 text-yellow-950 px-6 py-3 rounded-xl font-black text-sm shadow-sm transition-transform active:scale-95">
+            <Link to="/deposit" className="bg-yellow-400 hover:bg-yellow-500 text-yellow-950 px-6 py-3 rounded-xl font-black text-sm shadow-sm active:scale-95 transition-transform">
               Deposit Now
             </Link>
           </div>
         ) : (
           <div className="space-y-3">
             {history.map((deposit) => {
-              const { color, bg, icon: StatusIcon, label } = getStatusConfig(deposit.status);
-              
+              const { color, bg, border, icon: StatusIcon, label, badgeBg } = getStatusConfig(deposit.status);
+              const isExpanded = expandedId === deposit.id;
+
               return (
-                <div key={deposit.id} className="bg-white rounded-[1.25rem] p-4 shadow-sm border border-gray-100 flex items-center">
-                  <div className={`w-12 h-12 rounded-2xl ${bg} flex items-center justify-center shrink-0 mr-4`}>
-                    <ArrowDownToLine size={24} className={color} />
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold text-sm text-slate-800 truncate">
-                      {deposit.deposit_methods?.name || 'Bank Transfer'}
-                    </p>
-                    <div className="flex items-center space-x-1.5 mt-0.5">
-                      <StatusIcon size={12} className={color} />
-                      <span className={`text-[10px] font-black uppercase tracking-wider ${color}`}>
-                        {label}
-                      </span>
-                      <span className="text-slate-300 mx-1">•</span>
-                      <span className="text-[10px] font-semibold text-slate-400">
-                        {formatDate(deposit.created_at)}
-                      </span>
+                <div key={deposit.id} className={`bg-white rounded-[1.25rem] shadow-sm border ${border} overflow-hidden transition-all`}>
+                  {/* MAIN ROW */}
+                  <div className="p-4 flex items-center">
+                    <div className={`w-12 h-12 rounded-2xl ${bg} flex items-center justify-center shrink-0 mr-3`}>
+                      <ArrowDownToLine size={22} className={color} />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm text-slate-800 truncate">
+                        {deposit.deposit_methods?.name || 'Bank Transfer'}
+                      </p>
+                      <div className="flex items-center space-x-1.5 mt-0.5 flex-wrap gap-y-0.5">
+                        <span className={`text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full ${badgeBg} flex items-center space-x-0.5`}>
+                          <StatusIcon size={9} />
+                          <span>{label}</span>
+                        </span>
+                        <span className="text-[10px] font-semibold text-slate-400">
+                          {formatDate(deposit.created_at)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="text-right pl-2 shrink-0">
+                      <p className="font-black text-slate-800 text-base">+{deposit.amount.toLocaleString('en-US')}</p>
+                      <p className="text-[10px] font-bold text-slate-400">ETB</p>
                     </div>
                   </div>
 
-                  <div className="text-right pl-3">
-                    <p className="font-black text-slate-800">
-                      +{deposit.amount.toLocaleString('en-US')} <span className="text-xs">ETB</span>
-                    </p>
-                  </div>
+                  {/* VIEW DETAIL BUTTON */}
+                  {deposit.screenshot_url && (
+                    <button
+                      onClick={() => setExpandedId(isExpanded ? null : deposit.id)}
+                      className={`w-full flex items-center justify-center space-x-1.5 py-2.5 border-t ${border} text-xs font-bold transition-colors ${isExpanded ? `${bg} ${color}` : 'text-blue-500 hover:bg-blue-50'}`}
+                    >
+                      <Image size={13} />
+                      <span>{isExpanded ? 'Hide Screenshot' : 'View Screenshot'}</span>
+                      {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    </button>
+                  )}
+
+                  {/* SCREENSHOT PREVIEW */}
+                  {isExpanded && deposit.screenshot_url && (
+                    <div className="px-4 pb-4 pt-2">
+                      <div
+                        className="rounded-xl overflow-hidden border border-gray-100 cursor-zoom-in"
+                        onClick={() => setLightboxUrl(deposit.screenshot_url!)}
+                      >
+                        <img
+                          src={deposit.screenshot_url}
+                          alt="Payment receipt"
+                          className="w-full object-contain max-h-64"
+                        />
+                      </div>
+                      <p className="text-center text-[10px] text-slate-400 font-semibold mt-2">Tap image to view full size</p>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* LIGHTBOX (full-screen image viewer) */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <button
+            className="absolute top-5 right-5 text-white bg-white/20 rounded-full w-9 h-9 flex items-center justify-center"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <X size={20} />
+          </button>
+          <img
+            src={lightboxUrl}
+            alt="Payment receipt full"
+            className="max-w-full max-h-full rounded-2xl object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
