@@ -15,3 +15,9 @@ VALUES
   ('support_username', 'adwabingo_admin', 'Support Team Username', 'Telegram username for the support team (with or without @).'),
   ('channel_link', 'https://t.me/adwabingo', 'Channel Link', 'Full HTTPS link to the official Telegram channel.')
 ON CONFLICT (key) DO NOTHING;
+
+-- Enable Row Level Security
+ALTER TABLE settings ENABLE ROW LEVEL SECURITY;
+
+-- Allow all operations for anon key (since our backend uses it)
+CREATE POLICY "anon_all" ON settings FOR ALL TO anon USING (true) WITH CHECK (true);
