@@ -81,14 +81,14 @@ export default function Home() {
           </button>
         </div>
         
-        <div className="relative rounded-2xl overflow-hidden shadow-sm h-36 bg-white flex items-center justify-center border border-gray-100">
+        <div className="relative rounded-2xl overflow-hidden shadow-sm h-52 bg-white flex items-center justify-center border border-gray-100">
           <img 
             src="/banner.jpg" 
             alt="Adwa Bingo" 
-            className="w-full h-full object-contain"
+            className="w-full h-full object-cover"
           />
-          <div className="absolute bottom-2 left-0 right-0 flex justify-center">
-            <div className="bg-yellow-400 text-yellow-950 px-6 py-1.5 rounded-full font-bold text-xs shadow-md border border-yellow-300">
+          <div className="absolute bottom-3 left-0 right-0 flex justify-center">
+            <div className="bg-yellow-400 text-yellow-950 px-8 py-2 rounded-full font-bold text-sm shadow-md border border-yellow-300">
               PLAY NOW
             </div>
           </div>
@@ -99,7 +99,7 @@ export default function Home() {
       <div className="px-4 pb-4">
         <h2 className="font-bold text-slate-500 tracking-wider text-xs mb-2">SELECT MEDEB</h2>
         
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           {[
             { amount: 10, color: 'from-blue-400 to-blue-600' },
             { amount: 20, color: 'from-emerald-400 to-emerald-600' },
@@ -107,12 +107,12 @@ export default function Home() {
             { amount: 100, color: 'from-rose-400 to-rose-600' }
           ].map((stake) => (
             <div key={stake.amount} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-              <div className={`h-20 bg-gradient-to-br ${stake.color} flex items-center justify-center relative`}>
-                <span className="text-white font-black text-2xl drop-shadow-sm">{stake.amount}</span>
-                <span className="absolute top-2 right-2 bg-white/20 px-1.5 py-0.5 rounded text-[9px] font-bold text-white uppercase tracking-wider">ETB</span>
+              <div className={`h-12 bg-gradient-to-br ${stake.color} flex items-center justify-center relative`}>
+                <span className="text-white font-black text-xl drop-shadow-sm">{stake.amount}</span>
+                <span className="absolute top-1.5 right-1.5 bg-white/20 px-1.5 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-wider">ETB</span>
               </div>
-              <div className="p-2.5 text-center">
-                <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs transition-colors">
+              <div className="p-2 text-center">
+                <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-1.5 rounded-lg text-xs transition-colors">
                   Join Room
                 </button>
               </div>
