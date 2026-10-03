@@ -108,14 +108,14 @@ export default function Profile() {
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <div className="bg-white dark:bg-slate-900/10 backdrop-blur-md rounded-xl p-2.5 border border-white/10 flex flex-col">
+            <div className="bg-white/10 dark:bg-white/5 backdrop-blur-md rounded-xl p-2.5 border border-white/10 flex flex-col">
               <div className="flex items-center space-x-1.5 text-white/70 mb-0.5">
                 <Wallet size={12} />
                 <p className="text-[9px] font-bold uppercase tracking-wider">Main</p>
               </div>
               <p className="text-lg font-black text-white">{formatMoney(user?.main_balance)} <span className="text-[9px]">ETB</span></p>
             </div>
-            <div className="bg-white dark:bg-slate-900/10 backdrop-blur-md rounded-xl p-2.5 border border-white/10 flex flex-col">
+            <div className="bg-white/10 dark:bg-white/5 backdrop-blur-md rounded-xl p-2.5 border border-white/10 flex flex-col">
               <div className="flex items-center space-x-1.5 text-purple-300 mb-0.5">
                 <Gift size={12} />
                 <p className="text-[9px] font-bold uppercase tracking-wider">Bonus</p>
