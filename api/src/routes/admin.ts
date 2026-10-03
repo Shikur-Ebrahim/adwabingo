@@ -138,21 +138,30 @@ router.post('/deposits/:id/approve', async (req, res) => {
   });
   if (balErr) { res.status(500).json({ error: balErr.message }); return; }
 
-  // Check if first deposit and if they have an inviter
-  let bonusAmount = 0;
+  // Check if first deposit to apply bonuses
+  let depositorBonus = 0;
+  let inviterBonus = 0;
   let inviterId = null;
   
   if (isFirstDeposit) {
-    const { data: userRecord } = await supabase.from('users').select('inviter_id').eq('telegram_id', deposit.telegram_id).single();
-    if (userRecord && userRecord.inviter_id) {
-      inviterId = userRecord.inviter_id;
-      // 10% of the first deposit amount
-      bonusAmount = deposit.amount * 0.10;
+    // 1. Give 20% bonus to the DEPOSITOR
+    depositorBonus = deposit.amount * 0.20;
+    const { data: depRecord } = await supabase.from('users').select('bonus_balance, inviter_id').eq('telegram_id', deposit.telegram_id).single();
+    
+    if (depRecord) {
+      const currentDepBonus = Number(depRecord.bonus_balance || 0);
+      await supabase.from('users').update({ bonus_balance: currentDepBonus + depositorBonus }).eq('telegram_id', deposit.telegram_id);
       
-      const { data: inviterRecord } = await supabase.from('users').select('bonus_balance').eq('telegram_id', inviterId).single();
-      if (inviterRecord) {
-        const currentBonus = Number(inviterRecord.bonus_balance || 0);
-        await supabase.from('users').update({ bonus_balance: currentBonus + bonusAmount }).eq('telegram_id', inviterId);
+      // 2. Give 10% bonus to the INVITER (if they exist)
+      if (depRecord.inviter_id) {
+        inviterId = depRecord.inviter_id;
+        inviterBonus = deposit.amount * 0.10;
+        
+        const { data: invRecord } = await supabase.from('users').select('bonus_balance').eq('telegram_id', inviterId).single();
+        if (invRecord) {
+          const currentInvBonus = Number(invRecord.bonus_balance || 0);
+          await supabase.from('users').update({ bonus_balance: currentInvBonus + inviterBonus }).eq('telegram_id', inviterId);
+        }
       }
     }
   }
@@ -163,6 +172,9 @@ router.post('/deposits/:id/approve', async (req, res) => {
   // Send Telegram Notification to the depositor
   try {
     let msgText = `✅ *Deposit Approved!*\n\n💰 Amount: *${Number(deposit.amount).toLocaleString('en-US')} ETB* has been added to your balance.`;
+    if (isFirstDeposit) {
+      msgText += `\n\n🎁 *First Deposit Bonus!* You received an extra *${Number(depositorBonus).toLocaleString('en-US')} ETB* in your bonus balance!`;
+    }
     msgText += `\n\n🎮 Open the Mini App to start playing!`;
 
     await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
@@ -179,9 +191,9 @@ router.post('/deposits/:id/approve', async (req, res) => {
   }
 
   // Send Telegram Notification to the Inviter
-  if (inviterId && bonusAmount > 0) {
+  if (inviterId && inviterBonus > 0) {
     try {
-      const inviterMsg = `🎉 *Referral Bonus Received!*\n\nYour invited friend made their first deposit! You have received *${Number(bonusAmount).toLocaleString('en-US')} ETB* in your bonus balance. Keep inviting friends for more rewards! 🎁`;
+      const inviterMsg = `🎉 *Referral Bonus Received!*\n\nYour invited friend made their first deposit! You have received *${Number(inviterBonus).toLocaleString('en-US')} ETB* in your bonus balance. Keep inviting friends for more rewards! 🎁`;
       await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -196,7 +208,7 @@ router.post('/deposits/:id/approve', async (req, res) => {
     }
   }
 
-  res.json({ success: true, isFirstDeposit, bonusAmount });
+  res.json({ success: true, isFirstDeposit, depositorBonus, inviterBonus });
 });
 
 // Reject deposit → permanently delete from DB
