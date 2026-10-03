@@ -285,6 +285,33 @@ export async function handleDepositScreenshot(ctx: Context) {
 
     clearDepositSession(userId);
 
+    // ── Notify Workers ────────────────────────────────────────────────────────
+    try {
+      const { data: workers } = await supabase
+        .from('users')
+        .select('telegram_id')
+        .in('role', ['worker', 'admin']);
+
+      if (workers && workers.length > 0) {
+        const safeUsername = (ctx.from?.username || ctx.from?.first_name || 'User').replace(/[_*[\]]/g, '\\$&');
+        const safeMethodName = (session.methodName || 'Unknown').replace(/[_*[\]]/g, '\\$&');
+        
+        const notifyMsg = `🔔 *New Deposit Request!*\n\n` +
+                          `👤 User: @${safeUsername}\n` +
+                          `💰 Amount: *${Number(session.amount).toLocaleString('en-US')} ETB*\n` +
+                          `🏦 Method: *${safeMethodName}*\n\n` +
+                          `👇 Please check the Admin Dashboard to approve.`;
+
+        for (const worker of workers) {
+          if (!worker.telegram_id) continue;
+          await ctx.api.sendMessage(worker.telegram_id, notifyMsg, { parse_mode: 'Markdown' }).catch(e => console.error(e));
+        }
+      }
+    } catch (notifyErr) {
+      console.error('Failed to notify workers:', notifyErr);
+    }
+    // ──────────────────────────────────────────────────────────────────────────
+
     // Fetch support contact for success message
     let supportText = '📞 For support, contact our team.';
     let inlineKeyboard;

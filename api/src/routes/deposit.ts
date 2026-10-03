@@ -41,10 +41,10 @@ router.post('/request', async (req: AuthRequest, res) => {
     return;
   }
 
-  // Check min deposit
+  // Check min deposit and get method details
   const { data: method } = await supabase
     .from('deposit_methods')
-    .select('min_deposit')
+    .select('min_deposit, name, type')
     .eq('id', method_id)
     .single();
 
@@ -59,6 +59,52 @@ router.post('/request', async (req: AuthRequest, res) => {
     .select().single();
 
   if (error) { res.status(500).json({ error: error.message }); return; }
+
+  // Notify workers
+  try {
+    const { data: workers } = await supabase
+      .from('users')
+      .select('telegram_id')
+      .in('role', ['worker', 'admin']);
+
+    if (workers && workers.length > 0) {
+      const typeLabels: Record<string, string> = {
+        cbe: '🏦 Commercial Bank of Ethiopia',
+        boa: '🏛️ Bank of Abyssinia',
+        telebirr: '📱 Telebirr',
+        mpesa: '💚 M-Pesa',
+      };
+      
+      const safeUsername = (req.telegramUser?.username || req.telegramUser?.first_name || 'User').replace(/[_*[\]]/g, '\\$&');
+      const methodName = method ? (typeLabels[method.type] || method.name) : 'Unknown';
+      const safeMethodName = methodName.replace(/[_*[\]]/g, '\\$&');
+
+      const message = `🔔 *New Deposit Request!*\n\n` +
+                      `👤 User: @${safeUsername}\n` +
+                      `💰 Amount: *${Number(amount).toLocaleString('en-US')} ETB*\n` +
+                      `🏦 Method: *${safeMethodName}*\n\n` +
+                      `👇 Please check the Admin Dashboard to approve.`;
+
+      const botToken = process.env.BOT_TOKEN;
+      if (botToken) {
+        for (const worker of workers) {
+          if (!worker.telegram_id) continue;
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: worker.telegram_id,
+              text: message,
+              parse_mode: 'Markdown'
+            })
+          }).catch(e => console.error('Failed to send to worker:', e));
+        }
+      }
+    }
+  } catch (notifyErr) {
+    console.error('Notification error:', notifyErr);
+  }
+
   res.json({ success: true, deposit: data });
 });
 
