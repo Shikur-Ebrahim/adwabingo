@@ -330,6 +330,90 @@ router.delete('/withdrawals/:id/reject', async (req, res) => {
   res.json({ success: true });
 });
 
+// ─── TRANSACTION REPORT ────────────────────────────────────────────────────────
+router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) => {
+  const { from, to } = req.query;
+  
+  let dQuery = supabase.from('deposits').select('*, users!inner(username, inviter_id)');
+  let wQuery = supabase.from('withdrawals').select('*, users!inner(username)');
+
+  if (from) {
+    dQuery = dQuery.gte('created_at', from);
+    wQuery = wQuery.gte('created_at', from);
+  }
+  if (to) {
+    // Add 1 day to 'to' to include the whole day if it's just a YYYY-MM-DD
+    const toDate = new Date(to as string);
+    toDate.setUTCHours(23, 59, 59, 999);
+    dQuery = dQuery.lte('created_at', toDate.toISOString());
+    wQuery = wQuery.lte('created_at', toDate.toISOString());
+  }
+
+  const [dRes, wRes] = await Promise.all([dQuery, wQuery]);
+  const deposits = dRes.data || [];
+  const withdrawals = wRes.data || [];
+
+  // To calculate bonuses accurately, we need to know which deposits were the "first"
+  const { data: allApproved } = await supabase
+    .from('deposits')
+    .select('id, telegram_id, created_at')
+    .eq('status', 'approved')
+    .order('created_at', { ascending: true });
+
+  const firstDepositIds = new Set();
+  const seenUsers = new Set();
+  if (allApproved) {
+    for (const d of allApproved) {
+      if (!seenUsers.has(d.telegram_id)) {
+        seenUsers.add(d.telegram_id);
+        firstDepositIds.add(d.id);
+      }
+    }
+  }
+
+  // Current settings for bonuses (fallback to historical defaults)
+  const { data: setDep } = await supabase.from('settings').select('value').eq('key', 'first_deposit_bonus_pct').single();
+  const { data: setInv } = await supabase.from('settings').select('value').eq('key', 'invitation_reward_pct').single();
+  const depPct = setDep ? parseFloat(setDep.value) / 100 : 0.20;
+  const invPct = setInv ? parseFloat(setInv.value) / 100 : 0.10;
+
+  let totalDeposits = 0;
+  let totalWithdrawals = 0;
+  let totalDepBonus = 0;
+  let totalInvBonus = 0;
+
+  const txList: any[] = [];
+
+  deposits.forEach((d: any) => {
+    if (d.status === 'approved') totalDeposits += Number(d.amount);
+    txList.push({ id: d.id, type: 'deposit', amount: Number(d.amount), status: d.status, created_at: d.created_at, username: d.users.username, telegram_id: d.telegram_id });
+
+    if (d.status === 'approved' && firstDepositIds.has(d.id)) {
+      const db = Number(d.amount) * depPct;
+      totalDepBonus += db;
+      txList.push({ id: d.id + '_db', type: 'deposit_bonus', amount: db, status: 'approved', created_at: d.created_at, username: d.users.username, telegram_id: d.telegram_id });
+
+      if (d.users.inviter_id) {
+        const ib = Number(d.amount) * invPct;
+        totalInvBonus += ib;
+        txList.push({ id: d.id + '_ib', type: 'invitation_reward', amount: ib, status: 'approved', created_at: d.created_at, username: 'Inviter of ' + d.users.username, telegram_id: d.users.inviter_id });
+      }
+    }
+  });
+
+  withdrawals.forEach((w: any) => {
+    if (w.status === 'approved') totalWithdrawals += Number(w.amount);
+    txList.push({ id: w.id, type: 'withdrawal', amount: Number(w.amount), status: w.status, created_at: w.created_at, username: w.users.username, telegram_id: w.telegram_id });
+  });
+
+  txList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  res.json({
+    stats: { totalDeposits, totalWithdrawals, totalDepBonus, totalInvBonus },
+    transactions: txList
+  });
+});
+
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
 
 // GET /admin/settings — return all key/value settings
