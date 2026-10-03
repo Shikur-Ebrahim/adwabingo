@@ -30,14 +30,7 @@ export default function Profile() {
   const formatMoney = (amount: number | undefined) => (amount || 0).toLocaleString('en-US');
 
   const handleInvite = () => {
-    if (user) {
-      const inviteLink = `https://t.me/adwabingo_bot?start=ref_${user.telegram_id}`;
-      if (typeof WebApp !== 'undefined' && WebApp.openTelegramLink) {
-        WebApp.openTelegramLink(`https://t.me/share/url?url=${inviteLink}&text=Play Bingo with me on ADWA Bingo!`);
-      } else {
-        window.open(`https://t.me/share/url?url=${inviteLink}&text=Play Bingo with me on ADWA Bingo!`, '_blank');
-      }
-    }
+    navigateTo('/invite');
   };
 
   const handleSupport = () => {

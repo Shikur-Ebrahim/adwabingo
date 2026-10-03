@@ -8,8 +8,18 @@ let bannerFileId: string | null = null;
 
 export async function startCommand(ctx: Context) {
   const user = ctx.from!;
+  
+  // Extract inviter ID from start payload if present (e.g., /start ref_12345)
+  let inviterId = undefined;
+  if (ctx.message?.text) {
+    const parts = ctx.message.text.split(' ');
+    if (parts.length > 1 && parts[1].startsWith('ref_')) {
+      inviterId = parts[1].replace('ref_', '');
+    }
+  }
+
   try {
-    await upsertUser(user.id.toString(), user.username || user.first_name, user.first_name);
+    await upsertUser(user.id.toString(), user.username || user.first_name, user.first_name, inviterId);
   } catch (e) { console.error('Upsert user error:', e); }
 
   const miniAppUrl = process.env.MINI_APP_URL || 'https://adwabingo.vercel.app';
