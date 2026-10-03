@@ -11,6 +11,26 @@ export default function Home() {
     navigate('/invite');
   };
 
+  const handleHelp = async () => {
+    const initData = typeof WebApp !== 'undefined' ? WebApp.initData : '';
+    const API_URL = import.meta.env.VITE_API_URL || '/api';
+    try {
+      const res = await fetch(`${API_URL}/player/support-contact`, {
+        headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData }
+      });
+      const data = await res.json();
+      const username = data.username || 'adwabingo_admin';
+      const url = `https://t.me/${username.replace('@', '')}`;
+      if (typeof WebApp !== 'undefined' && WebApp.openTelegramLink) {
+        WebApp.openTelegramLink(url);
+      } else {
+        window.open(url, '_blank');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const initial = user?.first_name ? user.first_name.charAt(0).toUpperCase() : 'U';
 
   const formatMoney = (amount: number | undefined) => {
@@ -73,7 +93,7 @@ export default function Home() {
       <div className="px-4">
         <div className="flex items-center justify-between mb-2">
           <h2 className="font-bold text-slate-500 dark:text-slate-400 tracking-wider text-xs">ACTIVE GAMES</h2>
-          <button className="text-blue-500 flex items-center space-x-1 text-xs font-semibold">
+          <button onClick={handleHelp} className="text-blue-500 flex items-center space-x-1 text-xs font-semibold">
             <Info size={14} />
             <span>Help</span>
           </button>

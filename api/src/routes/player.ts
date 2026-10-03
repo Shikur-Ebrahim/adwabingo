@@ -56,30 +56,24 @@ router.get('/invited', validateTelegramAuth, async (req: AuthRequest, res) => {
   const total_earned = invitedWithRewards.reduce((sum, u) => sum + u.reward_earned, 0);
   res.json({ invited: invitedWithRewards, total_earned });
 });
-// Fetch a support contact (worker first, fallback to admin)
+// Fetch support contact and channel link from settings
 router.get('/support-contact', validateTelegramAuth, async (req: AuthRequest, res) => {
-  // Try to find a worker
-  let { data } = await supabase
-    .from('users')
-    .select('username')
-    .eq('role', 'worker')
-    .not('username', 'is', null)
-    .limit(1)
+  const { data: supportData } = await supabase
+    .from('settings')
+    .select('value')
+    .eq('key', 'support_username')
     .single();
 
-  // If no worker, fallback to admin
-  if (!data) {
-    const adminRes = await supabase
-      .from('users')
-      .select('username')
-      .eq('role', 'admin')
-      .not('username', 'is', null)
-      .limit(1)
-      .single();
-    data = adminRes.data;
-  }
+  const { data: channelData } = await supabase
+    .from('settings')
+    .select('value')
+    .eq('key', 'channel_link')
+    .single();
 
-  res.json({ username: data?.username || null });
+  const username = supportData ? supportData.value : 'adwabingo_admin';
+  const channel = channelData ? channelData.value : 'https://t.me/adwabingo';
+
+  res.json({ username, channel });
 });
 
 // POST /api/player/transfer — transfer main_balance between users

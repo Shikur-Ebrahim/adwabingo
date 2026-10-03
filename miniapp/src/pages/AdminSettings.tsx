@@ -1,55 +1,26 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Settings, Save, Percent, Gift, Users, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Settings, Save, Gift, Users, Headphones, Megaphone, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
-interface Setting {
-  key: string;
-  value: string;
-  label: string;
-  description: string;
-}
-
 interface SettingField {
   key: string;
   label: string;
-  description: string;
   icon: React.ReactNode;
-  unit: string;
-  min: number;
-  max: number;
+  type: 'number' | 'text';
+  unit?: string;
   color: string;
   bg: string;
-  defaultValue: number;
+  defaultValue: string | number;
 }
 
 const SETTING_FIELDS: SettingField[] = [
-  {
-    key: 'first_deposit_bonus_pct',
-    label: 'First Deposit Bonus',
-    description: 'Bonus % added to depositor\'s bonus balance on their very first approved deposit.',
-    icon: <Gift size={20} />,
-    unit: '%',
-    min: 0,
-    max: 100,
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50',
-    defaultValue: 20,
-  },
-  {
-    key: 'invitation_reward_pct',
-    label: 'Invitation Reward',
-    description: 'Bonus % added to the inviter\'s bonus balance when their invited friend makes a first deposit.',
-    icon: <Users size={20} />,
-    unit: '%',
-    min: 0,
-    max: 100,
-    color: 'text-violet-600',
-    bg: 'bg-violet-50',
-    defaultValue: 10,
-  },
+  { key: 'first_deposit_bonus_pct', label: '1st Deposit Bonus', icon: <Gift size={16} />, type: 'number', unit: '%', color: 'text-emerald-600', bg: 'bg-emerald-50', defaultValue: 20 },
+  { key: 'invitation_reward_pct', label: 'Invite Reward', icon: <Users size={16} />, type: 'number', unit: '%', color: 'text-violet-600', bg: 'bg-violet-50', defaultValue: 10 },
+  { key: 'support_username', label: 'Support Team User', icon: <Headphones size={16} />, type: 'text', color: 'text-orange-600', bg: 'bg-orange-50', defaultValue: 'adwabingo_admin' },
+  { key: 'channel_link', label: 'Official Channel Link', icon: <Megaphone size={16} />, type: 'text', color: 'text-indigo-600', bg: 'bg-indigo-50', defaultValue: 'https://t.me/adwabingo' },
 ];
 
 export default function AdminSettings() {
@@ -75,8 +46,7 @@ export default function AdminSettings() {
       if (res.ok) {
         const data = await res.json();
         const map: Record<string, string> = {};
-        (data.settings as Setting[]).forEach(s => { map[s.key] = s.value; });
-        // Fill defaults for any missing keys
+        (data.settings || []).forEach((s: any) => { map[s.key] = s.value; });
         SETTING_FIELDS.forEach(f => {
           if (!(f.key in map)) map[f.key] = String(f.defaultValue);
         });
@@ -100,124 +70,88 @@ export default function AdminSettings() {
         body: JSON.stringify({ key, value: values[key] }),
       });
       if (res.ok) {
-        showToast('success', 'Setting saved successfully!');
+        showToast('success', 'Saved!');
         if (typeof WebApp !== 'undefined') WebApp.HapticFeedback.notificationOccurred('success');
       } else {
-        const d = await res.json();
-        showToast('error', d.error || 'Failed to save');
+        showToast('error', 'Failed');
       }
     } catch {
-      showToast('error', 'Network error');
+      showToast('error', 'Error');
     } finally {
       setSaving(null);
     }
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-8">
-
-      {/* TOAST */}
+    <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
+      {/* Toast Overlay */}
       {toast && (
-        <div className={`fixed top-4 left-4 right-4 z-50 flex items-center space-x-2 px-4 py-3 rounded-2xl shadow-lg text-sm font-bold transition-all ${
+        <div className={`fixed top-2 left-4 right-4 z-50 flex items-center justify-center space-x-1.5 px-3 py-2 rounded-xl shadow-md text-xs font-bold ${
           toast.type === 'success' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
         }`}>
-          {toast.type === 'success' ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+          {toast.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
           <span>{toast.msg}</span>
         </div>
       )}
 
-      {/* HEADER */}
-      <div className="bg-white px-4 pt-6 pb-4 shadow-sm border-b border-gray-100 flex items-center sticky top-0 z-10">
-        <Link to="/admin" className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 active:bg-slate-200 transition-colors">
-          <ArrowLeft size={20} />
+      {/* Header - Compact */}
+      <div className="bg-white px-3 py-3 shadow-sm border-b border-gray-100 flex items-center shrink-0">
+        <Link to="/admin" className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-700 active:bg-slate-200 transition-colors">
+          <ArrowLeft size={18} />
         </Link>
-        <div className="ml-4 flex-1">
-          <h1 className="text-xl font-black text-slate-800 tracking-tight">Settings</h1>
-          <p className="text-xs text-slate-500 font-medium">Configure bonus & reward values</p>
+        <div className="ml-3 flex-1">
+          <h1 className="text-lg font-black text-slate-800 leading-tight">Settings</h1>
         </div>
-        <button
-          onClick={fetchSettings}
-          className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200 transition-colors"
-        >
-          <RefreshCw size={15} />
-        </button>
+        <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-white shrink-0">
+          <Settings size={16} />
+        </div>
       </div>
 
-      <div className="px-4 py-5 space-y-4">
-
-        {/* PAGE ICON */}
-        <div className="flex items-center space-x-3 bg-gradient-to-r from-slate-700 to-slate-900 rounded-2xl px-4 py-4">
-          <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white">
-            <Settings size={20} />
-          </div>
-          <div>
-            <p className="text-white font-black text-sm">Bonus Configuration</p>
-            <p className="text-white/60 text-[11px] font-medium">Changes apply on the next deposit approval</p>
-          </div>
-        </div>
-
+      {/* Body - Fits on one screen */}
+      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-48 space-y-3">
-            <div className="w-7 h-7 border-4 border-violet-400 border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs font-bold text-slate-400">Loading settings...</p>
+          <div className="flex flex-col items-center justify-center h-full space-y-2">
+            <div className="w-6 h-6 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+            <p className="text-xs font-bold text-slate-400">Loading...</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {SETTING_FIELDS.map((field) => (
-              <div key={field.key} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                {/* Card Header */}
-                <div className={`px-4 pt-4 pb-3 flex items-center space-x-3`}>
-                  <div className={`w-10 h-10 rounded-xl ${field.bg} ${field.color} flex items-center justify-center shrink-0`}>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 space-y-1">
+            {SETTING_FIELDS.map((field, idx) => (
+              <div key={field.key} className={`p-2 flex flex-col space-y-2 ${idx !== SETTING_FIELDS.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                <div className="flex items-center space-x-2">
+                  <div className={`w-7 h-7 rounded-lg ${field.bg} ${field.color} flex items-center justify-center shrink-0`}>
                     {field.icon}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-black text-sm text-slate-800">{field.label}</p>
-                    <p className="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">{field.description}</p>
-                  </div>
+                  <span className="font-bold text-[13px] text-slate-700">{field.label}</span>
                 </div>
-
-                {/* Input Row */}
-                <div className="px-4 pb-4 flex items-center space-x-3">
+                <div className="flex items-center space-x-2">
                   <div className="flex-1 relative">
                     <input
-                      type="number"
-                      min={field.min}
-                      max={field.max}
+                      type={field.type}
                       value={values[field.key] ?? field.defaultValue}
                       onChange={(e) => setValues(prev => ({ ...prev, [field.key]: e.target.value }))}
-                      className="w-full border-2 border-slate-200 focus:border-violet-400 outline-none rounded-xl px-4 py-3 text-2xl font-black text-slate-800 text-center transition-colors"
+                      className={`w-full border border-slate-200 focus:border-violet-400 outline-none rounded-lg px-2 py-1.5 font-bold text-slate-800 bg-slate-50 ${field.type === 'number' ? 'text-sm text-center' : 'text-[11px]'}`}
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">
-                      {field.unit}
-                    </span>
+                    {field.unit && (
+                      <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xs">
+                        {field.unit}
+                      </span>
+                    )}
                   </div>
-
                   <button
                     onClick={() => handleSave(field.key)}
                     disabled={saving === field.key}
-                    className="h-12 px-5 bg-violet-500 hover:bg-violet-600 active:scale-95 disabled:opacity-60 text-white font-black text-sm rounded-xl flex items-center space-x-1.5 transition-all shadow-sm"
+                    className="h-8 px-3 bg-slate-800 hover:bg-slate-900 active:scale-95 disabled:opacity-50 text-white font-bold text-[11px] rounded-lg flex items-center justify-center shadow-sm shrink-0 w-16 transition-all"
                   >
                     {saving === field.key ? (
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <Save size={16} />
+                      <div className="flex items-center space-x-1">
+                        <Save size={12} />
+                        <span>Save</span>
+                      </div>
                     )}
-                    <span>Save</span>
                   </button>
-                </div>
-
-                {/* Preview */}
-                <div className="px-4 pb-4">
-                  <div className="bg-slate-50 rounded-xl px-3 py-2.5 flex items-center space-x-2">
-                    <Percent size={13} className="text-slate-400 shrink-0" />
-                    <p className="text-[11px] text-slate-500 font-medium">
-                      Example: deposit of <span className="font-black text-slate-700">1,000 ETB</span> →{' '}
-                      <span className={`font-black ${field.color}`}>
-                        +{((parseFloat(values[field.key] ?? String(field.defaultValue)) / 100) * 1000).toFixed(0)} ETB
-                      </span>{' '}
-                      bonus
-                    </p>
-                  </div>
                 </div>
               </div>
             ))}

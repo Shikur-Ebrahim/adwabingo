@@ -12,6 +12,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 export default function Profile() {
   const { user, isProfileOpen, setProfileOpen, isDarkMode, toggleDarkMode } = useGameStore();
   const [supportUsername, setSupportUsername] = useState('adwabingo_admin');
+  const [channelLink, setChannelLink] = useState('https://t.me/adwabingo');
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
 
@@ -23,6 +24,7 @@ export default function Profile() {
       .then(r => r.json())
       .then(data => {
         if (data.username) setSupportUsername(data.username);
+        if (data.channel) setChannelLink(data.channel);
       })
       .catch(console.error);
   }, []);
@@ -43,11 +45,10 @@ export default function Profile() {
   };
 
   const handleChannel = () => {
-    const url = 'https://t.me/adwabingo';
     if (typeof WebApp !== 'undefined' && WebApp.openTelegramLink) {
-      WebApp.openTelegramLink(url);
+      WebApp.openTelegramLink(channelLink);
     } else {
-      window.open(url, '_blank');
+      window.open(channelLink, '_blank');
     }
   };
 
