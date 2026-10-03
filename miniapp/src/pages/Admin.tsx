@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { Users, UserCog, ArrowDownToLine, ArrowUpFromLine, Landmark, CreditCard, Gamepad2, Receipt } from 'lucide-react';
+import { Users, UserCog, ArrowDownToLine, ArrowUpFromLine, Landmark, CreditCard, Gamepad2, Receipt, Settings2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 
@@ -34,6 +34,7 @@ export default function Admin() {
     { id: 'workers', title: 'Workers', icon: UserCog, color: 'text-orange-600', bg: 'bg-orange-100' },
     { id: 'games_report', title: 'Games Report', icon: Gamepad2, color: 'text-cyan-600', bg: 'bg-cyan-100' },
     { id: 'tx_report', title: 'Transaction Report', icon: Receipt, color: 'text-teal-600', bg: 'bg-teal-100' },
+    { id: 'settings', title: 'Settings', icon: Settings2, color: 'text-slate-600', bg: 'bg-slate-100' },
   ];
 
   return (
@@ -116,15 +117,38 @@ export default function Admin() {
             )
           }
 
+          // Route-based modules
+          const routeMap: Record<string, string> = {
+            users: '/admin/users',
+            workers: '/admin/workers',
+            games_report: '/admin/games-report',
+            tx_report: '/admin/tx-report',
+            settings: '/admin/settings',
+          };
+          if (routeMap[mod.id]) {
+            return (
+              <Link
+                key={mod.id}
+                to={routeMap[mod.id]}
+                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
+              >
+                <div className={`w-12 h-12 rounded-2xl ${mod.bg} ${mod.color} flex items-center justify-center shadow-inner`}>
+                  <Icon size={24} strokeWidth={2.5} />
+                </div>
+                <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
+              </Link>
+            );
+          }
+
           return (
-            <button 
-              key={mod.id} 
-              className="bg-white  p-5 rounded-2xl shadow-sm border border-gray-100  flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
+            <button
+              key={mod.id}
+              className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
             >
               <div className={`w-12 h-12 rounded-2xl ${mod.bg} ${mod.color} flex items-center justify-center shadow-inner`}>
                 <Icon size={24} strokeWidth={2.5} />
               </div>
-              <span className="font-bold text-sm text-slate-700  text-center">{mod.title}</span>
+              <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
             </button>
           )
         })}

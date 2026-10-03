@@ -144,8 +144,23 @@ router.post('/deposits/:id/approve', async (req, res) => {
   let inviterId = null;
   
   if (isFirstDeposit) {
-    // 1. Give 20% bonus to the DEPOSITOR
-    depositorBonus = deposit.amount * 0.20;
+    // Load bonus settings from DB (fallback to defaults if not set)
+    const { data: settingsRow } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'first_deposit_bonus_pct')
+      .single();
+    const { data: invSettingsRow } = await supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'invitation_reward_pct')
+      .single();
+
+    const firstDepositPct = settingsRow ? parseFloat(settingsRow.value) / 100 : 0.20;
+    const invitationPct   = invSettingsRow ? parseFloat(invSettingsRow.value) / 100 : 0.10;
+
+    // 1. Give configurable% bonus to the DEPOSITOR
+    depositorBonus = deposit.amount * firstDepositPct;
     const { data: depRecord } = await supabase.from('users').select('bonus_balance, inviter_id').eq('telegram_id', deposit.telegram_id).single();
     
     if (depRecord) {
@@ -155,7 +170,7 @@ router.post('/deposits/:id/approve', async (req, res) => {
       // 2. Give 10% bonus to the INVITER (if they exist)
       if (depRecord.inviter_id) {
         inviterId = depRecord.inviter_id;
-        inviterBonus = deposit.amount * 0.10;
+        inviterBonus = deposit.amount * invitationPct;
         
         const { data: invRecord } = await supabase.from('users').select('bonus_balance').eq('telegram_id', inviterId).single();
         if (invRecord) {
@@ -312,6 +327,28 @@ router.delete('/withdrawals/:id/reject', async (req, res) => {
     });
   } catch (err) { console.error('Failed to notify user:', err); }
 
+  res.json({ success: true });
+});
+
+// ─── SETTINGS ────────────────────────────────────────────────────────────────
+
+// GET /admin/settings — return all key/value settings
+router.get('/settings', validateTelegramAuth, requireAdmin, async (_req, res) => {
+  const { data, error } = await supabase.from('settings').select('key, value, label, description');
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ settings: data || [] });
+});
+
+// PUT /admin/settings — upsert a single setting by key
+router.put('/settings', validateTelegramAuth, requireAdmin, async (req, res) => {
+  const { key, value } = req.body;
+  if (!key || value === undefined) { res.status(400).json({ error: 'key and value are required' }); return; }
+
+  const { error } = await supabase
+    .from('settings')
+    .upsert({ key, value: String(value) }, { onConflict: 'key' });
+
+  if (error) { res.status(500).json({ error: error.message }); return; }
   res.json({ success: true });
 });
 

@@ -80,6 +80,7 @@ import AdminDepositMethods from './pages/AdminDepositMethods';
 import AdminWithdrawalMethods from './pages/AdminWithdrawalMethods';
 import AdminDeposits from './pages/AdminDeposits';
 import AdminWithdrawals from './pages/AdminWithdrawals';
+import AdminSettings from './pages/AdminSettings';
 
 import DepositHistory from './pages/DepositHistory';
 import WithdrawHistory from './pages/WithdrawHistory';
@@ -125,6 +126,7 @@ function App() {
           <Route path="/admin/withdrawal-methods" element={<AdminWithdrawalMethods />} />
           <Route path="/admin/deposits" element={<AdminDeposits />} />
           <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/worker" element={<Worker />} />
         </Routes>
         <Profile />
