@@ -206,16 +206,60 @@ export default function AdminTxReport() {
           ))}
         </div>
 
-        {/* NET PROFIT LINE */}
+        {/* NET FLOW BREAKDOWN */}
         <div className="px-3 pb-3">
-          <div className="bg-slate-800 rounded-xl px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <TrendingUp size={16} className="text-white/70" />
-              <span className="text-white font-black text-xs">Net Platform Flow</span>
+          <div className="bg-slate-800 rounded-xl p-3 space-y-2">
+            <div className="flex items-center space-x-1.5 mb-1">
+              <TrendingUp size={14} className="text-white/60" />
+              <span className="text-white/60 font-black text-[10px] uppercase tracking-wider">Net Profit Breakdown</span>
             </div>
-            <span className="text-yellow-300 font-black text-sm">
-              {fmt(stats.totalDeposits - stats.totalWithdrawals - stats.totalDepBonus - stats.totalInvBonus)} ETB
-            </span>
+
+            {/* Formula rows */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-white/70 text-[11px] font-semibold">Deposits</span>
+                </div>
+                <span className="text-emerald-400 font-black text-[12px]">+{fmt(stats.totalDeposits)} ETB</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                  <span className="text-white/70 text-[11px] font-semibold">Withdrawals</span>
+                </div>
+                <span className="text-rose-400 font-black text-[12px]">−{fmt(stats.totalWithdrawals)} ETB</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
+                  <span className="text-white/70 text-[11px] font-semibold">1st Deposit Bonus</span>
+                </div>
+                <span className="text-violet-400 font-black text-[12px]">−{fmt(stats.totalDepBonus)} ETB</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                  <span className="text-white/70 text-[11px] font-semibold">Invite Reward</span>
+                </div>
+                <span className="text-blue-400 font-black text-[12px]">−{fmt(stats.totalInvBonus)} ETB</span>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-white/10" />
+
+            {/* Net result */}
+            <div className="flex items-center justify-between">
+              <span className="text-white font-black text-xs">= Net Profit</span>
+              <span className={`font-black text-base ${
+                stats.totalDeposits - stats.totalWithdrawals - stats.totalDepBonus - stats.totalInvBonus >= 0
+                  ? 'text-yellow-300' : 'text-rose-400'
+              }`}>
+                {stats.totalDeposits - stats.totalWithdrawals - stats.totalDepBonus - stats.totalInvBonus >= 0 ? '+' : ''}
+                {fmt(stats.totalDeposits - stats.totalWithdrawals - stats.totalDepBonus - stats.totalInvBonus)} ETB
+              </span>
+            </div>
           </div>
         </div>
 
