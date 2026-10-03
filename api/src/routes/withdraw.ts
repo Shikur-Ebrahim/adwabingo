@@ -61,23 +61,21 @@ router.post('/request', async (req: AuthRequest, res) => {
   // 3. Check user's main balance and atomically deduct
   const { data: user } = await supabase
     .from('users')
-    .select('balance')
+    .select('main_balance')
     .eq('telegram_id', telegramId)
     .single();
 
-  if (!user || user.balance < amount) {
+  if (!user || user.main_balance < amount) {
     res.status(400).json({ error: 'Insufficient main balance.' });
     return;
   }
 
-  // Atomically deduct the balance
-  // Since we don't have a specific RPC for withdrawal deduction, we'll use a direct update
-  // but ensure balance >= amount to prevent race conditions.
+  // Atomically deduct the main_balance
   const { data: updateData, error: updateErr } = await supabase
     .from('users')
-    .update({ balance: user.balance - amount })
+    .update({ main_balance: user.main_balance - amount })
     .eq('telegram_id', telegramId)
-    .gte('balance', amount) // Safety check
+    .gte('main_balance', amount) // Safety check
     .select()
     .single();
 
@@ -101,8 +99,8 @@ router.post('/request', async (req: AuthRequest, res) => {
     .single();
 
   if (insertErr) {
-    // If insertion fails, refund the balance
-    await supabase.from('users').update({ balance: user.balance }).eq('telegram_id', telegramId);
+    // If insertion fails, refund the main_balance
+    await supabase.from('users').update({ main_balance: user.main_balance }).eq('telegram_id', telegramId);
     res.status(500).json({ error: insertErr.message });
     return;
   }
