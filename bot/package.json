@@ -7,13 +7,16 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "grammy": "^1.22.0",
+    "@aws-sdk/client-s3": "^3.1146.0",
     "@supabase/supabase-js": "^2.39.0",
-    "dotenv": "^16.4.0"
+    "@types/node-fetch": "^2.6.13",
+    "dotenv": "^16.4.0",
+    "grammy": "^1.22.0",
+    "node-fetch": "^2.7.0"
   },
   "devDependencies": {
-    "typescript": "^5.3.0",
+    "@types/node": "^20.0.0",
     "ts-node-dev": "^2.0.0",
-    "@types/node": "^20.0.0"
+    "typescript": "^5.3.0"
   }
 }

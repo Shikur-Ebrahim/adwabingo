@@ -1,0 +1,255 @@
+import { Context } from 'grammy';
+import { supabase } from '../services/supabase';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import fetch from 'node-fetch';
+
+// R2 client
+const r2 = new S3Client({
+  region: 'auto',
+  endpoint: process.env.R2_ENDPOINT!,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+});
+
+// In-memory session: userId → deposit state
+interface DepositSession {
+  step: 'choose_method' | 'awaiting_amount' | 'awaiting_screenshot';
+  methodId?: string;
+  methodName?: string;
+  accountNumber?: string;
+  minDeposit?: number;
+  amount?: number;
+}
+
+const sessions = new Map<number, DepositSession>();
+
+export function getDepositSession(userId: number) {
+  return sessions.get(userId);
+}
+
+export function clearDepositSession(userId: number) {
+  sessions.delete(userId);
+}
+
+// ── STEP 1: Show method list ──────────────────────────────────────────────────
+export async function startDeposit(ctx: Context) {
+  await ctx.answerCallbackQuery();
+  const userId = ctx.from!.id;
+
+  // Check if user already has a pending deposit
+  const { data: pending } = await supabase
+    .from('deposits')
+    .select('id, amount')
+    .eq('telegram_id', userId.toString())
+    .eq('status', 'pending')
+    .single();
+
+  if (pending) {
+    await ctx.reply(
+      `⏳ *Deposit Pending*\n\nYou already have a deposit of *${Number(pending.amount).toLocaleString('en-US')} ETB* waiting for approval.\n\nPlease wait for admin to approve it before making a new deposit.`,
+      { parse_mode: 'Markdown' }
+    );
+    return;
+  }
+
+  // Fetch active deposit methods
+  const { data: methods, error } = await supabase
+    .from('deposit_methods')
+    .select('id, type, name, account_number, min_deposit')
+    .eq('is_active', true)
+    .order('created_at', { ascending: true });
+
+  if (error || !methods || methods.length === 0) {
+    await ctx.reply('❌ No deposit methods available right now. Please try again later.');
+    return;
+  }
+
+  // Build keyboard with one button per method
+  const keyboard = methods.map((m: any) => ([{
+    text: `🏦 ${m.name}`,
+    callback_data: `dep_method_${m.id}`,
+  }]));
+
+  keyboard.push([{ text: '❌ Cancel', callback_data: 'dep_cancel' }]);
+
+  sessions.set(userId, { step: 'choose_method' });
+
+  await ctx.reply(
+    `💰 *ADWA Bingo Deposit*\n\nSelect your preferred deposit method:`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: { inline_keyboard: keyboard },
+    }
+  );
+}
+
+// ── STEP 2: Show method details after user selects ───────────────────────────
+export async function handleMethodSelect(ctx: Context, methodId: string) {
+  await ctx.answerCallbackQuery();
+  const userId = ctx.from!.id;
+
+  const { data: method, error } = await supabase
+    .from('deposit_methods')
+    .select('id, type, name, account_number, min_deposit')
+    .eq('id', methodId)
+    .single();
+
+  if (error || !method) {
+    await ctx.reply('❌ Method not found. Please try again.');
+    clearDepositSession(userId);
+    return;
+  }
+
+  const typeEmoji: Record<string, string> = {
+    cbe: '🏦',
+    boa: '🏛️',
+    telebirr: '📱',
+    mpesa: '💚',
+  };
+
+  const emoji = typeEmoji[method.type] || '💳';
+
+  sessions.set(userId, {
+    step: 'awaiting_amount',
+    methodId: method.id,
+    methodName: method.name,
+    accountNumber: method.account_number,
+    minDeposit: method.min_deposit,
+  });
+
+  await ctx.reply(
+    `${emoji} *Deposit via ${method.name}*\n\n` +
+    `📋 *Send Money To:*\n` +
+    `┌──────────────────────\n` +
+    `│ Name: *${method.name}*\n` +
+    `│ Account: \`${method.account_number}\`\n` +
+    `└──────────────────────\n\n` +
+    `⚠️ Minimum deposit: *${Number(method.min_deposit).toLocaleString('en-US')} ETB*\n\n` +
+    `📝 *How to deposit:*\n` +
+    `1️⃣ Send money to the account above\n` +
+    `2️⃣ Take a screenshot of the receipt\n` +
+    `3️⃣ Reply with the amount you sent\n\n` +
+    `👇 *Enter the amount you sent (in ETB):*`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ Cancel', callback_data: 'dep_cancel' }]],
+      },
+    }
+  );
+}
+
+// ── STEP 3: Handle amount text ────────────────────────────────────────────────
+export async function handleDepositAmount(ctx: Context) {
+  const userId = ctx.from!.id;
+  const session = sessions.get(userId);
+  if (!session || session.step !== 'awaiting_amount') return false;
+
+  const text = ctx.message?.text?.trim() || '';
+  const amount = parseFloat(text);
+
+  if (isNaN(amount) || amount <= 0) {
+    await ctx.reply('❌ Invalid amount. Please enter a valid number (e.g. 100)');
+    return true;
+  }
+
+  if (amount < (session.minDeposit || 50)) {
+    await ctx.reply(`❌ Minimum deposit is *${session.minDeposit?.toLocaleString('en-US')} ETB*. Please enter a higher amount.`, { parse_mode: 'Markdown' });
+    return true;
+  }
+
+  sessions.set(userId, { ...session, step: 'awaiting_screenshot', amount });
+
+  await ctx.reply(
+    `✅ Amount: *${amount.toLocaleString('en-US')} ETB*\n\n📸 Now send a *screenshot* of your payment receipt as a *photo*:`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [[{ text: '❌ Cancel', callback_data: 'dep_cancel' }]],
+      },
+    }
+  );
+  return true;
+}
+
+// ── STEP 4: Handle screenshot photo ─────────────────────────────────────────
+export async function handleDepositScreenshot(ctx: Context) {
+  const userId = ctx.from!.id;
+  const session = sessions.get(userId);
+  if (!session || session.step !== 'awaiting_screenshot') return false;
+
+  const photo = ctx.message?.photo;
+  if (!photo || photo.length === 0) {
+    await ctx.reply('❌ Please send a *photo* (screenshot) of your payment receipt.', { parse_mode: 'Markdown' });
+    return true;
+  }
+
+  const processingMsg = await ctx.reply('⏳ Processing your deposit request...');
+
+  try {
+    // Get the highest resolution photo
+    const best = photo[photo.length - 1];
+    const fileInfo = await ctx.api.getFile(best.file_id);
+    const fileUrl = `https://api.telegram.org/file/bot${process.env.BOT_TOKEN}/${fileInfo.file_path}`;
+
+    // Download from Telegram
+    const response = await fetch(fileUrl);
+    const buffer = await response.buffer();
+
+    // Upload to R2
+    const fileName = `deposits/bot_${userId}_${Date.now()}.jpg`;
+    await r2.send(new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET!,
+      Key: fileName,
+      Body: buffer,
+      ContentType: 'image/jpeg',
+    }));
+
+    const screenshotUrl = `${process.env.R2_PUBLIC_URL}/${fileName}`;
+
+    // Save deposit to Supabase
+    const { error: depErr } = await supabase.from('deposits').insert([{
+      telegram_id: userId.toString(),
+      method_id: session.methodId,
+      amount: session.amount,
+      screenshot_url: screenshotUrl,
+      status: 'pending',
+    }]);
+
+    if (depErr) throw new Error(depErr.message);
+
+    clearDepositSession(userId);
+
+    // Edit processing message to success
+    await ctx.api.editMessageText(
+      ctx.chat!.id,
+      processingMsg.message_id,
+      `✅ *Deposit Request Submitted!*\n\n` +
+      `💰 Amount: *${Number(session.amount).toLocaleString('en-US')} ETB*\n` +
+      `🏦 Method: *${session.methodName}*\n` +
+      `📊 Status: *Pending Review*\n\n` +
+      `⏳ Your deposit will be approved within 24 hours.\n` +
+      `📞 For support, contact our team.`,
+      { parse_mode: 'Markdown' }
+    );
+
+  } catch (err: any) {
+    console.error('Deposit screenshot error:', err);
+    await ctx.api.editMessageText(
+      ctx.chat!.id,
+      processingMsg.message_id,
+      `❌ Failed to process deposit. Please try again or contact support.\n\nError: ${err.message}`
+    );
+  }
+
+  return true;
+}
+
+// ── CANCEL ───────────────────────────────────────────────────────────────────
+export async function cancelDeposit(ctx: Context) {
+  await ctx.answerCallbackQuery();
+  clearDepositSession(ctx.from!.id);
+  await ctx.editMessageText('❌ Deposit cancelled. Use /start to begin again.');
+}
