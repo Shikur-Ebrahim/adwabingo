@@ -20,7 +20,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col space-y-4 pb-6">
+    <div className="flex flex-col min-h-screen pb-20 space-y-4">
       {/* HEADER SECTION */}
       <div className="bg-white px-4 py-4 rounded-b-2xl shadow-sm border-b border-gray-100 flex items-center justify-between">
         <div className="flex items-center space-x-3">
@@ -96,7 +96,7 @@ export default function Home() {
       </div>
 
       {/* MEDEB (STAKES) */}
-      <div className="px-4 pb-4">
+      <div className="px-4 flex-1">
         <h2 className="font-bold text-slate-500 tracking-wider text-xs mb-2">SELECT MEDEB</h2>
         
         <div className="grid grid-cols-2 gap-3">
@@ -107,12 +107,12 @@ export default function Home() {
             { amount: 100, color: 'from-rose-400 to-rose-600' }
           ].map((stake) => (
             <div key={stake.amount} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-              <div className={`h-12 bg-gradient-to-br ${stake.color} flex items-center justify-center relative`}>
-                <span className="text-white font-black text-xl drop-shadow-sm">{stake.amount}</span>
+              <div className={`h-16 bg-gradient-to-br ${stake.color} flex items-center justify-center relative`}>
+                <span className="text-white font-black text-2xl drop-shadow-sm">{stake.amount}</span>
                 <span className="absolute top-1.5 right-1.5 bg-white/20 px-1.5 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-wider">ETB</span>
               </div>
-              <div className="p-2 text-center">
-                <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-1.5 rounded-lg text-xs transition-colors">
+              <div className="p-3 text-center">
+                <button className="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-lg text-xs transition-colors">
                   Join Room
                 </button>
               </div>
