@@ -4,7 +4,6 @@ dotenv.config();
 
 import { corsMiddleware } from './middleware/cors';
 import authRouter from './routes/auth';
-import gameRouter from './routes/game';
 import playerRouter from './routes/player';
 
 const app = express();
@@ -14,7 +13,6 @@ app.use(corsMiddleware);
 app.use(express.json());
 app.get('/health', (_, res) => res.json({ status: 'ok', service: 'adwabingo-api' }));
 app.use('/api/auth', authRouter);
-app.use('/api/game', gameRouter);
 app.use('/api/player', playerRouter);
 
 app.listen(PORT, () => console.log(`🚀 API running on port ${PORT}`));
