@@ -151,7 +151,7 @@ export async function handleMethodSelect(ctx: Context, methodId: string) {
   sessions.set(userId, {
     step: 'awaiting_amount',
     methodId: method.id,
-    methodName: method.name,
+    methodName: typeLabels[method.type] || method.name,
     accountNumber: method.account_number,
     minDeposit: method.min_deposit,
   });
@@ -284,6 +284,34 @@ export async function handleDepositScreenshot(ctx: Context) {
 
     clearDepositSession(userId);
 
+    // Fetch support contact for success message
+    let supportText = '📞 For support, contact our team.';
+    let inlineKeyboard;
+    
+    let { data: worker } = await supabase
+      .from('users')
+      .select('username')
+      .eq('role', 'worker')
+      .not('username', 'is', null)
+      .limit(1)
+      .single();
+
+    if (!worker) {
+      const { data: admin } = await supabase
+        .from('users')
+        .select('username')
+        .eq('role', 'admin')
+        .not('username', 'is', null)
+        .limit(1)
+        .single();
+      worker = admin;
+    }
+
+    if (worker?.username) {
+      supportText = `💬 Need help? Contact support: @${worker.username}`;
+      inlineKeyboard = { inline_keyboard: [[{ text: '💬 Contact Support', url: `https://t.me/${worker.username}` }]] };
+    }
+
     // Edit processing message to success
     await ctx.api.editMessageText(
       ctx.chat!.id,
@@ -292,9 +320,12 @@ export async function handleDepositScreenshot(ctx: Context) {
       `💰 Amount: *${Number(session.amount).toLocaleString('en-US')} ETB*\n` +
       `🏦 Method: *${session.methodName}*\n` +
       `📊 Status: *Pending Review*\n\n` +
-      `⏳ Your deposit will be approved within 24 hours.\n` +
-      `📞 For support, contact our team.`,
-      { parse_mode: 'Markdown' }
+      `⏳ Your deposit will be approved within a few minutes.\n` +
+      `${supportText}`,
+      { 
+        parse_mode: 'Markdown',
+        reply_markup: inlineKeyboard
+      }
     );
 
   } catch (err: any) {
