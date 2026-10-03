@@ -1,78 +1,73 @@
-import React, { useEffect, useState } from 'react';
-import { Toaster } from 'react-hot-toast';
-import { tg, getStartParam } from './lib/telegram';
-import { api } from './lib/api';
-import { Page } from './types';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Gamepad2, Wallet, Trophy, User } from 'lucide-react';
+import WebApp from '@twa-dev/sdk';
+import { useGameStore } from './store/gameStore';
+
 import Home from './pages/Home';
-import Game from './pages/Game';
+import Deposit from './pages/Deposit';
 import Profile from './pages/Profile';
-import Leaderboard from './components/Leaderboard';
 
-export default function App() {
-  const [page, setPage] = useState<Page>('home');
-  const [roomCode, setRoomCode] = useState<string | null>(null);
-  const [authDone, setAuthDone] = useState(false);
+function Navigation() {
+  const location = useLocation();
 
-  useEffect(() => {
-    // Initialize Telegram WebApp
-    if (tg) {
-      tg.ready();
-      tg.expand();
-    }
-
-    // Check for room code in start param
-    const param = getStartParam();
-    if (param) {
-      setRoomCode(param);
-      setPage('game');
-    }
-
-    // Auth with backend
-    api.verify().then(() => setAuthDone(true)).catch(() => setAuthDone(true));
-  }, []);
-
-  function handleJoinRoom(code: string) {
-    setRoomCode(code);
-    setPage('game');
-  }
-
-  function handleBack() {
-    setPage('home');
-    setRoomCode(null);
-  }
+  const navItems = [
+    { path: '/', label: 'Games', icon: Gamepad2 },
+    { path: '/deposit', label: 'Deposit', icon: Wallet },
+    { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+    { path: '/profile', label: 'Profile', icon: User },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          style: { background: '#1f2937', color: '#fff', border: '1px solid #374151' },
-          duration: 3000,
-        }}
-      />
-
-      {page === 'home' && (
-        <Home
-          onJoinRoom={handleJoinRoom}
-          onGoLeaderboard={() => setPage('leaderboard')}
-          onGoProfile={() => setPage('profile')}
-        />
-      )}
-
-      {page === 'game' && roomCode && (
-        <Game roomCode={roomCode} onBack={handleBack} />
-      )}
-
-      {page === 'profile' && (
-        <Profile onBack={() => setPage('home')} />
-      )}
-
-      {page === 'leaderboard' && (
-        <div className="min-h-screen px-4 py-6">
-          <button onClick={() => setPage('home')} className="text-gray-400 hover:text-white mb-4 flex items-center gap-1">← Back</button>
-          <Leaderboard />
-        </div>
-      )}
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe">
+      <div className="flex justify-around items-center h-16">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = location.pathname === item.path;
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
+                isActive ? 'text-yellow-600' : 'text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+              <span className="text-[10px] font-medium">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }
+
+function App() {
+  const { fetchUser, loading } = useGameStore();
+
+  useEffect(() => {
+    WebApp.ready();
+    WebApp.expand();
+    fetchUser();
+  }, [fetchUser]);
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen bg-slate-50">Loading...</div>;
+  }
+
+  return (
+    <BrowserRouter>
+      <div className="min-h-screen bg-slate-50 pb-20 font-sans text-slate-800">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/deposit" element={<Deposit />} />
+          <Route path="/leaderboard" element={<div className="p-4 text-center mt-10 font-bold">Leaderboard</div>} />
+          <Route path="/profile" element={<Profile />} />
+        </Routes>
+        <Navigation />
+      </div>
+    </BrowserRouter>
+  );
+}
+
+export default App;
