@@ -1,34 +1,61 @@
 import { create } from 'zustand';
-import { Room, Player, PlayerSummary } from '../types';
+import { User } from '../types';
+import WebApp from '@twa-dev/sdk';
 
 interface GameStore {
-  room: Room | null;
-  player: Player | null;
-  players: PlayerSummary[];
-  calledNumbers: number[];
-  latestNumber: number | null;
-  isLoading: boolean;
+  user: User | null;
+  loading: boolean;
   error: string | null;
-  setRoom: (room: Room) => void;
-  setPlayer: (player: Player) => void;
-  setPlayers: (players: PlayerSummary[]) => void;
-  setCalledNumbers: (nums: number[]) => void;
-  addCalledNumber: (n: number) => void;
-  setLoading: (v: boolean) => void;
-  setError: (e: string | null) => void;
-  updateMarkedCells: (marked: boolean[][]) => void;
-  reset: () => void;
+  fetchUser: () => Promise<void>;
 }
 
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
 export const useGameStore = create<GameStore>((set) => ({
-  room: null, player: null, players: [], calledNumbers: [], latestNumber: null, isLoading: false, error: null,
-  setRoom: (room) => set({ room }),
-  setPlayer: (player) => set({ player }),
-  setPlayers: (players) => set({ players }),
-  setCalledNumbers: (calledNumbers) => set({ calledNumbers, latestNumber: calledNumbers.at(-1) ?? null }),
-  addCalledNumber: (n) => set(s => ({ calledNumbers: [...s.calledNumbers, n], latestNumber: n })),
-  setLoading: (isLoading) => set({ isLoading }),
-  setError: (error) => set({ error }),
-  updateMarkedCells: (marked) => set(s => s.player ? { player: { ...s.player, marked_cells: marked } } : {}),
-  reset: () => set({ room: null, player: null, players: [], calledNumbers: [], latestNumber: null, error: null }),
+  user: null,
+  loading: true,
+  error: null,
+
+  fetchUser: async () => {
+    try {
+      set({ loading: true, error: null });
+      
+      let initData = '';
+      if (typeof WebApp !== 'undefined' && WebApp.initData) {
+        initData = WebApp.initData;
+      }
+      
+      const response = await fetch(`${API_URL}/auth/verify`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-telegram-init-data': initData,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch user');
+      }
+
+      const data = await response.json();
+      set({ user: data.user, loading: false });
+    } catch (error: any) {
+      console.error('Error fetching user:', error);
+      // For local testing outside Telegram, mock a user if it fails
+      set({ 
+        loading: false,
+        user: {
+          id: 'test-id',
+          telegram_id: '123456789',
+          username: 'testuser',
+          first_name: 'Test',
+          main_balance: 0,
+          bonus_balance: 0,
+          role: 'user',
+          total_games: 0,
+          total_wins: 0
+        }
+      });
+    }
+  },
 }));
