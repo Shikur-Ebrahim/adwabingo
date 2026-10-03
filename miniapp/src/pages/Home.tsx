@@ -1,5 +1,6 @@
 import { useGameStore } from '../store/gameStore';
-import { Gift, Wallet, ArrowDownToLine, Share2, PlusCircle, Info } from 'lucide-react';
+import { Gift, ArrowDownToLine, Share2, PlusCircle, Info } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 
 export default function Home() {
@@ -53,10 +54,10 @@ export default function Home() {
 
       {/* ACTION BUTTONS */}
       <div className="px-4 grid grid-cols-3 gap-3">
-        <button className="flex items-center justify-center space-x-1.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-950 py-2 rounded-xl font-bold text-xs shadow-sm transition-colors">
+        <Link to="/deposit" className="flex items-center justify-center space-x-1.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-950 py-2 rounded-xl font-bold text-xs shadow-sm transition-colors">
           <PlusCircle size={16} />
           <span>Deposit</span>
-        </button>
+        </Link>
         <button className="flex items-center justify-center space-x-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-slate-700 py-2 rounded-xl font-bold text-xs shadow-sm transition-colors">
           <ArrowDownToLine size={16} />
           <span>Withdraw</span>

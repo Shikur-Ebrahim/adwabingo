@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronRight, CheckCircle2, UploadCloud, X, Clock, AlertCircle } from 'lucide-react';
+import { ArrowLeft, ChevronRight, CheckCircle2, UploadCloud, X, Clock, AlertCircle, Copy, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 
@@ -41,6 +41,14 @@ export default function Deposit() {
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
 
   useEffect(() => { fetchMethods(); }, []);
 
@@ -170,8 +178,18 @@ export default function Deposit() {
                   {selected.type.toUpperCase()}
                 </span>
                 <h3 className="font-black text-slate-800 text-base mt-1 leading-tight">{selected.name}</h3>
-                <div className="mt-2 flex items-center space-x-2">
+                <div className="mt-2 flex items-center space-x-3">
                   <span className="font-black text-xl text-slate-700 tracking-wider">{selected.account_number}</span>
+                  <button
+                    onClick={() => copyToClipboard(selected.account_number)}
+                    className={`flex items-center space-x-1 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      copied
+                        ? 'bg-emerald-100 text-emerald-600 border border-emerald-200'
+                        : 'bg-slate-100 text-slate-500 border border-slate-200 hover:bg-slate-200'
+                    }`}
+                  >
+                    {copied ? <><Check size={13} strokeWidth={3} /><span>Copied!</span></> : <><Copy size={13} /><span>Copy</span></>}
+                  </button>
                 </div>
               </div>
             </div>
