@@ -77,17 +77,19 @@ export default function Admin() {
               <Link
                 key={mod.id}
                 to="/admin/deposits"
-                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95 relative"
+                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
               >
-                {stats.pendingDeposits > 0 && (
-                  <div className="absolute top-3 right-3 bg-rose-500 text-white text-[10px] font-black w-5 h-5 flex items-center justify-center rounded-full shadow-sm animate-pulse">
-                    {stats.pendingDeposits}
-                  </div>
-                )}
                 <div className={`w-12 h-12 rounded-2xl ${mod.bg} ${mod.color} flex items-center justify-center shadow-inner`}>
                   <Icon size={24} strokeWidth={2.5} />
                 </div>
-                <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
+                <div className="flex items-center justify-center space-x-1.5">
+                  <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
+                  {stats.pendingDeposits > 0 && (
+                    <span className="bg-emerald-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-md animate-pulse shadow-sm">
+                      {stats.pendingDeposits}
+                    </span>
+                  )}
+                </div>
               </Link>
             )
           }
