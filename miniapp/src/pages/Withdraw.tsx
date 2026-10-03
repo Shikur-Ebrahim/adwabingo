@@ -45,6 +45,7 @@ export default function Withdraw() {
   const [selected, setSelected] = useState<WithdrawalMethod | null>(null);
   const [step, setStep] = useState<Step>('list');
   const [pendingAmount, setPendingAmount] = useState<number | null>(null);
+  const [supportContact, setSupportContact] = useState<string>('');
 
   // Form state
   const [amount, setAmount] = useState('');
@@ -63,9 +64,10 @@ export default function Withdraw() {
   const fetchData = async () => {
     try {
       const headers = getHeaders();
-      const [methodsRes, historyRes] = await Promise.all([
+      const [methodsRes, historyRes, contactRes] = await Promise.all([
         fetch(`${API_URL}/withdraw/methods`, { headers }),
         fetch(`${API_URL}/withdraw/history`, { headers }),
+        fetch(`${API_URL}/player/support-contact`, { headers }),
       ]);
 
       if (methodsRes.ok) setMethods(await methodsRes.json());
@@ -77,6 +79,11 @@ export default function Withdraw() {
           setPendingAmount(pending.amount);
           setStep('pending_status');
         }
+      }
+      
+      if (contactRes.ok) {
+        const { contact } = await contactRes.json();
+        setSupportContact(contact || 'adwabingo_admin');
       }
     } catch (err) {
       console.error(err);
@@ -150,6 +157,14 @@ export default function Withdraw() {
           <Link to="/" className="mt-5 block w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-4 rounded-xl text-center transition-all active:scale-95">
             Back to Home
           </Link>
+          <a
+            href={`https://t.me/${supportContact}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 flex items-center justify-center space-x-2 w-full bg-blue-50 hover:bg-blue-100 text-blue-600 font-black py-4 rounded-xl text-center transition-all active:scale-95"
+          >
+            <span>Contact Support (@{supportContact})</span>
+          </a>
         </div>
       </div>
     );
@@ -173,6 +188,14 @@ export default function Withdraw() {
           <Link to="/" className="mt-5 block w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-black py-4 rounded-xl text-center transition-all active:scale-95">
             Back to Home
           </Link>
+          <a
+            href={`https://t.me/${supportContact}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 flex items-center justify-center space-x-2 w-full bg-blue-50 hover:bg-blue-100 text-blue-600 font-black py-4 rounded-xl text-center transition-all active:scale-95"
+          >
+            <span>Contact Support (@{supportContact})</span>
+          </a>
         </div>
       </div>
     );
