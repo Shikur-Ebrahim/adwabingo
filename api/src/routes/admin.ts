@@ -116,11 +116,20 @@ router.get('/deposits', async (req, res) => {
   res.json(data);
 });
 
-// Approve deposit → add to user balance + mark approved
+// Approve deposit → add to user balance + mark approved + apply bonus + notify user
 router.post('/deposits/:id/approve', async (req, res) => {
   const { data: deposit, error: fetchErr } = await supabase
     .from('deposits').select('*').eq('id', req.params.id).single();
   if (fetchErr || !deposit) { res.status(404).json({ error: 'Deposit not found' }); return; }
+
+  // Check if this is their first approved deposit
+  const { count: approvedCount } = await supabase
+    .from('deposits')
+    .select('*', { count: 'exact', head: true })
+    .eq('telegram_id', deposit.telegram_id)
+    .eq('status', 'approved');
+
+  const isFirstDeposit = approvedCount === 0;
 
   // Atomic balance increment
   const { error: balErr } = await supabase.rpc('increment_user_balance', {
@@ -129,10 +138,42 @@ router.post('/deposits/:id/approve', async (req, res) => {
   });
   if (balErr) { res.status(500).json({ error: balErr.message }); return; }
 
+  // If first deposit, give 20% bonus
+  let bonusAmount = 0;
+  if (isFirstDeposit) {
+    bonusAmount = deposit.amount * 0.2;
+    const { data: userRecord } = await supabase.from('users').select('bonus_balance').eq('telegram_id', deposit.telegram_id).single();
+    if (userRecord) {
+      const currentBonus = Number(userRecord.bonus_balance || 0);
+      await supabase.from('users').update({ bonus_balance: currentBonus + bonusAmount }).eq('telegram_id', deposit.telegram_id);
+    }
+  }
+
   // Mark deposit as approved
   await supabase.from('deposits').update({ status: 'approved', updated_at: new Date() }).eq('id', req.params.id);
 
-  res.json({ success: true });
+  // Send Telegram Notification to the user
+  try {
+    let msgText = `✅ *Deposit Approved!*\n\n💰 Amount: *${Number(deposit.amount).toLocaleString('en-US')} ETB* has been added to your balance.`;
+    if (isFirstDeposit) {
+      msgText += `\n\n🎁 *First Deposit Bonus!* You received an extra *${Number(bonusAmount).toLocaleString('en-US')} ETB* in your bonus balance!`;
+    }
+    msgText += `\n\n🎮 Open the Mini App to start playing!`;
+
+    await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: deposit.telegram_id,
+        text: msgText,
+        parse_mode: 'Markdown',
+      })
+    });
+  } catch (err) {
+    console.error('Failed to notify user on Telegram:', err);
+  }
+
+  res.json({ success: true, isFirstDeposit, bonusAmount });
 });
 
 // Reject deposit → permanently delete from DB
