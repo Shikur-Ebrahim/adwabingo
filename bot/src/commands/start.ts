@@ -37,7 +37,7 @@ export async function startCommand(ctx: Context) {
         { text: '📢 Join Channel', url: channelUrl },
       ],
       [
-        { text: '👥 Invite Friend', url: shareUrl },
+        { text: '👥 Invite Friend', callback_data: 'btn_invite' },
         { text: '💰 Deposit', callback_data: 'btn_deposit' },
       ],
     ],
