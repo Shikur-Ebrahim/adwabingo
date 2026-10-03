@@ -2,12 +2,19 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '../types';
 import WebApp from '@twa-dev/sdk';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_ANON_KEY
+);
 
 interface GameStore {
   user: User | null;
   loading: boolean;
   error: string | null;
   fetchUser: () => Promise<void>;
+  subscribeToBalance: () => () => void;
 }
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -62,9 +69,36 @@ export const useGameStore = create<GameStore>()(
           set({ loading: false });
         }
       },
+
+      // Realtime subscription — updates balance instantly when admin approves
+      subscribeToBalance: () => {
+        const telegramId = get().user?.telegram_id;
+        if (!telegramId) return () => {};
+
+        const channel = supabase
+          .channel(`user-balance-${telegramId}`)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'users',
+              filter: `telegram_id=eq.${telegramId}`,
+            },
+            (payload) => {
+              const updated = payload.new as User;
+              set((state) => ({
+                user: state.user ? { ...state.user, main_balance: updated.main_balance, bonus_balance: updated.bonus_balance } : state.user,
+              }));
+            }
+          )
+          .subscribe();
+
+        return () => { supabase.removeChannel(channel); };
+      },
     }),
     {
-      name: 'adwabingo-cache', // Saves to phone memory for instant loading
+      name: 'adwabingo-cache',
     }
   )
 );

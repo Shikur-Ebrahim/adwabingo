@@ -104,4 +104,43 @@ router.delete('/withdrawal-methods/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+// ─── DEPOSIT VERIFICATION ─────────────────────────────────────────────────────
+
+// Get all pending deposits with user + method info
+router.get('/deposits', async (req, res) => {
+  const { data, error } = await supabase
+    .from('deposits')
+    .select('*, deposit_methods(type, name, logo_url), users!deposits_telegram_id_fkey(first_name, username)')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: false });
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json(data);
+});
+
+// Approve deposit → add to user balance + mark approved
+router.post('/deposits/:id/approve', async (req, res) => {
+  const { data: deposit, error: fetchErr } = await supabase
+    .from('deposits').select('*').eq('id', req.params.id).single();
+  if (fetchErr || !deposit) { res.status(404).json({ error: 'Deposit not found' }); return; }
+
+  // Atomic balance increment
+  const { error: balErr } = await supabase.rpc('increment_user_balance', {
+    p_telegram_id: deposit.telegram_id,
+    p_amount: deposit.amount,
+  });
+  if (balErr) { res.status(500).json({ error: balErr.message }); return; }
+
+  // Mark deposit as approved
+  await supabase.from('deposits').update({ status: 'approved', updated_at: new Date() }).eq('id', req.params.id);
+
+  res.json({ success: true });
+});
+
+// Reject deposit → permanently delete from DB
+router.delete('/deposits/:id/reject', async (req, res) => {
+  const { error } = await supabase.from('deposits').delete().eq('id', req.params.id);
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ success: true });
+});
+
 export default router;

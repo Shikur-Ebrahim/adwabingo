@@ -67,15 +67,19 @@ function RoleRouter() {
 
 import AdminDepositMethods from './pages/AdminDepositMethods';
 import AdminWithdrawalMethods from './pages/AdminWithdrawalMethods';
+import AdminDeposits from './pages/AdminDeposits';
 
 function App() {
-  const { fetchUser, loading } = useGameStore();
+  const { fetchUser, subscribeToBalance } = useGameStore();
 
   useEffect(() => {
     WebApp.ready();
     WebApp.expand();
-    fetchUser();
-  }, [fetchUser]);
+    fetchUser().then(() => {
+      const unsub = subscribeToBalance();
+      return unsub;
+    });
+  }, [fetchUser, subscribeToBalance]);
 
   return (
     <BrowserRouter>
@@ -88,6 +92,7 @@ function App() {
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/deposit-methods" element={<AdminDepositMethods />} />
           <Route path="/admin/withdrawal-methods" element={<AdminWithdrawalMethods />} />
+          <Route path="/admin/deposits" element={<AdminDeposits />} />
           <Route path="/worker" element={<Worker />} />
         </Routes>
         <Navigation />
