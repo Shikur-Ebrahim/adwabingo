@@ -145,7 +145,7 @@ export default function AdminWithdrawals() {
   const pendingCount = withdrawals.filter(w => w.status === 'pending').length;
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-50 ">
       {/* Header */}
       <div className="bg-gradient-to-r from-rose-600 to-rose-700 px-4 pt-6 pb-5 sticky top-0 z-10 shadow-md">
         <div className="flex items-center justify-between mb-4">
@@ -156,13 +156,13 @@ export default function AdminWithdrawals() {
               <p className="text-rose-200 text-xs">{pendingCount} pending</p>
             </div>
           </div>
-          <button onClick={fetchWithdrawals} className="text-white/80 hover:text-white p-2 rounded-xl bg-white dark:bg-slate-900/10">
+          <button onClick={fetchWithdrawals} className="text-white/80 hover:text-white p-2 rounded-xl bg-white /10">
             <RefreshCw size={18} />
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-white dark:bg-slate-900/20 rounded-xl p-1 gap-1">
+        <div className="flex bg-white /20 rounded-xl p-1 gap-1">
           {[
             { key: 'pending', label: `Pending${pendingCount > 0 ? ` (${pendingCount})` : ''}` },
             { key: 'approved', label: 'Approved History' },
@@ -171,7 +171,7 @@ export default function AdminWithdrawals() {
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
               className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${
-                activeTab === tab.key ? 'bg-white dark:bg-slate-900 text-rose-700 shadow-sm' : 'text-white/80'
+                activeTab === tab.key ? 'bg-white  text-rose-700 shadow-sm' : 'text-white/80'
               }`}
             >
               {tab.label}
@@ -189,7 +189,7 @@ export default function AdminWithdrawals() {
             className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
               timeFilter === f.id
                 ? 'bg-rose-600 text-white shadow-sm'
-                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-gray-200'
+                : 'bg-white  text-slate-600  border border-gray-200'
             }`}
           >
             {f.label}
@@ -207,7 +207,7 @@ export default function AdminWithdrawals() {
         ) : filteredWithdrawals.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-slate-400">
             <Clock size={48} className="mb-3 opacity-30" />
-            <p className="font-bold text-slate-500 dark:text-slate-400">No {activeTab} withdrawals</p>
+            <p className="font-bold text-slate-500 ">No {activeTab} withdrawals</p>
             <p className="text-sm mt-1">
               {activeTab === 'pending' ? 'All caught up!' : 'No history for this period'}
             </p>
@@ -215,45 +215,45 @@ export default function AdminWithdrawals() {
         ) : (
           filteredWithdrawals.map(w => {
             const type = w.withdrawal_methods?.type || 'unknown';
-            const badgeColor = typeBadgeColors[type] || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300';
+            const badgeColor = typeBadgeColors[type] || 'bg-slate-100  text-slate-600 ';
             const methodLabel = typeLabels[type] || type.toUpperCase();
             const isProcessing = processingId === w.id;
 
             return (
-              <div key={w.id} className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
+              <div key={w.id} className="bg-white  rounded-2xl shadow-sm border border-gray-100  overflow-hidden">
                 {/* Top row */}
                 <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-gray-50">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center font-black text-slate-600 dark:text-slate-300 text-sm">
+                    <div className="w-10 h-10 bg-slate-100  rounded-full flex items-center justify-center font-black text-slate-600  text-sm">
                       {(w.users?.first_name || 'U').charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-black text-slate-800 dark:text-slate-100 text-sm">{w.users?.first_name || 'Unknown'}</p>
+                      <p className="font-black text-slate-800  text-sm">{w.users?.first_name || 'Unknown'}</p>
                       {w.users?.username && (
                         <p className="text-xs text-slate-400">@{w.users.username}</p>
                       )}
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-black text-slate-800 dark:text-slate-100 text-lg">{Number(w.amount).toLocaleString('en-US')} <span className="text-sm font-bold text-slate-500 dark:text-slate-400">ETB</span></p>
+                    <p className="font-black text-slate-800  text-lg">{Number(w.amount).toLocaleString('en-US')} <span className="text-sm font-bold text-slate-500 ">ETB</span></p>
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeColor}`}>{methodLabel}</span>
                   </div>
                 </div>
 
                 {/* Account details */}
                 <div className="px-4 py-3 space-y-1.5">
-                  <div className="flex items-center space-x-2 text-slate-600 dark:text-slate-300">
+                  <div className="flex items-center space-x-2 text-slate-600 ">
                     <User size={13} className="text-slate-400" />
                     <span className="text-xs font-semibold">{w.account_name}</span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-600 dark:text-slate-300">
+                  <div className="flex items-center justify-between text-slate-600 ">
                     <div className="flex items-center space-x-2">
                       <Phone size={13} className="text-slate-400" />
                       <span className="text-xs font-mono font-bold">{w.account_number}</span>
                     </div>
                     <button
                       onClick={() => handleCopy(w.account_number, w.id)}
-                      className="p-1.5 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      className="p-1.5 rounded-lg bg-slate-50  text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
                     >
                       {copiedId === w.id ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
                     </button>
@@ -263,11 +263,11 @@ export default function AdminWithdrawals() {
 
                 {/* Action buttons — only for pending */}
                 {w.status === 'pending' && (
-                  <div className="grid grid-cols-2 gap-0 border-t border-gray-100 dark:border-slate-800">
+                  <div className="grid grid-cols-2 gap-0 border-t border-gray-100 ">
                     <button
                       onClick={() => handleApprove(w.id)}
                       disabled={isProcessing}
-                      className="flex items-center justify-center space-x-1.5 py-3 text-emerald-600 font-black text-sm hover:bg-emerald-50 transition-colors border-r border-gray-100 dark:border-slate-800 active:scale-95 disabled:opacity-50"
+                      className="flex items-center justify-center space-x-1.5 py-3 text-emerald-600 font-black text-sm hover:bg-emerald-50 transition-colors border-r border-gray-100  active:scale-95 disabled:opacity-50"
                     >
                       <CheckCircle2 size={16} />
                       <span>{isProcessing ? '...' : 'Approve'}</span>
