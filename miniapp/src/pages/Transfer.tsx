@@ -27,7 +27,7 @@ export default function Transfer() {
     const amt = Number(amount);
     if (!recipientId.trim()) { setErrorMsg('Please enter a Telegram ID.'); return; }
     if (!amt || amt <= 0) { setErrorMsg('Please enter a valid amount.'); return; }
-    if (amt < 1) { setErrorMsg('Minimum transfer is 1 ETB.'); return; }
+    if (amt < 10) { setErrorMsg('Minimum transfer is 10 ETB.'); return; }
 
     setErrorMsg('');
     setLoading(true);
@@ -115,7 +115,7 @@ export default function Transfer() {
         {/* BALANCE CARD */}
         <div className="bg-slate-900 rounded-[1.5rem] p-5 flex justify-between items-center">
           <div>
-            <p className="text-white/50 text-[10px] font-bold uppercase tracking-wider mb-0.5">Your Main Balance</p>
+            <p className="text-white/50 text-xs font-semibold mb-1">Your Main Balance</p>
             <p className="text-3xl font-black text-white">{(user?.main_balance || 0).toLocaleString('en-US')} <span className="text-sm">ETB</span></p>
           </div>
           <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
@@ -126,7 +126,7 @@ export default function Transfer() {
         {/* RECIPIENT INPUT */}
         <div className="bg-white rounded-[1.5rem] p-5 shadow-sm border border-gray-100 space-y-4">
           <div>
-            <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Recipient Telegram ID</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">User ID</label>
             <input
               type="number"
               inputMode="numeric"
@@ -135,7 +135,7 @@ export default function Transfer() {
               onChange={e => { setRecipientId(e.target.value); setErrorMsg(''); setStep('form'); }}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-800 font-bold text-base focus:outline-none focus:border-emerald-400 transition-colors"
             />
-            <p className="text-[10px] text-slate-400 font-semibold mt-1.5 ml-1">
+            <p className="text-[10px] text-slate-400 font-medium mt-2 ml-1">
               📌 Ask the recipient to copy their ID from their Profile sidebar
             </p>
           </div>
@@ -143,29 +143,17 @@ export default function Transfer() {
           <div className="h-px bg-slate-100" />
 
           <div>
-            <label className="block text-xs font-black text-slate-500 uppercase tracking-wider mb-2">Amount (ETB)</label>
+            <label className="block text-sm font-semibold text-slate-700 mb-2">Amount (ETB)</label>
             <div className="relative">
               <input
                 type="number"
                 inputMode="decimal"
-                placeholder="Enter amount"
+                placeholder="Enter amount (Min 10)"
                 value={amount}
                 onChange={e => { setAmount(e.target.value); setErrorMsg(''); setStep('form'); }}
                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 pr-16 text-slate-800 font-bold text-base focus:outline-none focus:border-emerald-400 transition-colors"
               />
-              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-black text-sm">ETB</span>
-            </div>
-            {/* Quick amount buttons */}
-            <div className="grid grid-cols-4 gap-2 mt-2">
-              {[10, 50, 100, 200].map(v => (
-                <button
-                  key={v}
-                  onClick={() => setAmount(String(v))}
-                  className={`py-2 rounded-xl text-xs font-black transition-colors ${amount === String(v) ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-                >
-                  {v}
-                </button>
-              ))}
+              <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">ETB</span>
             </div>
           </div>
         </div>
