@@ -106,12 +106,11 @@ router.delete('/withdrawal-methods/:id', async (req, res) => {
 
 // ─── DEPOSIT VERIFICATION ─────────────────────────────────────────────────────
 
-// Get all pending deposits with user + method info
+// Get all deposits with user + method info (pending and approved)
 router.get('/deposits', async (req, res) => {
   const { data, error } = await supabase
     .from('deposits')
     .select('*, deposit_methods(type, name, logo_url), users!deposits_telegram_id_fkey(first_name, username)')
-    .eq('status', 'pending')
     .order('created_at', { ascending: false });
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.json(data);
