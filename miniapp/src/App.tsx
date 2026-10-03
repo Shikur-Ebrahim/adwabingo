@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { Gamepad2, Wallet, Trophy, User } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 import { useGameStore } from './store/gameStore';
@@ -7,9 +7,17 @@ import { useGameStore } from './store/gameStore';
 import Home from './pages/Home';
 import Deposit from './pages/Deposit';
 import Profile from './pages/Profile';
+import Admin from './pages/Admin';
+import Worker from './pages/Worker';
 
 function Navigation() {
   const location = useLocation();
+  const { user } = useGameStore();
+
+  // Hide the player bottom navigation if the user is an Admin or Worker
+  if (user?.role === 'admin' || user?.role === 'worker') {
+    return null;
+  }
 
   const navItems = [
     { path: '/', label: 'Games', icon: Gamepad2 },
@@ -42,6 +50,21 @@ function Navigation() {
   );
 }
 
+function RoleRouter() {
+  const { user } = useGameStore();
+  
+  if (user?.role === 'admin') {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  if (user?.role === 'worker') {
+    return <Navigate to="/worker" replace />;
+  }
+  
+  // Default user role sees the normal bingo home page
+  return <Home />;
+}
+
 function App() {
   const { fetchUser, loading } = useGameStore();
 
@@ -52,17 +75,19 @@ function App() {
   }, [fetchUser]);
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen bg-slate-50">Loading...</div>;
+    return <div className="flex items-center justify-center min-h-screen bg-slate-50 font-bold text-slate-500">Loading...</div>;
   }
 
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-slate-50 pb-20 font-sans text-slate-800">
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<RoleRouter />} />
           <Route path="/deposit" element={<Deposit />} />
-          <Route path="/leaderboard" element={<div className="p-4 text-center mt-10 font-bold">Leaderboard</div>} />
+          <Route path="/leaderboard" element={<div className="p-4 text-center mt-10 font-bold">Leaderboard coming soon...</div>} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/worker" element={<Worker />} />
         </Routes>
         <Navigation />
       </div>
