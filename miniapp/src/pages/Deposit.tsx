@@ -162,9 +162,21 @@ export default function Deposit() {
             <Clock size={18} className="text-yellow-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs text-yellow-700 font-semibold text-left">Your balance will be credited once an admin approves your payment. This usually takes a few minutes.</p>
           </div>
-          <Link to="/" className="mt-6 block w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-950 font-black py-4 rounded-xl text-center transition-all active:scale-95">
+          <Link to="/" className="mt-3 block w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-4 rounded-xl text-center transition-all active:scale-95">
             Back to Home
           </Link>
+          
+          {supportUsername && (
+            <a 
+              href={`https://t.me/${supportUsername.replace('@', '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 flex items-center justify-center space-x-2 text-blue-600 font-black text-sm bg-blue-50 hover:bg-blue-100 transition-colors py-3.5 rounded-xl w-full border border-blue-100"
+            >
+              <MessageCircle size={18} />
+              <span>Need Help? Contact Support</span>
+            </a>
+          )}
         </div>
       </div>
     );
@@ -187,19 +199,15 @@ export default function Deposit() {
           </div>
           
           {supportUsername && (
-            <button 
-              onClick={() => {
-                if (typeof WebApp !== 'undefined') {
-                  WebApp.openTelegramLink(`https://t.me/${supportUsername}`);
-                } else {
-                  window.open(`https://t.me/${supportUsername}`, '_blank');
-                }
-              }}
+            <a 
+              href={`https://t.me/${supportUsername.replace('@', '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="mt-4 flex items-center justify-center space-x-2 text-blue-600 font-black text-sm bg-blue-50 hover:bg-blue-100 transition-colors py-3.5 rounded-xl w-full border border-blue-100"
             >
               <MessageCircle size={18} />
               <span>Need Help? Contact Support</span>
-            </button>
+            </a>
           )}
 
           <Link to="/" className="mt-3 block w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-4 rounded-xl text-center transition-all active:scale-95">
