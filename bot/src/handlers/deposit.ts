@@ -146,7 +146,6 @@ export async function handleMethodSelect(ctx: Context, methodId: string) {
     telebirr: '📱',
     mpesa: '💚',
   };
-
   const emoji = typeEmoji[method.type] || '💳';
 
   sessions.set(userId, {
@@ -157,26 +156,50 @@ export async function handleMethodSelect(ctx: Context, methodId: string) {
     minDeposit: method.min_deposit,
   });
 
+  // Send account details — account number in code block = tap-to-copy on mobile
   await ctx.reply(
-    `${emoji} *Deposit via ${method.name}*\n\n` +
+    `${emoji} *Deposit via ${typeLabels[method.type] || method.name}*\n\n` +
     `📋 *Send Money To:*\n` +
-    `┌──────────────────────\n` +
-    `│ Name: *${method.name}*\n` +
-    `│ Account: \`${method.account_number}\`\n` +
-    `└──────────────────────\n\n` +
-    `⚠️ Minimum deposit: *${Number(method.min_deposit).toLocaleString('en-US')} ETB*\n\n` +
-    `📝 *How to deposit:*\n` +
-    `1️⃣ Send money to the account above\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n` +
+    `👤 Name: *${method.name}*\n` +
+    `🔢 Account: \`${method.account_number}\`\n` +
+    `*(Tap the number above to copy it)*\n` +
+    `━━━━━━━━━━━━━━━━━━━━\n\n` +
+    `⚠️ Min deposit: *${Number(method.min_deposit).toLocaleString('en-US')} ETB*\n\n` +
+    `📝 *Steps:*\n` +
+    `1️⃣ Send money to account above\n` +
     `2️⃣ Take a screenshot of the receipt\n` +
-    `3️⃣ Reply with the amount you sent\n\n` +
-    `👇 *Enter the amount you sent (in ETB):*`,
+    `3️⃣ Type the amount you sent below`,
     {
       parse_mode: 'Markdown',
       reply_markup: {
-        inline_keyboard: [[{ text: '❌ Cancel', callback_data: 'dep_cancel' }]],
+        inline_keyboard: [
+          [{ text: `📋 Copy: ${method.account_number}`, callback_data: `dep_copy_${method.account_number}` }],
+          [{ text: '❌ Cancel', callback_data: 'dep_cancel' }],
+        ],
       },
     }
   );
+
+  // Separate message with force_reply so keyboard opens automatically
+  await ctx.reply(
+    `👇 *Enter the amount you sent (ETB):*`,
+    {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        force_reply: true,
+        input_field_placeholder: `Min ${Number(method.min_deposit).toLocaleString('en-US')} ETB...`,
+      },
+    }
+  );
+}
+
+// ── Copy account number popup ─────────────────────────────────────────────────
+export async function handleCopyAccount(ctx: Context, accountNumber: string) {
+  await ctx.answerCallbackQuery({
+    text: `Account: ${accountNumber}\n(Long press to copy)`,
+    show_alert: true,
+  });
 }
 
 // ── STEP 3: Handle amount text ────────────────────────────────────────────────
