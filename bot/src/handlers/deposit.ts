@@ -77,7 +77,8 @@ export async function startDeposit(ctx: Context) {
     }
 
     if (worker?.username) {
-      supportText = `\n\n💬 Need help? Contact support: @${worker.username}`;
+      const safeWorker = worker.username.replace(/[_*[\]]/g, '\\$&');
+      supportText = `\n\n💬 Need help? Contact support: @${safeWorker}`;
     }
 
     await ctx.reply(
@@ -308,9 +309,12 @@ export async function handleDepositScreenshot(ctx: Context) {
     }
 
     if (worker?.username) {
-      supportText = `💬 Need help? Contact support: @${worker.username}`;
+      const safeUsername = worker.username.replace(/[_*[\]]/g, '\\$&');
+      supportText = `💬 Need help? Contact support: @${safeUsername}`;
       inlineKeyboard = { inline_keyboard: [[{ text: '💬 Contact Support', url: `https://t.me/${worker.username}` }]] };
     }
+
+    const safeMethodName = (session.methodName || '').replace(/[_*[\]]/g, '\\$&');
 
     // Edit processing message to success
     await ctx.api.editMessageText(
@@ -318,7 +322,7 @@ export async function handleDepositScreenshot(ctx: Context) {
       processingMsg.message_id,
       `✅ *Deposit Request Submitted!*\n\n` +
       `💰 Amount: *${Number(session.amount).toLocaleString('en-US')} ETB*\n` +
-      `🏦 Method: *${session.methodName}*\n` +
+      `🏦 Method: *${safeMethodName}*\n` +
       `📊 Status: *Pending Review*\n\n` +
       `⏳ Your deposit will be approved within a few minutes.\n` +
       `${supportText}`,
