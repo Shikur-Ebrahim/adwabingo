@@ -37,7 +37,7 @@ export async function startCommand(ctx: Context) {
         { text: '📢 Join Channel', url: channelUrl },
       ],
       [
-        { text: '👥 Invite Friend', callback_data: 'btn_invite' },
+        { text: '👥 Invite Friend', url: `tg://msg_url?url=${encodeURIComponent(inviteLink)}&text=${encodeURIComponent('🎮 Play ADWA Bingo with me! Join using my link and let\'s win together! 🎱')}` },
         { text: '💰 Deposit', callback_data: 'btn_deposit' },
       ],
     ],
