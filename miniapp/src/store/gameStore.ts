@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { User } from '../types';
 import WebApp from '@twa-dev/sdk';
 
@@ -11,51 +12,59 @@ interface GameStore {
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
-export const useGameStore = create<GameStore>((set) => ({
-  user: null,
-  loading: true,
-  error: null,
+export const useGameStore = create<GameStore>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      loading: false,
+      error: null,
 
-  fetchUser: async () => {
-    try {
-      set({ loading: true, error: null });
-      
-      let initData = '';
-      if (typeof WebApp !== 'undefined' && WebApp.initData) {
-        initData = WebApp.initData;
-      }
-      
-      const response = await fetch(`${API_URL}/auth/verify`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-telegram-init-data': initData,
-        },
-      });
+      fetchUser: async () => {
+        try {
+          // Instantly show UI using Telegram data if no cache exists
+          if (!get().user && typeof WebApp !== 'undefined' && WebApp.initDataUnsafe?.user) {
+            const tgUser = WebApp.initDataUnsafe.user;
+            set({
+              user: {
+                id: 'temp',
+                telegram_id: tgUser.id.toString(),
+                username: tgUser.username || '',
+                first_name: tgUser.first_name || 'User',
+                main_balance: 0,
+                bonus_balance: 0,
+                role: 'user',
+                total_games: 0,
+                total_wins: 0
+              }
+            });
+          }
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch user');
-      }
+          let initData = '';
+          if (typeof WebApp !== 'undefined' && WebApp.initData) {
+            initData = WebApp.initData;
+          }
+          
+          // Silently fetch real data in background
+          const response = await fetch(`${API_URL}/auth/verify`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-telegram-init-data': initData,
+            },
+          });
 
-      const data = await response.json();
-      set({ user: data.user, loading: false });
-    } catch (error: any) {
-      console.error('Error fetching user:', error);
-      // For local testing outside Telegram, mock a user if it fails
-      set({ 
-        loading: false,
-        user: {
-          id: 'test-id',
-          telegram_id: '123456789',
-          username: 'testuser',
-          first_name: 'Test',
-          main_balance: 0,
-          bonus_balance: 0,
-          role: 'user',
-          total_games: 0,
-          total_wins: 0
+          if (response.ok) {
+            const data = await response.json();
+            set({ user: data.user, loading: false });
+          }
+        } catch (error: any) {
+          console.error('Error fetching user:', error);
+          set({ loading: false });
         }
-      });
+      },
+    }),
+    {
+      name: 'adwabingo-cache', // Saves to phone memory for instant loading
     }
-  },
-}));
+  )
+);

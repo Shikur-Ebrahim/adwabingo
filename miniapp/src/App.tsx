@@ -74,10 +74,6 @@ function App() {
     fetchUser();
   }, [fetchUser]);
 
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen bg-slate-50 font-bold text-slate-500">Loading...</div>;
-  }
-
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-slate-50 pb-20 font-sans text-slate-800">
