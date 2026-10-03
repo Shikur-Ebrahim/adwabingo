@@ -488,7 +488,7 @@ router.put('/users/:telegramId/balance', async (req, res) => {
   const { data: user } = await supabase.from('users').select('main_balance, bonus_balance').eq('telegram_id', req.params.telegramId).single();
   if (!user) { res.status(404).json({ error: 'User not found' }); return; }
 
-  const current = Number(user[field] || 0);
+  const current = Number((user as Record<string, any>)[field] || 0);
   const newValue = Math.max(0, current + Number(amount));
   const { error } = await supabase.from('users').update({ [field]: newValue }).eq('telegram_id', req.params.telegramId);
   if (error) { res.status(500).json({ error: error.message }); return; }
