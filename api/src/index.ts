@@ -7,6 +7,7 @@ import authRouter from './routes/auth';
 import playerRouter from './routes/player';
 import uploadRouter from './routes/upload';
 import adminRouter from './routes/admin';
+import depositRouter from './routes/deposit';
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -18,5 +19,6 @@ app.use('/api/auth', authRouter);
 app.use('/api/player', playerRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/deposit', depositRouter);
 
 app.listen(PORT, () => console.log(`🚀 API running on port ${PORT}`));
