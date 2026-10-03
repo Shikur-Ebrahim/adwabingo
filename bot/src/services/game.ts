@@ -2,10 +2,10 @@ import { supabase } from './supabase';
 import { generateBingoCard, initMarkedCells, generateRoomCode, checkBingo } from './bingo';
 import { Room, Player, User } from '../types';
 
-export async function upsertUser(telegramId: string, username: string, firstName: string, lastName?: string): Promise<User> {
+export async function upsertUser(telegramId: string, username: string, firstName: string): Promise<User> {
   const { data, error } = await supabase
     .from('users')
-    .upsert({ telegram_id: telegramId, username, first_name: firstName, last_name: lastName }, { onConflict: 'telegram_id' })
+    .upsert({ telegram_id: telegramId, username, first_name: firstName }, { onConflict: 'telegram_id' })
     .select().single();
   if (error) throw error;
   return data as User;

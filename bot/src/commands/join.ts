@@ -14,7 +14,7 @@ export async function joinCommand(ctx: Context) {
   const code = parts[1].toUpperCase();
 
   try {
-    await upsertUser(user.id.toString(), user.username || user.first_name, user.first_name, user.last_name);
+    await upsertUser(user.id.toString(), user.username || user.first_name, user.first_name);
     const { room } = await joinRoom(code, user.id.toString(), user.username || user.first_name);
     const { data: players } = await supabase.from('room_players').select('username').eq('room_id', room.id);
     const playerList = (players || []).map((p: any) => `• ${p.username}`).join('\n');

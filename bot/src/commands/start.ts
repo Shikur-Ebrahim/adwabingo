@@ -9,7 +9,7 @@ let bannerFileId: string | null = null;
 export async function startCommand(ctx: Context) {
   const user = ctx.from!;
   try {
-    await upsertUser(user.id.toString(), user.username || user.first_name, user.first_name, user.last_name);
+    await upsertUser(user.id.toString(), user.username || user.first_name, user.first_name);
   } catch (e) { console.error('Upsert user error:', e); }
 
   const miniAppUrl = process.env.MINI_APP_URL || 'https://adwabingo.vercel.app';

@@ -5,7 +5,7 @@ export async function newGameCommand(ctx: Context) {
   const user = ctx.from!;
   const chatId = ctx.chat!.id.toString();
   try {
-    await upsertUser(user.id.toString(), user.username || user.first_name, user.first_name, user.last_name);
+    await upsertUser(user.id.toString(), user.username || user.first_name, user.first_name);
     const room = await createRoom(user.id.toString(), chatId);
     await joinRoom(room.code, user.id.toString(), user.username || user.first_name);
 
