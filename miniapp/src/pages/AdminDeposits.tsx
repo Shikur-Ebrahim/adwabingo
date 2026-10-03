@@ -97,7 +97,6 @@ export default function AdminDeposits() {
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     return `${Math.floor(diff / 86400)}d ago`;
   };
-  };
 
   const now = new Date();
   const filteredDeposits = deposits.filter(d => {
