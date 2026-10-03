@@ -6,6 +6,7 @@ import { useGameStore } from './store/gameStore';
 
 import Home from './pages/Home';
 import Deposit from './pages/Deposit';
+import Withdraw from './pages/Withdraw';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 import Worker from './pages/Worker';
@@ -87,6 +88,7 @@ function App() {
         <Routes>
           <Route path="/" element={<RoleRouter />} />
           <Route path="/deposit" element={<Deposit />} />
+          <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/leaderboard" element={<div className="p-4 text-center mt-10 font-bold">Leaderboard coming soon...</div>} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin" element={<Admin />} />

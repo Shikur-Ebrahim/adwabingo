@@ -58,10 +58,10 @@ export default function Home() {
           <PlusCircle size={16} />
           <span>Deposit</span>
         </Link>
-        <button className="flex items-center justify-center space-x-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-slate-700 py-2 rounded-xl font-bold text-xs shadow-sm transition-colors">
+        <Link to="/withdraw" className="flex items-center justify-center space-x-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-slate-700 py-2 rounded-xl font-bold text-xs shadow-sm transition-colors">
           <ArrowDownToLine size={16} />
           <span>Withdraw</span>
-        </button>
+        </Link>
         <button 
           onClick={handleInvite}
           className="flex items-center justify-center space-x-1.5 bg-white border border-gray-200 hover:bg-gray-50 text-slate-700 py-2 rounded-xl font-bold text-xs shadow-sm transition-colors"
