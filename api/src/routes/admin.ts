@@ -334,15 +334,15 @@ router.delete('/withdrawals/:id/reject', async (req, res) => {
 router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) => {
   const { from, to } = req.query;
   
-  let dQuery = supabase.from('deposits').select('*, users!inner(username, inviter_id)');
-  let wQuery = supabase.from('withdrawals').select('*, users!inner(username)');
+  // Use explicit FK for deposits. Withdrawals might lack FK, so no join there.
+  let dQuery = supabase.from('deposits').select('*, users!deposits_telegram_id_fkey(username, inviter_id)');
+  let wQuery = supabase.from('withdrawals').select('*');
 
   if (from) {
     dQuery = dQuery.gte('created_at', from);
     wQuery = wQuery.gte('created_at', from);
   }
   if (to) {
-    // Add 1 day to 'to' to include the whole day if it's just a YYYY-MM-DD
     const toDate = new Date(to as string);
     toDate.setUTCHours(23, 59, 59, 999);
     dQuery = dQuery.lte('created_at', toDate.toISOString());
@@ -353,7 +353,14 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   const deposits = dRes.data || [];
   const withdrawals = wRes.data || [];
 
-  // To calculate bonuses accurately, we need to know which deposits were the "first"
+  // Fetch usernames for withdrawals manually
+  let wTelegramIds = [...new Set(withdrawals.map((w: any) => w.telegram_id))];
+  let wUsersMap: Record<string, string> = {};
+  if (wTelegramIds.length > 0) {
+    const { data: wUsers } = await supabase.from('users').select('telegram_id, username').in('telegram_id', wTelegramIds);
+    (wUsers || []).forEach(u => wUsersMap[u.telegram_id] = u.username);
+  }
+
   const { data: allApproved } = await supabase
     .from('deposits')
     .select('id, telegram_id, created_at')
@@ -371,7 +378,6 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
     }
   }
 
-  // Current settings for bonuses (fallback to historical defaults)
   const { data: setDep } = await supabase.from('settings').select('value').eq('key', 'first_deposit_bonus_pct').single();
   const { data: setInv } = await supabase.from('settings').select('value').eq('key', 'invitation_reward_pct').single();
   const depPct = setDep ? parseFloat(setDep.value) / 100 : 0.20;
@@ -386,24 +392,26 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
 
   deposits.forEach((d: any) => {
     if (d.status === 'approved') totalDeposits += Number(d.amount);
-    txList.push({ id: d.id, type: 'deposit', amount: Number(d.amount), status: d.status, created_at: d.created_at, username: d.users.username, telegram_id: d.telegram_id });
+    const username = d.users?.username || 'Unknown';
+    txList.push({ id: d.id, type: 'deposit', amount: Number(d.amount), status: d.status, created_at: d.created_at, username, telegram_id: d.telegram_id });
 
     if (d.status === 'approved' && firstDepositIds.has(d.id)) {
       const db = Number(d.amount) * depPct;
       totalDepBonus += db;
-      txList.push({ id: d.id + '_db', type: 'deposit_bonus', amount: db, status: 'approved', created_at: d.created_at, username: d.users.username, telegram_id: d.telegram_id });
+      txList.push({ id: d.id + '_db', type: 'deposit_bonus', amount: db, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
 
-      if (d.users.inviter_id) {
+      if (d.users?.inviter_id) {
         const ib = Number(d.amount) * invPct;
         totalInvBonus += ib;
-        txList.push({ id: d.id + '_ib', type: 'invitation_reward', amount: ib, status: 'approved', created_at: d.created_at, username: 'Inviter of ' + d.users.username, telegram_id: d.users.inviter_id });
+        txList.push({ id: d.id + '_ib', type: 'invitation_reward', amount: ib, status: 'approved', created_at: d.created_at, username: 'Inviter of ' + username, telegram_id: d.users.inviter_id });
       }
     }
   });
 
   withdrawals.forEach((w: any) => {
     if (w.status === 'approved') totalWithdrawals += Number(w.amount);
-    txList.push({ id: w.id, type: 'withdrawal', amount: Number(w.amount), status: w.status, created_at: w.created_at, username: w.users.username, telegram_id: w.telegram_id });
+    const username = wUsersMap[w.telegram_id] || 'Unknown';
+    txList.push({ id: w.id, type: 'withdrawal', amount: Number(w.amount), status: w.status, created_at: w.created_at, username, telegram_id: w.telegram_id });
   });
 
   txList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
