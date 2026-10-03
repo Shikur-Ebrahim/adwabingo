@@ -197,12 +197,30 @@ router.get('/stats', async (req, res) => {
 
 // Get all withdrawals with user + method info
 router.get('/withdrawals', async (req, res) => {
-  const { data, error } = await supabase
+  const { data: withdrawals, error } = await supabase
     .from('withdrawals')
-    .select('*, withdrawal_methods(type, logo_url), users!withdrawals_telegram_id_fkey(first_name, username)')
+    .select('*, withdrawal_methods(type, logo_url)')
     .order('created_at', { ascending: false });
+    
   if (error) { res.status(500).json({ error: error.message }); return; }
-  res.json(data);
+
+  // Manually fetch user data to avoid missing foreign key issues
+  if (withdrawals && withdrawals.length > 0) {
+    const telegramIds = [...new Set(withdrawals.map(w => w.telegram_id))];
+    const { data: users } = await supabase
+      .from('users')
+      .select('telegram_id, first_name, username')
+      .in('telegram_id', telegramIds);
+      
+    if (users) {
+      const userMap = Object.fromEntries(users.map(u => [u.telegram_id, u]));
+      for (const w of withdrawals) {
+        (w as any).users = userMap[w.telegram_id] || null;
+      }
+    }
+  }
+
+  res.json(withdrawals);
 });
 
 // Approve withdrawal → mark as approved and notify user
