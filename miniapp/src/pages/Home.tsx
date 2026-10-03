@@ -14,6 +14,10 @@ export default function Home() {
 
   const initial = user?.first_name ? user.first_name.charAt(0).toUpperCase() : 'U';
 
+  const formatMoney = (amount: number | undefined) => {
+    return (amount || 0).toLocaleString('en-US');
+  };
+
   return (
     <div className="flex flex-col space-y-6">
       {/* HEADER SECTION */}
@@ -37,12 +41,12 @@ export default function Home() {
             <div className="flex items-center space-x-1 text-purple-500 mb-0.5">
               <Gift size={14} />
             </div>
-            <p className="text-xs font-bold text-slate-700">{user?.bonus_balance || '0.00'} ETB</p>
+            <p className="text-xs font-bold text-slate-700">{formatMoney(user?.bonus_balance)} ETB</p>
           </div>
           
           <div className="flex flex-col items-end">
             <p className="text-[11px] text-slate-500 font-medium">Wallet</p>
-            <p className="text-sm font-bold text-green-600">{user?.main_balance || '0.00'} ETB</p>
+            <p className="text-sm font-bold text-green-600">{formatMoney(user?.main_balance)} ETB</p>
           </div>
         </div>
       </div>
@@ -76,13 +80,12 @@ export default function Home() {
           </button>
         </div>
         
-        <div className="relative rounded-2xl overflow-hidden shadow-md h-44 cursor-pointer transform transition-transform hover:scale-[1.02] bg-slate-900">
+        <div className="relative rounded-2xl overflow-hidden shadow-md aspect-[16/9] cursor-pointer transform transition-transform hover:scale-[1.02] bg-white flex items-center justify-center">
           <img 
             src="/banner.jpg" 
             alt="Adwa Bingo" 
-            className="w-full h-full object-cover opacity-90 hover:opacity-100 transition-opacity"
+            className="w-full h-full object-contain"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
           <div className="absolute bottom-3 left-0 right-0 flex justify-center">
             <div className="bg-yellow-400 text-yellow-950 px-6 py-1.5 rounded-full font-bold text-sm shadow-lg border border-yellow-300">
               PLAY NOW
