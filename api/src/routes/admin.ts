@@ -62,4 +62,46 @@ router.delete('/deposit-methods/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+// ─── WITHDRAWAL METHODS ───────────────────────────────────────────────────────
+
+// Get all withdrawal methods
+router.get('/withdrawal-methods', async (req, res) => {
+  const { data, error } = await supabase
+    .from('withdrawal_methods')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json(data);
+});
+
+// Create a withdrawal method
+router.post('/withdrawal-methods', async (req, res) => {
+  const { type, logo_url, min_withdrawal } = req.body;
+  const { data, error } = await supabase
+    .from('withdrawal_methods')
+    .insert([{ type, logo_url, min_withdrawal }])
+    .select().single();
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json(data);
+});
+
+// Update a withdrawal method
+router.put('/withdrawal-methods/:id', async (req, res) => {
+  const { type, logo_url, min_withdrawal, is_active } = req.body;
+  const { data, error } = await supabase
+    .from('withdrawal_methods')
+    .update({ type, logo_url, min_withdrawal, is_active, updated_at: new Date() })
+    .eq('id', req.params.id)
+    .select().single();
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json(data);
+});
+
+// Delete a withdrawal method
+router.delete('/withdrawal-methods/:id', async (req, res) => {
+  const { error } = await supabase.from('withdrawal_methods').delete().eq('id', req.params.id);
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ success: true });
+});
+
 export default router;

@@ -66,6 +66,7 @@ function RoleRouter() {
 }
 
 import AdminDepositMethods from './pages/AdminDepositMethods';
+import AdminWithdrawalMethods from './pages/AdminWithdrawalMethods';
 
 function App() {
   const { fetchUser, loading } = useGameStore();
@@ -86,6 +87,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/deposit-methods" element={<AdminDepositMethods />} />
+          <Route path="/admin/withdrawal-methods" element={<AdminWithdrawalMethods />} />
           <Route path="/worker" element={<Worker />} />
         </Routes>
         <Navigation />
