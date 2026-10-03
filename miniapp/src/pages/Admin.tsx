@@ -94,6 +94,21 @@ export default function Admin() {
             )
           }
 
+          if (mod.id === 'withdrawals') {
+            return (
+              <Link
+                key={mod.id}
+                to="/admin/withdrawals"
+                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
+              >
+                <div className={`w-12 h-12 rounded-2xl ${mod.bg} ${mod.color} flex items-center justify-center shadow-inner`}>
+                  <Icon size={24} strokeWidth={2.5} />
+                </div>
+                <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
+              </Link>
+            )
+          }
+
           return (
             <button 
               key={mod.id} 

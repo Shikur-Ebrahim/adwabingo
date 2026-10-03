@@ -183,7 +183,7 @@ router.delete('/deposits/:id/reject', async (req, res) => {
   res.json({ success: true });
 });
 
-// Get admin stats (e.g. pending deposit count)
+// Get admin stats (pending deposits count)
 router.get('/stats', async (req, res) => {
   const { count, error } = await supabase
     .from('deposits')
@@ -191,6 +191,67 @@ router.get('/stats', async (req, res) => {
     .eq('status', 'pending');
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.json({ pendingDeposits: count || 0 });
+});
+
+// ─── WITHDRAWAL MANAGEMENT ───────────────────────────────────────────────────
+
+// Get all withdrawals with user + method info
+router.get('/withdrawals', async (req, res) => {
+  const { data, error } = await supabase
+    .from('withdrawals')
+    .select('*, withdrawal_methods(type, logo_url), users!withdrawals_telegram_id_fkey(first_name, username)')
+    .order('created_at', { ascending: false });
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json(data);
+});
+
+// Approve withdrawal → mark as approved and notify user
+router.post('/withdrawals/:id/approve', async (req, res) => {
+  const { data: withdrawal, error: fetchErr } = await supabase
+    .from('withdrawals').select('*').eq('id', req.params.id).single();
+  if (fetchErr || !withdrawal) { res.status(404).json({ error: 'Withdrawal not found' }); return; }
+
+  await supabase.from('withdrawals').update({ status: 'approved', updated_at: new Date() }).eq('id', req.params.id);
+
+  // Notify user
+  try {
+    const msg = `✅ *Withdrawal Approved!*\n\n💸 Amount: *${Number(withdrawal.amount).toLocaleString('en-US')} ETB* has been sent to your account.\n\n⏳ Funds will arrive within a few minutes.`;
+    await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: withdrawal.telegram_id, text: msg, parse_mode: 'Markdown' })
+    });
+  } catch (err) { console.error('Failed to notify user:', err); }
+
+  res.json({ success: true });
+});
+
+// Reject withdrawal → refund main_balance + delete record + notify user
+router.delete('/withdrawals/:id/reject', async (req, res) => {
+  const { data: withdrawal, error: fetchErr } = await supabase
+    .from('withdrawals').select('*').eq('id', req.params.id).single();
+  if (fetchErr || !withdrawal) { res.status(404).json({ error: 'Withdrawal not found' }); return; }
+
+  // Refund main_balance
+  const { data: user } = await supabase.from('users').select('main_balance').eq('telegram_id', withdrawal.telegram_id).single();
+  if (user) {
+    await supabase.from('users').update({ main_balance: Number(user.main_balance) + Number(withdrawal.amount) }).eq('telegram_id', withdrawal.telegram_id);
+  }
+
+  // Delete the record
+  await supabase.from('withdrawals').delete().eq('id', req.params.id);
+
+  // Notify user
+  try {
+    const msg = `❌ *Withdrawal Rejected*\n\n💸 Your withdrawal of *${Number(withdrawal.amount).toLocaleString('en-US')} ETB* has been rejected.\n\n💰 Your balance has been refunded. Please contact support for more info.`;
+    await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: withdrawal.telegram_id, text: msg, parse_mode: 'Markdown' })
+    });
+  } catch (err) { console.error('Failed to notify user:', err); }
+
+  res.json({ success: true });
 });
 
 export default router;
