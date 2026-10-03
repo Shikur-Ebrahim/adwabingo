@@ -41,7 +41,18 @@ export default function Transfer() {
         },
         body: JSON.stringify({ recipient_telegram_id: recipientId.trim(), amount: amt }),
       });
-      const data = await res.json();
+      
+      let data;
+      try {
+        data = await res.json();
+      } catch (parseError) {
+        // If it's not JSON, it's likely a 404 or 500 HTML page (e.g. backend not updated)
+        setErrorMsg(`Server error (not JSON): ${res.status}. Did you deploy the backend update?`);
+        setStep('error');
+        setLoading(false);
+        return;
+      }
+
       if (!res.ok) {
         setErrorMsg(data.error || 'Transfer failed.');
         setStep('error');
@@ -51,8 +62,8 @@ export default function Transfer() {
         setStep('success');
         if (typeof WebApp !== 'undefined') WebApp.HapticFeedback.notificationOccurred('success');
       }
-    } catch {
-      setErrorMsg('Network error. Please try again.');
+    } catch (err: any) {
+      setErrorMsg(`Network error: ${err.message}`);
       setStep('error');
     } finally {
       setLoading(false);
