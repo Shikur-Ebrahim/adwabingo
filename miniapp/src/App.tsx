@@ -65,6 +65,8 @@ function RoleRouter() {
   return <Home />;
 }
 
+import AdminDepositMethods from './pages/AdminDepositMethods';
+
 function App() {
   const { fetchUser, loading } = useGameStore();
 
@@ -83,6 +85,7 @@ function App() {
           <Route path="/leaderboard" element={<div className="p-4 text-center mt-10 font-bold">Leaderboard coming soon...</div>} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/deposit-methods" element={<AdminDepositMethods />} />
           <Route path="/worker" element={<Worker />} />
         </Routes>
         <Navigation />

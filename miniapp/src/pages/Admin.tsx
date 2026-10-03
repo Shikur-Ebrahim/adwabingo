@@ -1,4 +1,5 @@
 import { Users, UserCog, ArrowDownToLine, ArrowUpFromLine, Landmark, CreditCard, Gamepad2, Receipt } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export default function Admin() {
   const adminModules = [
@@ -17,6 +18,22 @@ export default function Admin() {
       <div className="grid grid-cols-2 gap-3">
         {adminModules.map((mod) => {
           const Icon = mod.icon;
+          
+          if (mod.id === 'dep_methods') {
+            return (
+              <Link 
+                key={mod.id}
+                to="/admin/deposit-methods" 
+                className="bg-white p-5 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center justify-center space-y-3 transition-all hover:shadow-md active:scale-95"
+              >
+                <div className={`w-12 h-12 rounded-2xl ${mod.bg} ${mod.color} flex items-center justify-center shadow-inner`}>
+                  <Icon size={24} strokeWidth={2.5} />
+                </div>
+                <span className="font-bold text-sm text-slate-700 text-center">{mod.title}</span>
+              </Link>
+            )
+          }
+
           return (
             <button 
               key={mod.id} 
