@@ -13,7 +13,7 @@ import Worker from './pages/Worker';
 
 function Navigation() {
   const location = useLocation();
-  const { user } = useGameStore();
+  const { user, isProfileOpen, setProfileOpen } = useGameStore();
 
   // Hide the player bottom navigation if the user is an Admin or Worker
   if (user?.role === 'admin' || user?.role === 'worker') {
@@ -24,19 +24,29 @@ function Navigation() {
     { path: '/', label: 'Games', icon: Gamepad2 },
     { path: '/deposit', label: 'Deposit', icon: Wallet },
     { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-    { path: '/profile', label: 'Profile', icon: User },
+    { path: '#', label: 'Profile', icon: User },
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe z-40">
       <div className="flex justify-around items-center h-16">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname === item.path;
+          const isProfileTab = item.label === 'Profile';
+          const isActive = isProfileTab ? isProfileOpen : (!isProfileOpen && location.pathname === item.path);
+          
           return (
             <Link
-              key={item.path}
-              to={item.path}
+              key={item.label}
+              to={isProfileTab ? location.pathname : item.path}
+              onClick={(e) => {
+                if (isProfileTab) {
+                  e.preventDefault();
+                  setProfileOpen(true);
+                } else {
+                  setProfileOpen(false);
+                }
+              }}
               className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
                 isActive ? 'text-yellow-600' : 'text-gray-400 hover:text-gray-600'
               }`}
@@ -91,7 +101,6 @@ function App() {
           <Route path="/deposit" element={<Deposit />} />
           <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/leaderboard" element={<div className="p-4 text-center mt-10 font-bold">Leaderboard coming soon...</div>} />
-          <Route path="/profile" element={<Profile />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/deposit-methods" element={<AdminDepositMethods />} />
           <Route path="/admin/withdrawal-methods" element={<AdminWithdrawalMethods />} />
@@ -99,6 +108,7 @@ function App() {
           <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
           <Route path="/worker" element={<Worker />} />
         </Routes>
+        <Profile />
         <Navigation />
       </div>
     </BrowserRouter>

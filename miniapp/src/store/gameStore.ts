@@ -13,6 +13,8 @@ interface GameStore {
   user: User | null;
   loading: boolean;
   error: string | null;
+  isProfileOpen: boolean;
+  setProfileOpen: (isOpen: boolean) => void;
   fetchUser: () => Promise<void>;
   subscribeToBalance: () => () => void;
 }
@@ -25,6 +27,8 @@ export const useGameStore = create<GameStore>()(
       user: null,
       loading: false,
       error: null,
+      isProfileOpen: false,
+      setProfileOpen: (isOpen: boolean) => set({ isProfileOpen: isOpen }),
 
       fetchUser: async () => {
         try {
