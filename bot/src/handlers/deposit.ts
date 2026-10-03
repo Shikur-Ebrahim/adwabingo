@@ -33,6 +33,14 @@ export function clearDepositSession(userId: number) {
   sessions.delete(userId);
 }
 
+// Type display labels
+const typeLabels: Record<string, string> = {
+  cbe: '🏦 Commercial Bank of Ethiopia',
+  boa: '🏛️ Bank of Abyssinia',
+  telebirr: '📱 Telebirr',
+  mpesa: '💚 M-Pesa',
+};
+
 // ── STEP 1: Show method list ──────────────────────────────────────────────────
 export async function startDeposit(ctx: Context) {
   await ctx.answerCallbackQuery();
@@ -47,8 +55,33 @@ export async function startDeposit(ctx: Context) {
     .single();
 
   if (pending) {
+    // Fetch support contact (worker or admin)
+    let supportText = '';
+    let { data: worker } = await supabase
+      .from('users')
+      .select('username')
+      .eq('role', 'worker')
+      .not('username', 'is', null)
+      .limit(1)
+      .single();
+
+    if (!worker) {
+      const { data: admin } = await supabase
+        .from('users')
+        .select('username')
+        .eq('role', 'admin')
+        .not('username', 'is', null)
+        .limit(1)
+        .single();
+      worker = admin;
+    }
+
+    if (worker?.username) {
+      supportText = `\n\n💬 Need help? Contact support: @${worker.username}`;
+    }
+
     await ctx.reply(
-      `⏳ *Deposit Pending*\n\nYou already have a deposit of *${Number(pending.amount).toLocaleString('en-US')} ETB* waiting for approval.\n\nPlease wait for admin to approve it before making a new deposit.`,
+      `⏳ *Deposit Pending*\n\nYou already have a deposit of *${Number(pending.amount).toLocaleString('en-US')} ETB* waiting for admin approval.\n\nPlease wait before making a new deposit.${supportText}`,
       { parse_mode: 'Markdown' }
     );
     return;
@@ -66,13 +99,18 @@ export async function startDeposit(ctx: Context) {
     return;
   }
 
-  // Build keyboard with one button per method
-  const keyboard = methods.map((m: any) => ([{
-    text: `🏦 ${m.name}`,
+  // Build 2-column keyboard using type labels
+  const methodButtons = methods.map((m: any) => ({
+    text: typeLabels[m.type] || `🏦 ${m.type.toUpperCase()}`,
     callback_data: `dep_method_${m.id}`,
-  }]));
+  }));
 
-  keyboard.push([{ text: '❌ Cancel', callback_data: 'dep_cancel' }]);
+  // Chunk into rows of 2
+  const rows: typeof methodButtons[] = [];
+  for (let i = 0; i < methodButtons.length; i += 2) {
+    rows.push(methodButtons.slice(i, i + 2));
+  }
+  rows.push([{ text: '❌ Cancel', callback_data: 'dep_cancel' }]);
 
   sessions.set(userId, { step: 'choose_method' });
 
@@ -80,7 +118,7 @@ export async function startDeposit(ctx: Context) {
     `💰 *ADWA Bingo Deposit*\n\nSelect your preferred deposit method:`,
     {
       parse_mode: 'Markdown',
-      reply_markup: { inline_keyboard: keyboard },
+      reply_markup: { inline_keyboard: rows },
     }
   );
 }
