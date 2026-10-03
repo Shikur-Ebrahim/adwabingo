@@ -65,7 +65,7 @@ router.post('/request', async (req: AuthRequest, res) => {
     const { data: workers } = await supabase
       .from('users')
       .select('telegram_id')
-      .in('role', ['worker', 'admin']);
+      .eq('role', 'worker');
 
     if (workers && workers.length > 0) {
       const typeLabels: Record<string, string> = {

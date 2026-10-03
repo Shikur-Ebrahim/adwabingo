@@ -290,7 +290,7 @@ export async function handleDepositScreenshot(ctx: Context) {
       const { data: workers } = await supabase
         .from('users')
         .select('telegram_id')
-        .in('role', ['worker', 'admin']);
+        .eq('role', 'worker');
 
       if (workers && workers.length > 0) {
         const safeUsername = (ctx.from?.username || ctx.from?.first_name || 'User').replace(/[_*[\]]/g, '\\$&');
