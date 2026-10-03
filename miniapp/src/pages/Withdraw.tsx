@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, User, Phone } from 'lucide-react';
+import { ArrowLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, User, Phone, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import { useGameStore } from '../store/gameStore';
@@ -154,17 +154,25 @@ export default function Withdraw() {
           <div className="mt-5 bg-blue-50 border border-blue-100 rounded-xl p-4">
             <p className="text-xs text-blue-700 font-semibold text-center">Please wait for admin to process before making a new request.</p>
           </div>
-          <Link to="/" className="mt-5 block w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-4 rounded-xl text-center transition-all active:scale-95">
+          {supportContact && (
+            <button 
+              onClick={() => {
+                if (typeof WebApp !== 'undefined' && WebApp.openTelegramLink) {
+                  WebApp.openTelegramLink(`https://t.me/${supportContact}`);
+                } else {
+                  window.open(`https://t.me/${supportContact}`, '_blank');
+                }
+              }}
+              className="mt-4 flex items-center justify-center space-x-2 text-blue-600 font-black text-sm bg-blue-50 hover:bg-blue-100 transition-colors py-3.5 rounded-xl w-full border border-blue-100"
+            >
+              <MessageCircle size={18} />
+              <span>Need Help? Contact Support</span>
+            </button>
+          )}
+
+          <Link to="/" className="mt-3 block w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-black py-4 rounded-xl text-center transition-all active:scale-95">
             Back to Home
           </Link>
-          <a
-            href={`https://t.me/${supportContact}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 flex items-center justify-center space-x-2 w-full bg-blue-50 hover:bg-blue-100 text-blue-600 font-black py-4 rounded-xl text-center transition-all active:scale-95"
-          >
-            <span>Contact Support (@{supportContact})</span>
-          </a>
         </div>
       </div>
     );
@@ -185,17 +193,25 @@ export default function Withdraw() {
           <div className="mt-5 bg-green-50 border border-green-100 rounded-xl p-4">
             <p className="text-xs text-green-700 font-semibold text-center">Your balance has been debited. Funds will be transferred within a few minutes.</p>
           </div>
-          <Link to="/" className="mt-5 block w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-black py-4 rounded-xl text-center transition-all active:scale-95">
+          {supportContact && (
+            <button 
+              onClick={() => {
+                if (typeof WebApp !== 'undefined' && WebApp.openTelegramLink) {
+                  WebApp.openTelegramLink(`https://t.me/${supportContact}`);
+                } else {
+                  window.open(`https://t.me/${supportContact}`, '_blank');
+                }
+              }}
+              className="mt-4 flex items-center justify-center space-x-2 text-blue-600 font-black text-sm bg-blue-50 hover:bg-blue-100 transition-colors py-3.5 rounded-xl w-full border border-blue-100"
+            >
+              <MessageCircle size={18} />
+              <span>Need Help? Contact Support</span>
+            </button>
+          )}
+
+          <Link to="/" className="mt-3 block w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-black py-4 rounded-xl text-center transition-all active:scale-95">
             Back to Home
           </Link>
-          <a
-            href={`https://t.me/${supportContact}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-3 flex items-center justify-center space-x-2 w-full bg-blue-50 hover:bg-blue-100 text-blue-600 font-black py-4 rounded-xl text-center transition-all active:scale-95"
-          >
-            <span>Contact Support (@{supportContact})</span>
-          </a>
         </div>
       </div>
     );
