@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { 
   Wallet, Gift, PlusCircle, ArrowDownToLine, Share2, 
-  ArrowRightLeft, History, Users, Globe, Headphones, Megaphone, ChevronRight, X, Moon, BarChart2
+  ArrowRightLeft, History, Users, Globe, Headphones, Megaphone, ChevronRight, X, Moon, BarChart2, Copy, Check
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -12,6 +12,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 export default function Profile() {
   const { user, isProfileOpen, setProfileOpen } = useGameStore();
   const [supportUsername, setSupportUsername] = useState('adwabingo_admin');
+  const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -91,9 +92,25 @@ export default function Profile() {
             <div className="w-11 h-11 rounded-full bg-emerald-500 border-2 border-white/20 flex items-center justify-center text-white font-black text-xl shadow-sm shrink-0">
               {user?.first_name ? user.first_name.charAt(0).toUpperCase() : 'U'}
             </div>
-            <div className="overflow-hidden">
+            <div className="overflow-hidden flex-1">
               <p className="text-white font-black text-base truncate leading-tight">{user?.first_name || 'Player'}</p>
-              <p className="text-white/50 text-xs font-semibold truncate">@{user?.username || 'user'}</p>
+              <div className="flex items-center space-x-1 mt-0.5">
+                <span className="text-white/50 text-[10px] font-mono font-semibold truncate">ID: {user?.telegram_id || '—'}</span>
+                <button
+                  onClick={() => {
+                    if (user?.telegram_id) {
+                      navigator.clipboard.writeText(user.telegram_id).then(() => {
+                        setCopied(true);
+                        if (typeof WebApp !== 'undefined') WebApp.HapticFeedback.impactOccurred('light');
+                        setTimeout(() => setCopied(false), 2000);
+                      });
+                    }
+                  }}
+                  className="shrink-0 text-white/50 hover:text-white transition-colors"
+                >
+                  {copied ? <Check size={11} className="text-emerald-400" /> : <Copy size={11} />}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -131,7 +148,7 @@ export default function Profile() {
               <Share2 size={18} className="mb-0.5 text-blue-500" />
               <span className="font-bold text-[10px]">Invite</span>
             </button>
-            <button onClick={() => { if(typeof WebApp !== 'undefined') WebApp.showAlert('Transfer coming soon!') }} className="bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors text-slate-700 rounded-xl py-2 flex flex-col items-center justify-center shadow-sm border border-gray-100">
+            <button onClick={() => navigateTo('/transfer')} className="bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors text-slate-700 rounded-xl py-2 flex flex-col items-center justify-center shadow-sm border border-gray-100">
               <ArrowRightLeft size={18} className="mb-0.5 text-emerald-500" />
               <span className="font-bold text-[10px]">Transfer</span>
             </button>
