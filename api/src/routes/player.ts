@@ -9,6 +9,53 @@ router.get('/profile', validateTelegramAuth, async (req: AuthRequest, res) => {
   if (!data) { res.status(404).json({ error: 'Player not found' }); return; }
   res.json({ player: data });
 });
+
+// GET /api/player/invited — returns all users invited by the current user
+router.get('/invited', validateTelegramAuth, async (req: AuthRequest, res) => {
+  const telegramId = req.telegramUser!.id.toString();
+
+  // Fetch all users who have this user as their inviter
+  const { data: invitedUsers, error } = await supabase
+    .from('users')
+    .select('telegram_id, first_name, username, created_at')
+    .eq('inviter_id', telegramId)
+    .order('created_at', { ascending: false });
+
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  if (!invitedUsers || invitedUsers.length === 0) {
+    res.json({ invited: [], total_earned: 0 });
+    return;
+  }
+
+  // For each invited user, check if they made a first approved deposit and calculate reward
+  const invitedWithRewards = await Promise.all(
+    invitedUsers.map(async (u: any) => {
+      const { data: firstDeposit } = await supabase
+        .from('deposits')
+        .select('amount, created_at')
+        .eq('telegram_id', u.telegram_id)
+        .eq('status', 'approved')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .single();
+
+      const rewardEarned = firstDeposit ? firstDeposit.amount * 0.10 : 0;
+      return {
+        telegram_id: u.telegram_id,
+        first_name: u.first_name,
+        username: u.username,
+        joined_at: u.created_at,
+        has_deposited: !!firstDeposit,
+        first_deposit_amount: firstDeposit?.amount || 0,
+        first_deposit_date: firstDeposit?.created_at || null,
+        reward_earned: rewardEarned,
+      };
+    })
+  );
+
+  const total_earned = invitedWithRewards.reduce((sum, u) => sum + u.reward_earned, 0);
+  res.json({ invited: invitedWithRewards, total_earned });
+});
 // Fetch a support contact (worker first, fallback to admin)
 router.get('/support-contact', validateTelegramAuth, async (req: AuthRequest, res) => {
   // Try to find a worker

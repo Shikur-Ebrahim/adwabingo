@@ -85,6 +85,7 @@ import DepositHistory from './pages/DepositHistory';
 import WithdrawHistory from './pages/WithdrawHistory';
 import Transfer from './pages/Transfer';
 import Invite from './pages/Invite';
+import InvitedPeople from './pages/InvitedPeople';
 
 function App() {
   const { fetchUser, subscribeToBalance } = useGameStore();
@@ -108,6 +109,7 @@ function App() {
           <Route path="/withdraw-history" element={<WithdrawHistory />} />
           <Route path="/transfer" element={<Transfer />} />
           <Route path="/invite" element={<Invite />} />
+          <Route path="/invited" element={<InvitedPeople />} />
           <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/leaderboard" element={<div className="p-4 text-center mt-10 font-bold">Leaderboard coming soon...</div>} />
           <Route path="/admin" element={<Admin />} />

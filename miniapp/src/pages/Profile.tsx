@@ -174,7 +174,7 @@ export default function Profile() {
               <ChevronRight size={12} className="text-slate-300" />
             </button>
 
-            <button onClick={handleInvite} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 rounded-lg transition-colors active:bg-slate-100 text-left">
+            <button onClick={() => navigateTo('/invited')} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 rounded-lg transition-colors active:bg-slate-100 text-left">
               <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mr-2.5 shrink-0">
                 <Users size={14} />
               </div>
