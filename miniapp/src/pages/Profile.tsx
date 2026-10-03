@@ -140,7 +140,7 @@ export default function Profile() {
           {/* VERTICAL LIST */}
           <div className="bg-white rounded-[1rem] p-1.5 shadow-sm border border-gray-100 flex flex-col flex-1 justify-around">
             
-            <button onClick={() => navigateTo('/deposit')} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 rounded-lg transition-colors active:bg-slate-100 text-left">
+            <button onClick={() => navigateTo('/deposit-history')} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 rounded-lg transition-colors active:bg-slate-100 text-left">
               <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center mr-2.5 shrink-0">
                 <History size={14} />
               </div>

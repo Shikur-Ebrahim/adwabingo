@@ -81,6 +81,8 @@ import AdminWithdrawalMethods from './pages/AdminWithdrawalMethods';
 import AdminDeposits from './pages/AdminDeposits';
 import AdminWithdrawals from './pages/AdminWithdrawals';
 
+import DepositHistory from './pages/DepositHistory';
+
 function App() {
   const { fetchUser, subscribeToBalance } = useGameStore();
 
@@ -99,6 +101,7 @@ function App() {
         <Routes>
           <Route path="/" element={<RoleRouter />} />
           <Route path="/deposit" element={<Deposit />} />
+          <Route path="/deposit-history" element={<DepositHistory />} />
           <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/leaderboard" element={<div className="p-4 text-center mt-10 font-bold">Leaderboard coming soon...</div>} />
           <Route path="/admin" element={<Admin />} />
