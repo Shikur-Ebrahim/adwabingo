@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, User, Phone } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
+import { useGameStore } from '../store/gameStore';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -36,12 +37,14 @@ const typeEmoji: Record<string, string> = {
 type Step = 'list' | 'form' | 'success' | 'pending_status';
 
 export default function Withdraw() {
+  const { user } = useGameStore();
+  const userBalance = Number(user?.main_balance || 0);
+
   const [methods, setMethods] = useState<WithdrawalMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<WithdrawalMethod | null>(null);
   const [step, setStep] = useState<Step>('list');
   const [pendingAmount, setPendingAmount] = useState<number | null>(null);
-  const [userBalance, setUserBalance] = useState<number>(0);
 
   // Form state
   const [amount, setAmount] = useState('');
@@ -60,10 +63,9 @@ export default function Withdraw() {
   const fetchData = async () => {
     try {
       const headers = getHeaders();
-      const [methodsRes, historyRes, profileRes] = await Promise.all([
+      const [methodsRes, historyRes] = await Promise.all([
         fetch(`${API_URL}/withdraw/methods`, { headers }),
         fetch(`${API_URL}/withdraw/history`, { headers }),
-        fetch(`${API_URL}/player/profile`, { headers }),
       ]);
 
       if (methodsRes.ok) setMethods(await methodsRes.json());
@@ -75,11 +77,6 @@ export default function Withdraw() {
           setPendingAmount(pending.amount);
           setStep('pending_status');
         }
-      }
-
-      if (profileRes.ok) {
-        const profile = await profileRes.json();
-        setUserBalance(Number(profile.player?.balance || 0));
       }
     } catch (err) {
       console.error(err);
