@@ -224,10 +224,10 @@ export default function Withdraw() {
               {typeEmoji[selected.type]} {typeLabels[selected.type] || selected.type.toUpperCase()}
             </h1>
           </div>
-          <div className="bg-white dark:bg-slate-900/20 backdrop-blur rounded-2xl p-4 text-white">
-            <p className="text-white/80 text-sm font-medium">Available Balance</p>
-            <p className="text-3xl font-black">{userBalance.toLocaleString('en-US')} <span className="text-xl">ETB</span></p>
-            <p className="text-white/70 text-xs mt-1">Min withdrawal: {selected.min_withdrawal.toLocaleString('en-US')} ETB</p>
+          <div className="bg-white rounded-2xl p-4 shadow-md border border-white/10">
+            <p className="text-slate-500 text-sm font-medium">Available Balance</p>
+            <p className="text-3xl font-black text-slate-800">{userBalance.toLocaleString('en-US')} <span className="text-xl text-slate-600">ETB</span></p>
+            <p className="text-slate-400 text-xs mt-1">Min withdrawal: {selected.min_withdrawal.toLocaleString('en-US')} ETB</p>
           </div>
         </div>
 
@@ -339,10 +339,10 @@ export default function Withdraw() {
           </Link>
           <h1 className="text-xl font-black text-white">Withdraw</h1>
         </div>
-        <div className="bg-white dark:bg-slate-900/10 backdrop-blur rounded-2xl p-4 text-white">
-          <p className="text-white/70 text-sm font-medium">Main Balance</p>
-          <p className="text-3xl font-black">{userBalance.toLocaleString('en-US')} <span className="text-xl">ETB</span></p>
-          <p className="text-white/60 text-xs mt-1">Only main balance can be withdrawn</p>
+        <div className="bg-white rounded-2xl p-4 shadow-md border border-white/10">
+          <p className="text-slate-500 text-sm font-medium">Main Balance</p>
+          <p className="text-3xl font-black text-slate-800">{userBalance.toLocaleString('en-US')} <span className="text-xl text-slate-600">ETB</span></p>
+          <p className="text-slate-400 text-xs mt-1">Only main balance can be withdrawn</p>
         </div>
       </div>
 
