@@ -154,8 +154,37 @@ export default function BingoGame() {
   else if (game.status === 'calling')  { statusTxt = 'Active';   statusCls = 'text-emerald-400'; }
   else                                 { statusTxt = 'Finished'; statusCls = 'text-slate-400'; }
 
+  const formatMoney = (amount: number | undefined) => (amount || 0).toLocaleString('en-US');
+  const initial = user?.first_name ? user.first_name.charAt(0).toUpperCase() : 'U';
+
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col select-none">
+    
+      {/* ── PROFILE BAR ──────────────────────────────────────────────────────── */}
+      <div className="bg-[#050505] px-4 py-3 border-b border-white/5 flex items-center justify-between z-10">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+            {initial}
+          </div>
+          <div>
+            <p className="font-bold text-sm uppercase tracking-wider text-slate-200">{user?.first_name || 'USER'}</p>
+          </div>
+        </div>
+
+        <div className="flex items-center space-x-4 text-right">
+          <div className="flex flex-col items-center">
+            <div className="flex items-center space-x-1 text-purple-400 mb-0.5">
+              <Gift size={14} />
+            </div>
+            <p className="text-xs font-bold text-slate-300">{formatMoney(user?.bonus_balance)} ETB</p>
+          </div>
+          
+          <div className="flex flex-col items-end">
+            <p className="text-[11px] text-slate-400 font-medium">Wallet</p>
+            <p className="text-sm font-bold text-green-400">{formatMoney(user?.main_balance)} ETB</p>
+          </div>
+        </div>
+      </div>
 
       {/* ── TOP BAR ─────────────────────────────────────────────────────────── */}
       <div className="bg-[#0c0c0c] border-b border-white/5 px-3 pt-3 pb-3 shrink-0">
