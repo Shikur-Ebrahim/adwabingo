@@ -1,4 +1,4 @@
-import { useGameStore } from '../store/gameStore';
+﻿import { useGameStore } from '../store/gameStore';
 import { Gift, ArrowDownToLine, Share2, PlusCircle, Info } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
@@ -134,7 +134,7 @@ export default function Home() {
                 <span className="absolute top-1.5 right-1.5 bg-white/20 px-1.5 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-wider">ETB</span>
               </div>
               <div className="p-3 text-center">
-                <button className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-2.5 rounded-lg text-xs transition-colors">
+                <button onClick={() => navigate(`/bingo/live?stake=${stake.amount}`)} className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-2.5 rounded-lg text-xs transition-colors">
                   Join Room
                 </button>
               </div>

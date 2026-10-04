@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ChevronDown, Gift, RefreshCw } from "lucide-react";
 import WebApp from "@twa-dev/sdk";
 import { supabase } from "../lib/supabase";
@@ -31,24 +31,29 @@ const ROW_COLORS = [
 ];
 
 const STAKE_OPTIONS = [
-  { value: 10, label: "10 ETB", color: "from-blue-500 to-blue-700", icon: "10" },
-  { value: 20, label: "20 ETB", color: "from-purple-500 to-purple-700", icon: "20" },
-  { value: 50, label: "50 ETB", color: "from-orange-500 to-orange-700", icon: "50" },
-  { value: 100, label: "100 ETB", color: "from-red-500 to-red-700", icon: "100" },
+  { value: 10, label: "10 ETB", color: "from-blue-500 to-blue-700" },
+  { value: 20, label: "20 ETB", color: "from-teal-500 to-teal-700" },
+  { value: 50, label: "50 ETB", color: "from-purple-500 to-purple-700" },
+  { value: 100, label: "100 ETB", color: "from-rose-500 to-rose-700" },
 ];
 
 export default function BingoGame() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, fetchUser: refreshUser, subscribeToBalance } = useGameStore();
+
+  // Read ?stake= from URL (from Home page "Join Room" buttons)
+  const urlStake = searchParams.get("stake");
+  const [selectedStake, setSelectedStake] = useState<number | null>(
+    urlStake ? Number(urlStake) : null
+  );
 
   // Subscribe to realtime balance updates — wallet updates INSTANTLY
   useEffect(() => {
+    if (!user?.telegram_id) return;
     const unsub = subscribeToBalance();
     return () => unsub();
   }, [subscribeToBalance, user?.telegram_id]);
-
-  // Stake selection phase
-  const [selectedStake, setSelectedStake] = useState<number | null>(null);
 
   // Game state
   const [game, setGame] = useState<BGame | null>(null);
@@ -80,7 +85,7 @@ export default function BingoGame() {
   // Realtime subscriptions
   useEffect(() => {
     if (!selectedStake) return;
-    const ch = supabase.channel(`bingo-rt-${selectedStake}`)
+    const ch = supabase.channel(`bingo-rt-${selectedStake}-${Date.now()}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bingo_games" }, ({ new: g }) => {
         if (Number(g.stake) === selectedStake) setGame(g as BGame);
       })
@@ -116,27 +121,17 @@ export default function BingoGame() {
     setBuying(seat); setErrMsg("");
 
     // ── OPTIMISTIC UPDATES (instant, no waiting for server) ──
-    // 1. Mark cartela as taken immediately
     setTaken(prev => [...prev, seat]);
 
-    // 2. Deduct balance from UI immediately (bonus first, then main)
     const stakeAmt = game.stake;
     let newBonus = bonusBal;
     let newMain = mainBal;
-    if (newBonus >= stakeAmt) {
-      newBonus -= stakeAmt;
-    } else {
-      const remainder = stakeAmt - newBonus;
-      newBonus = 0;
-      newMain -= remainder;
-    }
-    useGameStore.setState(state => ({
-      user: state.user ? { ...state.user, main_balance: newMain, bonus_balance: newBonus } : state.user
-    }));
+    if (newBonus >= stakeAmt) { newBonus -= stakeAmt; }
+    else { const r = stakeAmt - newBonus; newBonus = 0; newMain -= r; }
+    useGameStore.setState(s => ({ user: s.user ? { ...s.user, main_balance: newMain, bonus_balance: newBonus } : s.user }));
 
-    // 3. Update prize pool immediately
-    const newPlayerCount = taken.length + 1;
-    const newPrize = newPlayerCount < 3 ? newPlayerCount * stakeAmt : Math.floor(newPlayerCount * stakeAmt * 0.8);
+    const newCount = taken.length + 1;
+    const newPrize = newCount < 3 ? newCount * stakeAmt : Math.floor(newCount * stakeAmt * 0.8);
     setGame(prev => prev ? { ...prev, prize_pool: newPrize } : prev);
 
     try {
@@ -148,16 +143,13 @@ export default function BingoGame() {
       if (r.ok) {
         WebApp.HapticFeedback?.notificationOccurred("success");
         setMyCard({ cartela_number: seat, card_matrix: d.card_matrix });
-        // Server will push the real balance via realtime subscription
         refreshUser();
       } else {
-        // ── ROLLBACK on error ──
+        // ROLLBACK
         setTaken(prev => prev.filter(n => n !== seat));
-        useGameStore.setState(state => ({
-          user: state.user ? { ...state.user, main_balance: mainBal, bonus_balance: bonusBal } : state.user
-        }));
+        useGameStore.setState(s => ({ user: s.user ? { ...s.user, main_balance: mainBal, bonus_balance: bonusBal } : s.user }));
         setErrMsg(d.error ?? "Could not join. Try again.");
-        fetchState(); // Re-sync from server
+        fetchState();
       }
     } catch { setErrMsg("Network error"); } finally { setBuying(null); }
   };
@@ -168,16 +160,11 @@ export default function BingoGame() {
   const iWon = game?.status === "finished" && myCard?.cartela_number === game.winner_cartela && game.winner_telegram_id === String(user?.telegram_id);
   const formatMoney = (a: number | undefined) => (a || 0).toLocaleString("en-US");
   const initial = user?.first_name ? user.first_name.charAt(0).toUpperCase() : "U";
-
-  // Status text
   let statusTxt = "Finished", statusCls = "text-slate-400";
   if (game?.status === "waiting") {
-    if (timeLeft > 86400) statusTxt = "Waiting...";
-    else statusTxt = `${timeLeft}s`;
+    statusTxt = timeLeft > 86400 ? "Waiting..." : `${timeLeft}s`;
     statusCls = "text-orange-400";
-  } else if (game?.status === "calling") {
-    statusTxt = "Active"; statusCls = "text-emerald-400";
-  }
+  } else if (game?.status === "calling") { statusTxt = "Active"; statusCls = "text-emerald-400"; }
 
   // ─── STAKE SELECTION SCREEN ───
   if (!selectedStake) {
@@ -203,7 +190,7 @@ export default function BingoGame() {
             {STAKE_OPTIONS.map(opt => (
               <button key={opt.value} onClick={() => setSelectedStake(opt.value)}
                 className={`bg-gradient-to-br ${opt.color} rounded-2xl p-5 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all shadow-lg`}>
-                <span className="text-white font-black text-3xl">{opt.icon}</span>
+                <span className="text-white font-black text-3xl">{opt.value}</span>
                 <span className="text-white/80 font-bold text-xs uppercase tracking-wider">ETB</span>
               </button>
             ))}
@@ -220,7 +207,7 @@ export default function BingoGame() {
 
   // ─── LOADING ───
   if (loading && !game) {
-    return <div className="min-h-screen bg-black flex items-center justify-center"><RefreshCw size={28} className="text-orange-500 animate-spin" /></div>;
+    return <div className="min-h-screen bg-[#05081a] flex items-center justify-center"><RefreshCw size={28} className="text-orange-500 animate-spin" /></div>;
   }
 
   // ─── NO GAME ───
@@ -239,7 +226,6 @@ export default function BingoGame() {
   return (
     <div className="min-h-screen bg-[#05081a] flex flex-col select-none">
       <div className="sticky top-0 z-50 bg-[#05081a] flex flex-col shrink-0">
-        {/* Profile Bar */}
         <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg">{initial}</div>
@@ -250,8 +236,6 @@ export default function BingoGame() {
             <div className="flex flex-col items-end"><p className="text-[11px] text-slate-400">Wallet</p><p className="text-sm font-bold text-green-400">{formatMoney(user?.main_balance)} ETB</p></div>
           </div>
         </div>
-
-        {/* Controls Bar */}
         <div className="bg-[#0a0d1f] px-3 pt-3 pb-3">
           <div className="flex items-center gap-2 mb-2">
             <button onClick={() => setSelectedStake(null)} className="h-9 w-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl"><ArrowLeft size={18} className="text-white" /></button>
@@ -274,29 +258,16 @@ export default function BingoGame() {
             </div>
             <button className="h-9 w-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl"><Gift size={17} className="text-white/50" /></button>
           </div>
-
-          {/* Stats Row: Stake / Derash / Status */}
           <div className="grid grid-cols-3 gap-1.5">
-            <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center">
-              <p className="text-[8px] text-white/30 font-bold uppercase">Stake</p>
-              <p className="text-xs font-black text-white">{game.stake} ETB</p>
-            </div>
-            <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center">
-              <p className="text-[8px] text-white/30 font-bold uppercase">Derash</p>
-              <p className="text-xs font-black text-yellow-400">{game.prize_pool} ETB</p>
-            </div>
-            <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center">
-              <p className="text-[8px] text-white/30 font-bold uppercase">Status</p>
-              <p className={`text-xs font-black ${statusCls}`}>{statusTxt}</p>
-            </div>
+            <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Stake</p><p className="text-xs font-black text-white">{game.stake} ETB</p></div>
+            <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Derash</p><p className="text-xs font-black text-yellow-400">{game.prize_pool} ETB</p></div>
+            <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Status</p><p className={`text-xs font-black ${statusCls}`}>{statusTxt}</p></div>
           </div>
         </div>
       </div>
 
-      {/* Error */}
       {errMsg && <div className="mx-3 mt-2 px-3 py-2 bg-red-500/20 border border-red-500/40 rounded-xl flex items-center justify-between"><p className="text-red-400 text-xs font-bold">{errMsg}</p><button onClick={() => setErrMsg("")} className="text-red-400 text-base leading-none">x</button></div>}
 
-      {/* Cartela Grid */}
       <div className="flex-1 overflow-y-auto relative">
         <div className="p-2">
           <p className="text-center text-[10px] text-cyan-300 font-black uppercase tracking-widest mb-2">
@@ -340,35 +311,18 @@ export default function BingoGame() {
           </div>
         </div>
 
-        {/* Overlay for non-joined users */}
         {(game.status === "calling" || game.status === "finished") && !myCard && (
           <div className="absolute inset-0 backdrop-blur-[6px] bg-black/60 flex items-center justify-center p-6 z-10">
             <div className="bg-[#111]/95 border border-white/10 rounded-2xl px-6 py-7 text-center max-w-[280px] w-full shadow-2xl">
               {game.status === "finished" ? (
-                <>
-                  <p className="text-4xl mb-3">&#127942;</p>
-                  <p className="text-blue-400 text-xl font-black mb-1">Game Finished</p>
-                  <p className="text-white/60 text-sm">
-                    {game.winner_cartela
-                      ? `${game.winner_first_name || "Player"} #${game.winner_cartela} won ${game.winner_prize} ETB!`
-                      : "No winner this round."}
-                    <br/>Next game starts soon.
-                  </p>
-                  <button onClick={fetchState} className="mt-5 w-full py-2.5 bg-orange-500 text-black font-black rounded-xl text-sm active:scale-95">Join Next Game</button>
-                </>
+                <><p className="text-4xl mb-3">&#127942;</p><p className="text-blue-400 text-xl font-black mb-1">Game Finished</p><p className="text-white/60 text-sm">{game.winner_cartela ? `${game.winner_first_name || "Player"} #${game.winner_cartela} won ${game.winner_prize} ETB!` : "No winner this round."}<br/>Next game starts soon.</p><button onClick={fetchState} className="mt-5 w-full py-2.5 bg-orange-500 text-black font-black rounded-xl text-sm active:scale-95">Join Next Game</button></>
               ) : (
-                <>
-                  <p className="text-4xl mb-3">&#9889;</p>
-                  <p className="text-blue-400 text-xl font-black mb-1">Game Started!</p>
-                  <p className="text-white/60 text-sm">You did not join this round. Wait for the next game.</p>
-                  <button onClick={fetchState} className="mt-5 w-full py-2.5 bg-white/10 text-white font-black rounded-xl text-sm active:scale-95">Refresh</button>
-                </>
+                <><p className="text-4xl mb-3">&#9889;</p><p className="text-blue-400 text-xl font-black mb-1">Game Started!</p><p className="text-white/60 text-sm">You did not join this round. Wait for the next game.</p><button onClick={fetchState} className="mt-5 w-full py-2.5 bg-white/10 text-white font-black rounded-xl text-sm active:scale-95">Refresh</button></>
               )}
             </div>
           </div>
         )}
 
-        {/* Winner celebration */}
         {iWon && (
           <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center z-20 p-6">
             <span className="text-7xl mb-4 animate-bounce">&#127942;</span>
@@ -380,18 +334,10 @@ export default function BingoGame() {
         )}
       </div>
 
-      {/* Your Bingo Card at bottom */}
       {myCard && game.status !== "waiting" && (
         <div className="bg-[#0a0d1f] border-t border-white/5 p-3 shrink-0">
           <p className="text-center text-[9px] font-black text-white/20 uppercase tracking-widest mb-2">Your Card - Cartela #{myCard.cartela_number}</p>
-          {lastNum && game.status === "calling" && (
-            <div className="flex justify-center mb-2">
-              <div className="flex items-center gap-2 bg-orange-500/20 border border-orange-500/40 rounded-full px-4 py-1">
-                <span className="text-orange-400 font-black text-sm">Latest:</span>
-                <span className="text-yellow-300 font-black text-xl">{lastNum}</span>
-              </div>
-            </div>
-          )}
+          {lastNum && game.status === "calling" && <div className="flex justify-center mb-2"><div className="flex items-center gap-2 bg-orange-500/20 border border-orange-500/40 rounded-full px-4 py-1"><span className="text-orange-400 font-black text-sm">Latest:</span><span className="text-yellow-300 font-black text-xl">{lastNum}</span></div></div>}
           <div className="max-w-[260px] mx-auto">
             <div className="grid grid-cols-5 gap-1 mb-1">{["B","I","N","G","O"].map(l => <div key={l} className="text-center font-black text-orange-500 text-base">{l}</div>)}</div>
             <div className="grid grid-cols-5 gap-1">
