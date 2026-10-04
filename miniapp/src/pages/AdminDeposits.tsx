@@ -136,8 +136,8 @@ export default function AdminDeposits() {
   return (
     <div className="min-h-screen bg-slate-50  pb-24">
       {/* Header */}
-      <div className="bg-white  px-4 py-4 border-b border-gray-100  flex items-center justify-between sticky top-0 z-10">
-        <Link to="/admin" className="p-2 bg-slate-100  rounded-full text-slate-600  hover:bg-slate-200 transition-colors">
+      <div className="bg-white px-4 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 z-10">
+        <Link to={user?.role === 'worker' ? '/worker' : '/admin'} className="p-2 bg-slate-100 rounded-full text-slate-600 hover:bg-slate-200 transition-colors">
           <ArrowLeft size={18} />
         </Link>
         <div className="text-center">

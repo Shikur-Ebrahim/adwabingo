@@ -156,7 +156,7 @@ export default function AdminWithdrawals() {
       <div className="bg-gradient-to-r from-rose-600 to-rose-700 px-4 pt-6 pb-5 sticky top-0 z-10 shadow-md">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
-            <Link to="/admin" className="text-white/80 hover:text-white p-1"><ArrowLeft size={22} /></Link>
+            <Link to={user?.role === 'worker' ? '/worker' : '/admin'} className="text-white/80 hover:text-white p-1"><ArrowLeft size={22} /></Link>
             <div>
               <h1 className="text-xl font-black text-white">Withdrawals</h1>
               <p className="text-rose-200 text-xs">{pendingCount} pending</p>
