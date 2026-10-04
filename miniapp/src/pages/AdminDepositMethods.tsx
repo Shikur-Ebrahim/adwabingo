@@ -170,7 +170,9 @@ export default function AdminDepositMethods() {
     }
   };
 
-  if (user?.role !== 'admin') return <div className="p-10 text-center">Admin only!</div>;
+  if (!user || (user.role !== 'admin' && !(user.role === 'worker' && user.permissions?.deposits))) {
+    return <div className="p-10 text-center">Admin only!</div>;
+  }
 
   return (
     <div className="min-h-screen bg-slate-50  pb-20">
