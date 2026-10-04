@@ -160,68 +160,71 @@ export default function BingoGame() {
   return (
     <div className="min-h-screen bg-[#050505] flex flex-col select-none">
     
-      {/* ── PROFILE BAR ──────────────────────────────────────────────────────── */}
-      <div className="bg-[#050505] px-4 py-3 border-b border-white/5 flex items-center justify-between z-10">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg shadow-sm">
-            {initial}
-          </div>
-          <div>
-            <p className="font-bold text-sm uppercase tracking-wider text-slate-200">{user?.first_name || 'USER'}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-4 text-right">
-          <div className="flex flex-col items-center">
-            <div className="flex items-center space-x-1 text-purple-400 mb-0.5">
-              <Gift size={14} />
+      {/* ── STICKY HEADER CONTAINER ────────────────────────────────────────── */}
+      <div className="sticky top-0 z-50 bg-[#050505] border-b-[3px] border-emerald-500 shadow-[0_4px_20px_rgba(16,185,129,0.15)] flex flex-col shrink-0">
+        {/* ── PROFILE BAR ──────────────────────────────────────────────────────── */}
+        <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg shadow-sm">
+              {initial}
             </div>
-            <p className="text-xs font-bold text-slate-300">{formatMoney(user?.bonus_balance)} ETB</p>
-          </div>
-          
-          <div className="flex flex-col items-end">
-            <p className="text-[11px] text-slate-400 font-medium">Wallet</p>
-            <p className="text-sm font-bold text-green-400">{formatMoney(user?.main_balance)} ETB</p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── TOP BAR ─────────────────────────────────────────────────────────── */}
-      <div className="bg-[#0c0c0c] border-b border-white/5 px-3 pt-3 pb-3 shrink-0">
-        {/* Row 1 */}
-        <div className="flex items-center gap-2 mb-2">
-          <button onClick={() => navigate(-1)}
-            className="h-9 w-10 flex items-center justify-center bg-[#1e1e1e] border border-white/10 rounded-xl">
-            <ArrowLeft size={18} className="text-white" />
-          </button>
-
-          <button className="flex items-center gap-1.5 bg-[#1e1e1e] border border-white/10 rounded-xl px-3 h-9">
-            <span className="text-white font-black text-sm">{game.stake} ETB</span>
-            <ChevronDown size={13} className="text-white/40" />
-          </button>
-
-          <div className="flex-1 bg-[#1e1e1e] border border-white/10 rounded-xl h-9 flex flex-col items-center justify-center">
-            <span className="text-[9px] text-white/30 font-bold leading-none">Game ID</span>
-            <span className="text-sm font-black text-white leading-tight">{game.game_id}</span>
-          </div>
-
-          <button className="h-9 w-10 flex items-center justify-center bg-[#1e1e1e] border border-white/10 rounded-xl">
-            <Gift size={17} className="text-white/50" />
-          </button>
-        </div>
-
-        {/* Row 2: stats */}
-        <div className="grid grid-cols-3 gap-1.5">
-          {[
-            { label: 'Stake',  val: `${game.stake} ETB`,       cls: 'text-white' },
-            { label: 'Derash', val: `${game.prize_pool} ETB`,  cls: 'text-yellow-400' },
-            { label: 'Status', val: statusTxt,                 cls: statusCls },
-          ].map(({ label, val, cls }) => (
-            <div key={label} className="bg-[#181818] border border-white/5 rounded-xl py-1.5 text-center">
-              <p className="text-[8px] text-white/30 font-bold uppercase">{label}</p>
-              <p className={`text-xs font-black ${cls}`}>{val}</p>
+            <div>
+              <p className="font-bold text-sm uppercase tracking-wider text-slate-200">{user?.first_name || 'USER'}</p>
             </div>
-          ))}
+          </div>
+
+          <div className="flex items-center space-x-4 text-right">
+            <div className="flex flex-col items-center">
+              <div className="flex items-center space-x-1 text-purple-400 mb-0.5">
+                <Gift size={14} />
+              </div>
+              <p className="text-xs font-bold text-slate-300">{formatMoney(user?.bonus_balance)} ETB</p>
+            </div>
+            
+            <div className="flex flex-col items-end">
+              <p className="text-[11px] text-slate-400 font-medium">Wallet</p>
+              <p className="text-sm font-bold text-green-400">{formatMoney(user?.main_balance)} ETB</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── TOP BAR ─────────────────────────────────────────────────────────── */}
+        <div className="bg-[#0c0c0c] px-3 pt-3 pb-3">
+          {/* Row 1 */}
+          <div className="flex items-center gap-2 mb-2">
+            <button onClick={() => navigate(-1)}
+              className="h-9 w-10 flex items-center justify-center bg-[#1e1e1e] border border-white/10 rounded-xl">
+              <ArrowLeft size={18} className="text-white" />
+            </button>
+
+            <button className="flex items-center gap-1.5 bg-[#1e1e1e] border border-white/10 rounded-xl px-3 h-9">
+              <span className="text-white font-black text-sm">{game.stake} ETB</span>
+              <ChevronDown size={13} className="text-white/40" />
+            </button>
+
+            <div className="flex-1 bg-[#1e1e1e] border border-white/10 rounded-xl h-9 flex flex-col items-center justify-center">
+              <span className="text-[9px] text-white/30 font-bold leading-none">Game ID</span>
+              <span className="text-sm font-black text-white leading-tight">{game.game_id}</span>
+            </div>
+
+            <button className="h-9 w-10 flex items-center justify-center bg-[#1e1e1e] border border-white/10 rounded-xl">
+              <Gift size={17} className="text-white/50" />
+            </button>
+          </div>
+
+          {/* Row 2: stats */}
+          <div className="grid grid-cols-3 gap-1.5">
+            {[
+              { label: 'Stake',  val: `${game.stake} ETB`,       cls: 'text-white' },
+              { label: 'Derash', val: `${game.prize_pool} ETB`,  cls: 'text-yellow-400' },
+              { label: 'Status', val: statusTxt,                 cls: statusCls },
+            ].map(({ label, val, cls }) => (
+              <div key={label} className="bg-[#181818] border border-white/5 rounded-xl py-1.5 text-center">
+                <p className="text-[8px] text-white/30 font-bold uppercase">{label}</p>
+                <p className={`text-xs font-black ${cls}`}>{val}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
