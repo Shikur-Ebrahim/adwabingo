@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { Gamepad2, Wallet, Trophy, User } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
@@ -12,6 +12,7 @@ import Admin from './pages/Admin';
 import Worker from './pages/Worker';
 import BingoGame from './pages/BingoGame';
 import AdminBingoGames from './pages/AdminBingoGames';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function Navigation() {
   const location = useLocation();
@@ -161,7 +162,7 @@ function App() {
   return (
     <BrowserRouter>
       <div className="min-h-screen bg-slate-50 pb-20 font-sans text-slate-800">
-        <Routes>
+        <ErrorBoundary><Routes>
           <Route path="/" element={<RoleRouter />} />
           <Route path="/deposit" element={<Deposit />} />
           <Route path="/deposit-history" element={<DepositHistory />} />
@@ -183,7 +184,7 @@ function App() {
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/workers" element={<AdminWorkers />} />
           <Route path="/worker" element={<Worker />} />
-        </Routes>
+        </Routes></ErrorBoundary>
         <Profile />
         <Navigation />
       </div>
