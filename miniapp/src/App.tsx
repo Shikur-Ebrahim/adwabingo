@@ -64,8 +64,12 @@ function Navigation() {
 function RoleRouter() {
   const { user } = useGameStore();
   
-  if (user?.role === 'admin' || user?.role === 'worker') {
+  if (user?.role === 'admin') {
     return <Navigate to="/admin" replace />;
+  }
+  
+  if (user?.role === 'worker') {
+    return <Navigate to="/worker" replace />;
   }
   
   // Default user role sees the normal bingo home page

@@ -39,6 +39,7 @@ const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction)
   else if (path.startsWith('/users') && perms.users) allowed = true;
   else if (path.startsWith('/settings') && perms.settings) allowed = true;
   else if (path.startsWith('/tx-report') && perms.reports) allowed = true;
+  else if (path.startsWith('/profit-report')) allowed = true; // Allow workers to view profit report
   else if (path.startsWith('/games') && perms.games) allowed = true;
   
   // Explicitly deny these to anyone but admin
@@ -372,6 +373,34 @@ router.delete('/withdrawals/:id/reject', async (req, res) => {
   res.json({ success: true });
 });
 
+// ─── PROFIT REPORT ────────────────────────────────────────────────────────────
+router.get('/profit-report', validateTelegramAuth, requireAdmin, async (req, res) => {
+  const { from, to } = req.query;
+  
+  let dQuery = supabase.from('deposits').select('amount').eq('status', 'approved');
+  let wQuery = supabase.from('withdrawals').select('amount').eq('status', 'approved');
+
+  if (from) {
+    dQuery = dQuery.gte('created_at', from);
+    wQuery = wQuery.gte('created_at', from);
+  }
+  if (to) {
+    dQuery = dQuery.lte('created_at', to);
+    wQuery = wQuery.lte('created_at', to);
+  }
+
+  const [dRes, wRes] = await Promise.all([dQuery, wQuery]);
+
+  if (dRes.error) return res.status(500).json({ error: dRes.error.message });
+  if (wRes.error) return res.status(500).json({ error: wRes.error.message });
+
+  const totalDeposits = (dRes.data || []).reduce((sum, d) => sum + Number(d.amount), 0);
+  const totalWithdrawals = (wRes.data || []).reduce((sum, w) => sum + Number(w.amount), 0);
+  const netProfit = totalDeposits - totalWithdrawals;
+
+  res.json({ totalDeposits, totalWithdrawals, netProfit });
+});
+
 // ─── TRANSACTION REPORT ────────────────────────────────────────────────────────
 router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) => {
   const { from, to } = req.query;
@@ -579,7 +608,7 @@ router.get('/workers', async (req, res) => {
       .select('id, telegram_id, username, first_name, role, status, created_at')
       .eq('role', 'worker')
       .order('created_at', { ascending: false });
-    data = fallback.data;
+    data = fallback.data as any;
     error = fallback.error;
   }
   

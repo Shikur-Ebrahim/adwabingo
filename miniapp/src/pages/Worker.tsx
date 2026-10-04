@@ -1,20 +1,217 @@
+import { useState, useEffect, useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { Navigate, Link } from 'react-router-dom';
+import { ArrowDownToLine, ArrowUpFromLine, TrendingUp, Calendar, RefreshCw, LogOut } from 'lucide-react';
+import WebApp from '@twa-dev/sdk';
+
+const API_URL = import.meta.env.VITE_API_URL || '/api';
+
+function toDateStr(d: Date) {
+  return d.toISOString().split('T')[0];
+}
 
 export default function Worker() {
   const { user } = useGameStore();
+  const [activePreset, setActivePreset] = useState('Today');
+  const [stats, setStats] = useState({ totalDeposits: 0, totalWithdrawals: 0, netProfit: 0 });
+  const [loading, setLoading] = useState(true);
+
+  // Timeframes calculation
+  const setTimeframe = (preset: string) => {
+    setActivePreset(preset);
+    const now = new Date();
+    let from = '';
+    let to = '';
+
+    if (preset === 'Today') {
+      from = toDateStr(now);
+      to = toDateStr(now);
+    } else if (preset === 'Yesterday') {
+      const yest = new Date(now);
+      yest.setDate(yest.getDate() - 1);
+      from = toDateStr(yest);
+      to = toDateStr(yest);
+    } else if (preset === '7 Days') {
+      const d = new Date(now);
+      d.setDate(d.getDate() - 7);
+      from = toDateStr(d);
+      to = toDateStr(now);
+    } else if (preset === '1 Month') {
+      const d = new Date(now);
+      d.setMonth(d.getMonth() - 1);
+      from = toDateStr(d);
+      to = toDateStr(now);
+    } else if (preset === '3 Months') {
+      const d = new Date(now);
+      d.setMonth(d.getMonth() - 3);
+      from = toDateStr(d);
+      to = toDateStr(now);
+    } else if (preset === '6 Months') {
+      const d = new Date(now);
+      d.setMonth(d.getMonth() - 6);
+      from = toDateStr(d);
+      to = toDateStr(now);
+    } else if (preset === '1 Year') {
+      const d = new Date(now);
+      d.setFullYear(d.getFullYear() - 1);
+      from = toDateStr(d);
+      to = toDateStr(now);
+    } else if (preset === 'All Time') {
+      from = '';
+      to = '';
+    }
+    fetchReport(from, to);
+  };
+
+  const fetchReport = useCallback(async (fromStr: string, toStr: string) => {
+    setLoading(true);
+    try {
+      const initData = typeof WebApp !== 'undefined' ? WebApp.initData : '';
+      const params = new URLSearchParams();
+      if (fromStr) params.append('from', fromStr + 'T00:00:00.000Z');
+      if (toStr) params.append('to', toStr + 'T23:59:59.999Z');
+
+      const res = await fetch(`${API_URL}/admin/profit-report?${params}`, {
+        headers: { 'x-telegram-init-data': initData }
+      });
+      if (res.ok) {
+        setStats(await res.json());
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    setTimeframe('Today');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (!user || user.role !== 'worker') {
+    return <Navigate to="/" replace />;
+  }
+
+  const perms = user.permissions || {};
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50  p-6">
-      <div className="bg-white  p-8 rounded-2xl shadow-sm border border-gray-100  text-center w-full max-w-sm">
-        <div className="w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold text-2xl mx-auto mb-4 shadow-md">
-          {user?.first_name?.charAt(0).toUpperCase() || 'W'}
+    <div className="min-h-screen bg-slate-50 flex flex-col pb-24">
+      {/* Header */}
+      <div className="bg-orange-600 text-white px-4 py-6 rounded-b-[2rem] shadow-md relative z-10 shrink-0">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-2xl font-black">Worker Profile</h1>
+            <p className="text-orange-200 text-sm font-medium mt-1">
+              Welcome back, {user.first_name}
+            </p>
+          </div>
+          <Link to="/" className="p-2 bg-white/20 rounded-full hover:bg-white/30 transition-colors">
+            <LogOut size={20} />
+          </Link>
         </div>
-        <h1 className="text-2xl font-black text-slate-800 ">Welcome, Worker!</h1>
-        <p className="text-sm text-slate-500  mt-2 font-medium">@{user?.username}</p>
+
+        {/* Quick Actions for Verifications */}
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <Link
+            to="/admin/deposits"
+            className={`flex items-center p-3 rounded-2xl transition-all shadow-sm ${perms.deposits ? 'bg-white text-emerald-700 active:scale-95' : 'bg-white/20 text-white/50 pointer-events-none'}`}
+          >
+            <div className={`p-2 rounded-xl mr-3 ${perms.deposits ? 'bg-emerald-100' : 'bg-white/10'}`}>
+              <ArrowDownToLine size={20} />
+            </div>
+            <div>
+              <p className="font-bold text-sm leading-tight">Verify</p>
+              <p className={`text-[11px] ${perms.deposits ? 'text-emerald-600/70' : 'text-white/40'}`}>Deposits</p>
+            </div>
+          </Link>
+
+          <Link
+            to="/admin/withdrawals"
+            className={`flex items-center p-3 rounded-2xl transition-all shadow-sm ${perms.withdrawals ? 'bg-white text-rose-700 active:scale-95' : 'bg-white/20 text-white/50 pointer-events-none'}`}
+          >
+            <div className={`p-2 rounded-xl mr-3 ${perms.withdrawals ? 'bg-rose-100' : 'bg-white/10'}`}>
+              <ArrowUpFromLine size={20} />
+            </div>
+            <div>
+              <p className="font-bold text-sm leading-tight">Verify</p>
+              <p className={`text-[11px] ${perms.withdrawals ? 'text-rose-600/70' : 'text-white/40'}`}>Withdrawals</p>
+            </div>
+          </Link>
+        </div>
+      </div>
+
+      <div className="flex-1 p-4 -mt-2 relative z-0">
         
-        <div className="mt-8 pt-6 border-t border-gray-100 ">
-          <p className="text-slate-500  font-medium">Worker features coming soon...</p>
+        {/* Advanced Report Header */}
+        <div className="flex items-center justify-between mb-4 mt-2">
+          <h2 className="font-black text-slate-800 text-lg flex items-center space-x-2">
+            <TrendingUp size={20} className="text-orange-500" />
+            <span>Profit Report</span>
+          </h2>
+          {loading && <RefreshCw size={16} className="text-slate-400 animate-spin" />}
         </div>
+
+        {/* Timeframe Presets */}
+        <div className="flex overflow-x-auto hide-scrollbar space-x-2 pb-2 mb-4 snap-x">
+          {['Today', 'Yesterday', '7 Days', '1 Month', '3 Months', '6 Months', '1 Year', 'All Time'].map(preset => (
+            <button
+              key={preset}
+              onClick={() => setTimeframe(preset)}
+              className={`snap-start whitespace-nowrap px-4 py-2 rounded-full text-[11px] font-black transition-all ${
+                activePreset === preset
+                  ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                  : 'bg-white text-slate-500 border border-slate-200'
+              }`}
+            >
+              {preset}
+            </button>
+          ))}
+        </div>
+
+        {/* Profit Stats Grid */}
+        <div className="grid grid-cols-1 gap-3 mb-6">
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                <ArrowDownToLine size={24} />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Deposits</p>
+                <p className="text-xl font-black text-slate-800">{stats.totalDeposits.toLocaleString()} ETB</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center">
+                <ArrowUpFromLine size={24} />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Withdrawals</p>
+                <p className="text-xl font-black text-slate-800">{stats.totalWithdrawals.toLocaleString()} ETB</p>
+              </div>
+            </div>
+          </div>
+
+          <div className={`rounded-2xl p-5 shadow-sm border flex items-center justify-between transition-colors ${stats.netProfit >= 0 ? 'bg-gradient-to-r from-orange-500 to-amber-500 border-orange-400' : 'bg-gradient-to-r from-rose-500 to-red-500 border-rose-400'}`}>
+            <div>
+              <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">Net Profit Rate</p>
+              <p className="text-3xl font-black text-white">{stats.netProfit > 0 ? '+' : ''}{stats.netProfit.toLocaleString()} ETB</p>
+            </div>
+            <TrendingUp size={40} className="text-white/20" />
+          </div>
+        </div>
+
+        {/* Note */}
+        <div className="bg-blue-50 text-blue-800 p-4 rounded-2xl flex items-start space-x-3 text-xs font-medium">
+          <Calendar size={18} className="shrink-0 text-blue-500" />
+          <p>
+            This report automatically calculates the total volume of verified deposits and withdrawals for the selected timeframe. Pending transactions are excluded.
+          </p>
+        </div>
+
       </div>
     </div>
   );
