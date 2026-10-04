@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { Gamepad2, Wallet, Trophy, User } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
@@ -92,6 +92,7 @@ import InvitedPeople from './pages/InvitedPeople';
 
 function App() {
   const { fetchUser, subscribeToBalance, isDarkMode, isBlocked } = useGameStore();
+  const [supportUsername, setSupportUsername] = useState<string>('');
 
   useEffect(() => {
     WebApp.ready();
@@ -110,6 +111,26 @@ function App() {
     });
   }, [fetchUser, subscribeToBalance]);
 
+  useEffect(() => {
+    if (isBlocked) {
+      fetch(`${import.meta.env.VITE_API_URL || '/api'}/player/support-contact`, {
+        headers: { 'x-telegram-init-data': WebApp.initData }
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.username) setSupportUsername(d.username);
+      })
+      .catch(e => console.error(e));
+    }
+  }, [isBlocked]);
+
+  const handleSupport = () => {
+    if (supportUsername) {
+      const username = supportUsername.replace('@', '');
+      WebApp.openTelegramLink(`https://t.me/${username}`);
+    }
+  };
+
   if (isBlocked) {
     return (
       <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center p-6 z-50">
@@ -117,9 +138,19 @@ function App() {
           <span className="text-4xl">🚫</span>
         </div>
         <h1 className="text-white font-black text-xl mb-2 text-center">Account Deactivated</h1>
-        <p className="text-white/60 text-sm font-medium text-center max-w-xs">
+        <p className="text-white/60 text-sm font-medium text-center max-w-xs mb-8">
           Your account has been deactivated by the admin. Please contact support for more information.
         </p>
+        
+        {supportUsername && (
+          <button 
+            onClick={handleSupport}
+            className="px-6 py-3 bg-white text-slate-900 rounded-xl font-black text-sm active:scale-95 transition-all flex items-center space-x-2"
+          >
+            <span>💬</span>
+            <span>Contact Support</span>
+          </button>
+        )}
       </div>
     );
   }
