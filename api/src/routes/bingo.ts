@@ -122,15 +122,26 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
     res.status(400).json({ error: 'Seat taken or error' }); return;
   }
 
-  // Add to prize pool
-  await supabase.rpc('bingo_add_to_prize', { p_game_id: game.id });
+  // Calculate prize pool dynamically in Node.js (no RPC needed)
+  const { count } = await supabase.from('bingo_players').select('*', { count: 'exact', head: true }).eq('game_id', game.id);
+  const playersCount = count || 1;
+  
+  // 0% commission for 1-2 players, 20% commission for 3+ players
+  const prizePool = playersCount < 3 
+    ? playersCount * stakeAmt 
+    : playersCount * stakeAmt * 0.8;
 
+  let newStartAt = game.start_at;
   // TRIGGER 60s COUNTDOWN IF FIRST PLAYER
   if (new Date(game.start_at).getTime() > Date.now() + 86400000) {
-    await supabase.from('bingo_games').update({
-      start_at: new Date(Date.now() + 60_000).toISOString()
-    }).eq('id', game.id);
+    newStartAt = new Date(Date.now() + 60_000).toISOString();
   }
+
+  await supabase.from('bingo_games').update({
+    prize_pool: prizePool,
+    start_at: newStartAt,
+    updated_at: new Date().toISOString()
+  }).eq('id', game.id);
 
   res.json({ success: true, cartela_number: seat, card_matrix });
 });

@@ -172,7 +172,7 @@ export default function BingoGame() {
           <div className="absolute inset-0 backdrop-blur-[6px] bg-black/60 flex items-center justify-center p-6 z-10">
             <div className="bg-[#111]/95 border border-white/10 rounded-2xl px-6 py-7 text-center max-w-[280px] w-full shadow-2xl">
               {game.status === "finished" ? (
-                <><p className="text-4xl mb-3">&#127942;</p><p className="text-blue-400 text-xl font-black mb-1">Game Finished</p><p className="text-white/60 text-sm">{game.winner_first_name || 'Cartela'} #{game.winner_cartela} won {game.winner_prize} ETB!<br/>Next game starts soon.</p><button onClick={fetchState} className="mt-5 w-full py-2.5 bg-orange-500 text-black font-black rounded-xl text-sm active:scale-95">Join Next Game</button></>
+                <><p className="text-4xl mb-3">&#127942;</p><p className="text-blue-400 text-xl font-black mb-1">Game Finished</p><p className="text-white/60 text-sm">{game.winner_cartela ? `${game.winner_first_name || "Cartela"} #${game.winner_cartela} won ${game.winner_prize} ETB!` : "No winner this round."}<br/>Next game starts soon.</p><button onClick={fetchState} className="mt-5 w-full py-2.5 bg-orange-500 text-black font-black rounded-xl text-sm active:scale-95">Join Next Game</button></>
               ) : (
                 <><p className="text-4xl mb-3">&#9889;</p><p className="text-blue-400 text-xl font-black mb-1">Game Started!</p><p className="text-white/60 text-sm">You did not join this round. Wait for the next game.</p><button onClick={fetchState} className="mt-5 w-full py-2.5 bg-white/10 text-white font-black rounded-xl text-sm active:scale-95">Refresh</button></>
               )}
@@ -207,6 +207,8 @@ export default function BingoGame() {
     </div>
   );
 }
+
+
 
 
 
