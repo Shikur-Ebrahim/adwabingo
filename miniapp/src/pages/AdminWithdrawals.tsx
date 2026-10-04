@@ -168,7 +168,7 @@ export default function AdminWithdrawals() {
         </div>
 
         {/* Tabs */}
-        <div className="flex bg-white /20 rounded-xl p-1 gap-1">
+        <div className="flex bg-black/20 rounded-xl p-1 gap-1">
           {[
             { key: 'pending', label: `Pending${pendingCount > 0 ? ` (${pendingCount})` : ''}` },
             { key: 'approved', label: 'Approved History' },
@@ -177,7 +177,9 @@ export default function AdminWithdrawals() {
               key={tab.key}
               onClick={() => setActiveTab(tab.key as any)}
               className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${
-                activeTab === tab.key ? 'bg-white  text-rose-700 shadow-sm' : 'text-white/80'
+                activeTab === tab.key
+                  ? 'bg-white text-rose-700 shadow-sm'
+                  : 'text-white bg-white/10 hover:bg-white/20'
               }`}
             >
               {tab.label}

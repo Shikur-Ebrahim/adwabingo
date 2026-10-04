@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { Navigate, Link } from 'react-router-dom';
-import { ArrowDownToLine, ArrowUpFromLine, TrendingUp, Calendar, RefreshCw, LogOut } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, TrendingUp, Calendar, RefreshCw, LogOut, Search } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -19,25 +19,53 @@ export default function Worker() {
   const [stats, setStats] = useState({ totalDeposits: 0, totalWithdrawals: 0, netProfit: 0 });
   const [loading, setLoading] = useState(true);
 
-  // Timeframes calculation
-  const setTimeframe = (preset: string) => {
+  // Custom date range state
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [showCustom, setShowCustom] = useState(false);
+
+  const startOf = (d: Date) => {
+    const copy = new Date(d);
+    copy.setHours(0, 0, 0, 0);
+    return copy.toISOString();
+  };
+
+  const endOf = (d: Date) => {
+    const copy = new Date(d);
+    copy.setHours(23, 59, 59, 999);
+    return copy.toISOString();
+  };
+
+  const fetchReport = useCallback(async (fromIso: string, toIso: string) => {
+    setLoading(true);
+    try {
+      const initData = typeof WebApp !== 'undefined' ? WebApp.initData : '';
+      const params = new URLSearchParams();
+      if (fromIso) params.append('from', fromIso);
+      if (toIso) params.append('to', toIso);
+
+      const res = await fetch(`${API_URL}/admin/profit-report?${params}`, {
+        headers: { 'x-telegram-init-data': initData }
+      });
+      if (res.ok) {
+        setStats(await res.json());
+      } else if (res.status === 404) {
+        alert("Backend update required! Please run 'git pull' and 'docker compose up -d --build' on your VPS.");
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const applyPreset = (preset: string) => {
     setActivePreset(preset);
+    setShowCustom(false);
     const now = new Date();
-    
+
     let fromIso = '';
     let toIso = '';
-
-    const startOf = (d: Date) => {
-      const copy = new Date(d);
-      copy.setHours(0, 0, 0, 0);
-      return copy.toISOString();
-    };
-
-    const endOf = (d: Date) => {
-      const copy = new Date(d);
-      copy.setHours(23, 59, 59, 999);
-      return copy.toISOString();
-    };
 
     if (preset === 'Today') {
       fromIso = startOf(now);
@@ -72,41 +100,23 @@ export default function Worker() {
       d.setFullYear(d.getFullYear() - 1);
       fromIso = startOf(d);
       toIso = endOf(now);
-    } else if (preset === 'All Time') {
-      fromIso = '';
-      toIso = '';
     }
-    
+    // All Time: fromIso & toIso stay ''
+
     fetchReport(fromIso, toIso);
   };
 
-  const fetchReport = useCallback(async (fromIso: string, toIso: string) => {
-    setLoading(true);
-    try {
-      const initData = typeof WebApp !== 'undefined' ? WebApp.initData : '';
-      const params = new URLSearchParams();
-      if (fromIso) params.append('from', fromIso);
-      if (toIso) params.append('to', toIso);
-
-      const res = await fetch(`${API_URL}/admin/profit-report?${params}`, {
-        headers: { 'x-telegram-init-data': initData }
-      });
-      if (res.ok) {
-        setStats(await res.json());
-      } else {
-        if (res.status === 404) {
-          alert("Backend update required! Please run 'git pull' and 'docker compose up -d --build' on your VPS.");
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const applyCustomRange = () => {
+    if (!customFrom || !customTo) return;
+    setActivePreset('Custom');
+    setShowCustom(false);
+    const from = new Date(customFrom);
+    const to = new Date(customTo);
+    fetchReport(startOf(from), endOf(to));
+  };
 
   useEffect(() => {
-    setTimeframe('All Time');
+    applyPreset('Today');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -132,7 +142,7 @@ export default function Worker() {
           </Link>
         </div>
 
-        {/* Quick Actions for Verifications */}
+        {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-3 mt-4">
           <Link
             to="/admin/deposits"
@@ -163,22 +173,72 @@ export default function Worker() {
       </div>
 
       <div className="flex-1 p-4 -mt-2 relative z-0">
-        
-        {/* Advanced Report Header */}
+
+        {/* Report Header */}
         <div className="flex items-center justify-between mb-4 mt-2">
           <h2 className="font-black text-slate-800 text-lg flex items-center space-x-2">
             <TrendingUp size={20} className="text-orange-500" />
             <span>Profit Report</span>
           </h2>
-          {loading && <RefreshCw size={16} className="text-slate-400 animate-spin" />}
+          <div className="flex items-center space-x-2">
+            {loading && <RefreshCw size={16} className="text-slate-400 animate-spin" />}
+            <button
+              onClick={() => { setShowCustom(v => !v); setActivePreset('Custom'); }}
+              className={`flex items-center space-x-1 px-3 py-1.5 rounded-full text-[11px] font-black border transition-all ${
+                activePreset === 'Custom'
+                  ? 'bg-orange-500 text-white border-orange-500'
+                  : 'bg-white text-slate-500 border-slate-200'
+              }`}
+            >
+              <Calendar size={12} />
+              <span>Custom</span>
+            </button>
+          </div>
         </div>
 
-        {/* Timeframe Presets */}
+        {/* Custom Date Range Picker */}
+        {showCustom && (
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 mb-4">
+            <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">Select Date Range</p>
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">From</label>
+                <input
+                  type="date"
+                  value={customFrom}
+                  max={toDateStr(new Date())}
+                  onChange={e => setCustomFrom(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-400 uppercase mb-1 block">To</label>
+                <input
+                  type="date"
+                  value={customTo}
+                  max={toDateStr(new Date())}
+                  onChange={e => setCustomTo(e.target.value)}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-400"
+                />
+              </div>
+            </div>
+            <button
+              onClick={applyCustomRange}
+              disabled={!customFrom || !customTo}
+              className="w-full py-2.5 rounded-xl bg-orange-500 text-white font-black text-sm disabled:opacity-40 flex items-center justify-center space-x-2 active:scale-95 transition-transform"
+            >
+              <Search size={14} />
+              <span>Generate Report</span>
+            </button>
+          </div>
+        )}
+
+        {/* Preset Buttons */}
         <div className="flex overflow-x-auto hide-scrollbar space-x-2 pb-2 mb-4 snap-x">
           {['Today', 'Yesterday', '7 Days', '1 Month', '3 Months', '6 Months', '1 Year', 'All Time'].map(preset => (
             <button
               key={preset}
-              onClick={() => setTimeframe(preset)}
+              onClick={() => applyPreset(preset)}
               className={`snap-start whitespace-nowrap px-4 py-2 rounded-full text-[11px] font-black transition-all ${
                 activePreset === preset
                   ? 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
@@ -190,36 +250,38 @@ export default function Worker() {
           ))}
         </div>
 
-        {/* Profit Stats Grid */}
+        {/* Stats */}
         <div className="grid grid-cols-1 gap-3 mb-6">
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
-                <ArrowDownToLine size={24} />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Deposits</p>
-                <p className="text-xl font-black text-slate-800">{stats.totalDeposits.toLocaleString()} ETB</p>
-              </div>
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center space-x-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+              <ArrowDownToLine size={24} />
             </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center">
-                <ArrowUpFromLine size={24} />
-              </div>
-              <div>
-                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Withdrawals</p>
-                <p className="text-xl font-black text-slate-800">{stats.totalWithdrawals.toLocaleString()} ETB</p>
-              </div>
-            </div>
-          </div>
-
-          <div className={`rounded-2xl p-5 shadow-sm border flex items-center justify-between transition-colors ${stats.netProfit >= 0 ? 'bg-gradient-to-r from-orange-500 to-amber-500 border-orange-400' : 'bg-gradient-to-r from-rose-500 to-red-500 border-rose-400'}`}>
             <div>
-              <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">Net Profit Rate</p>
-              <p className="text-3xl font-black text-white">{stats.netProfit > 0 ? '+' : ''}{stats.netProfit.toLocaleString()} ETB</p>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Deposits</p>
+              <p className="text-xl font-black text-slate-800">{stats.totalDeposits.toLocaleString()} ETB</p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100 flex items-center space-x-3">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+              <ArrowUpFromLine size={24} />
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Withdrawals</p>
+              <p className="text-xl font-black text-slate-800">{stats.totalWithdrawals.toLocaleString()} ETB</p>
+            </div>
+          </div>
+
+          <div className={`rounded-2xl p-5 shadow-sm flex items-center justify-between ${
+            stats.netProfit >= 0
+              ? 'bg-gradient-to-r from-orange-500 to-amber-500'
+              : 'bg-gradient-to-r from-rose-500 to-red-500'
+          }`}>
+            <div>
+              <p className="text-white/80 text-xs font-bold uppercase tracking-wider mb-1">Net Profit</p>
+              <p className="text-3xl font-black text-white">
+                {stats.netProfit > 0 ? '+' : ''}{stats.netProfit.toLocaleString()} ETB
+              </p>
             </div>
             <TrendingUp size={40} className="text-white/20" />
           </div>
@@ -227,10 +289,8 @@ export default function Worker() {
 
         {/* Note */}
         <div className="bg-blue-50 text-blue-800 p-4 rounded-2xl flex items-start space-x-3 text-xs font-medium">
-          <Calendar size={18} className="shrink-0 text-blue-500" />
-          <p>
-            This report automatically calculates the total volume of verified deposits and withdrawals for the selected timeframe. Pending transactions are excluded.
-          </p>
+          <Calendar size={18} className="shrink-0 text-blue-500 mt-0.5" />
+          <p>Only <strong>approved</strong> deposits and withdrawals are counted. Pending transactions are excluded.</p>
         </div>
 
       </div>
