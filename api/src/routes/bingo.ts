@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { AuthRequest, validateTelegramAuth } from '../middleware/auth';
 import { supabase } from '../services/supabase';
 import { generateBingoCard } from '../services/BingoEngine';
@@ -146,4 +146,9 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   res.json({ success: true, cartela_number: seat, card_matrix });
 });
 
+router.get('/card', validateTelegramAuth, async (req, res) => {
+  const { game_id, cartela } = req.query;
+  const { data } = await supabase.from('bingo_players').select('card_matrix').eq('game_id', game_id).eq('cartela_number', cartela).maybeSingle();
+  res.json({ matrix: data?.card_matrix || null });
+});
 export default router;
