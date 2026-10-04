@@ -91,7 +91,7 @@ import Invite from './pages/Invite';
 import InvitedPeople from './pages/InvitedPeople';
 
 function App() {
-  const { fetchUser, subscribeToBalance, isDarkMode } = useGameStore();
+  const { fetchUser, subscribeToBalance, isDarkMode, isBlocked } = useGameStore();
 
   useEffect(() => {
     WebApp.ready();
@@ -109,6 +109,20 @@ function App() {
       return unsub;
     });
   }, [fetchUser, subscribeToBalance]);
+
+  if (isBlocked) {
+    return (
+      <div className="fixed inset-0 bg-slate-900 flex flex-col items-center justify-center p-6 z-50">
+        <div className="w-20 h-20 rounded-full bg-rose-500/20 flex items-center justify-center mb-5">
+          <span className="text-4xl">🚫</span>
+        </div>
+        <h1 className="text-white font-black text-xl mb-2 text-center">Account Deactivated</h1>
+        <p className="text-white/60 text-sm font-medium text-center max-w-xs">
+          Your account has been deactivated by the admin. Please contact support for more information.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <BrowserRouter>

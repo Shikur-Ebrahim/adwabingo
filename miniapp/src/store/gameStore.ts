@@ -13,6 +13,7 @@ interface GameStore {
   user: User | null;
   loading: boolean;
   error: string | null;
+  isBlocked: boolean;
   isProfileOpen: boolean;
   isDarkMode: boolean;
   setProfileOpen: (isOpen: boolean) => void;
@@ -29,6 +30,7 @@ export const useGameStore = create<GameStore>()(
       user: null,
       loading: false,
       error: null,
+      isBlocked: false,
       isProfileOpen: false,
       isDarkMode: false,
       setProfileOpen: (isOpen: boolean) => set({ isProfileOpen: isOpen }),
@@ -75,7 +77,9 @@ export const useGameStore = create<GameStore>()(
 
           if (response.ok) {
             const data = await response.json();
-            set({ user: data.user, loading: false });
+            set({ user: data.user, loading: false, isBlocked: false });
+          } else if (response.status === 403) {
+            set({ loading: false, isBlocked: true, user: null });
           }
         } catch (error: any) {
           console.error('Error fetching user:', error);
