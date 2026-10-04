@@ -9,10 +9,12 @@ const router = Router();
 // Returns current game state + taken cartela list + caller's card (if joined)
 router.get('/current', validateTelegramAuth, async (req: AuthRequest, res) => {
   const telegramId = req.telegramUser!.id.toString();
+  const stake = Number(req.query.stake) || 10;
 
   const { data: game } = await supabase
     .from('bingo_games')
     .select('*')
+    .eq('stake', stake)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -44,17 +46,21 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
     res.status(400).json({ error: 'Pick a cartela between 1 and 150' }); return;
   }
 
-  // Must be a 'waiting' game
-  const { data: game } = await supabase
+  // Also, allow specifying a stake room
+  const requestedStake = req.body.stake || 10;
+
+  let query = supabase
     .from('bingo_games')
-    .select('id, game_id, stake, status')
+    .select('id, game_id, stake, status, start_at')
     .eq('status', 'waiting')
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+    .eq('stake', Number(requestedStake))
+    .order('created_at', { ascending: false });
+  
+  const { data: gamesData } = await query.limit(1);
+  const game = gamesData?.[0];
 
   if (!game) {
-    res.status(400).json({ error: 'No game accepting players right now. Wait for the next one.' }); return;
+    res.status(400).json({ error: 'No game accepting players for this stake right now.' }); return;
   }
 
   // Already in this game?
@@ -67,19 +73,36 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   if (existing) { res.status(400).json({ error: 'You already joined this game' }); return; }
 
   // Check & deduct balance
-  const { data: user } = await supabase.from('users').select('main_balance, first_name').eq('telegram_id', telegramId).single();
+  const { data: user } = await supabase.from('users').select('main_balance, bonus_balance, first_name').eq('telegram_id', telegramId).single();
   if (!user) { res.status(404).json({ error: 'User not found' }); return; }
-  if (Number(user.main_balance) < Number(game.stake)) {
-    res.status(400).json({ error: `Insufficient balance â€” need ${game.stake} ETB` }); return;
+  
+  const stakeAmt = Number(game.stake);
+  const mainBal = Number(user.main_balance || 0);
+  const bonusBal = Number(user.bonus_balance || 0);
+  
+  if (mainBal + bonusBal < stakeAmt) {
+    res.status(400).json({ error: Insufficient balance — need  ETB }); return;
+  }
+
+  let toDeduct = stakeAmt;
+  let newBonus = bonusBal;
+  let newMain = mainBal;
+
+  if (newBonus >= toDeduct) {
+    newBonus -= toDeduct;
+    toDeduct = 0;
+  } else {
+    toDeduct -= newBonus;
+    newBonus = 0;
+    newMain -= toDeduct;
   }
 
   const { error: deductErr } = await supabase
     .from('users')
-    .update({ main_balance: Number(user.main_balance) - Number(game.stake) })
-    .eq('telegram_id', telegramId)
-    .gte('main_balance', Number(game.stake));
+    .update({ main_balance: newMain, bonus_balance: newBonus })
+    .eq('telegram_id', telegramId);
 
-  if (deductErr) { res.status(400).json({ error: 'Payment failed â€” please try again' }); return; }
+  if (deductErr) { res.status(400).json({ error: 'Payment failed — please try again' }); return; }
 
   // Generate card server-side
   const card_matrix = generateBingoCard();
@@ -94,15 +117,25 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   });
 
   if (insertErr) {
-    // Refund on duplicate seat
-    await supabase.from('users').update({ main_balance: Number(user.main_balance) }).eq('telegram_id', telegramId);
-    res.status(400).json({ error: 'That cartela was just taken â€” pick another!' }); return;
+    // Refund
+    await supabase.from('users').update({ main_balance: mainBal, bonus_balance: bonusBal }).eq('telegram_id', telegramId);
+    res.status(400).json({ error: 'Seat taken or error' }); return;
   }
 
-  // Add 80 % of stake to prize pool atomically
-  await supabase.rpc('bingo_add_to_prize', { p_game_id: game.id, p_amount: Number(game.stake) * 0.8 });
+  // Add to prize pool
+  await supabase.rpc('bingo_add_to_prize', { p_game_id: game.id, p_amount: stakeAmt * 0.8 });
+
+  // TRIGGER 60s COUNTDOWN IF FIRST PLAYER
+  if (new Date(game.start_at).getTime() > Date.now() + 86400000) {
+    await supabase.from('bingo_games').update({
+      start_at: new Date(Date.now() + 60_000).toISOString()
+    }).eq('id', game.id);
+  }
 
   res.json({ success: true, cartela_number: seat, card_matrix });
 });
 
 export default router;
+
+
+

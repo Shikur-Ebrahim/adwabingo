@@ -36,6 +36,7 @@ export default function BingoGame() {
   const [taken, setTaken] = useState<number[]>([]);
   const [myCard, setMyCard] = useState<MyCard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentStake, setCurrentStake] = useState(10);
   const [buying, setBuying] = useState<number | null>(null);
   const [errMsg, setErrMsg] = useState("");
   const [timeLeft, setTimeLeft] = useState(0);
@@ -52,18 +53,18 @@ export default function BingoGame() {
     } catch { /* ignore */ } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchState(); }, [fetchState]);
+  useEffect(() => { fetchState(); }, [fetchState, currentStake]);
 
   useEffect(() => {
     const ch = supabase.channel("bingo-rt")
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bingo_games" }, ({ new: g }) => { setGame(g as BGame); })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bingo_games" }, ({ new: g }) => { if (g.stake === currentStake) setGame(g as BGame); })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "bingo_games" }, () => { fetchState(); })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "bingo_players" }, ({ new: p }) => {
         const np = p as { game_id: string; cartela_number: number };
         if (np.game_id === gameIdRef.current) setTaken(prev => prev.includes(np.cartela_number) ? prev : [...prev, np.cartela_number]);
       }).subscribe();
     return () => { supabase.removeChannel(ch); };
-  }, [fetchState]);
+  }, [fetchState, currentStake]);
 
   useEffect(() => {
     if (!game || game.status !== "waiting") return;
@@ -78,7 +79,7 @@ export default function BingoGame() {
     if (!user || Number(user.main_balance) < game.stake) { setErrMsg(`Need ${game.stake} ETB`); return; }
     setBuying(seat); setErrMsg("");
     try {
-      const r = await fetch(`${API}/bingo/join`, { method: "POST", headers: hdrs(), body: JSON.stringify({ cartela_number: seat }) });
+      const r = await fetch(`${API}/bingo/join`, { method: "POST", headers: hdrs(), body: JSON.stringify({ cartela_number: seat, stake: currentStake }) });
       const d = await r.json();
       if (r.ok) { WebApp.HapticFeedback?.notificationOccurred("success"); setMyCard({ cartela_number: seat, card_matrix: d.card_matrix }); setTaken(prev => [...prev, seat]); refreshUser(); }
       else { setErrMsg(d.error ?? "Could not join. Try again."); }
@@ -113,7 +114,7 @@ export default function BingoGame() {
         <div className="bg-[#0a0d1f] px-3 pt-3 pb-3">
           <div className="flex items-center gap-2 mb-2">
             <button onClick={() => navigate(-1)} className="h-9 w-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl"><ArrowLeft size={18} className="text-white" /></button>
-            <button className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-xl px-3 h-9"><span className="text-white font-black text-sm">{game.stake} ETB</span><ChevronDown size={13} className="text-white/40" /></button>
+            <div className="relative"><select value={currentStake} onChange={(e) => setCurrentStake(Number(e.target.value))} className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-3 pr-8 h-9 text-white font-black text-sm outline-none focus:border-white/30"><option value={10}>10 ETB</option><option value={20}>20 ETB</option><option value={50}>50 ETB</option><option value={100}>100 ETB</option></select><ChevronDown size={13} className="text-white/40 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" /></div>
             <div className="flex-1 bg-white/5 border border-white/10 rounded-xl h-9 flex flex-col items-center justify-center"><span className="text-[9px] text-white/30 font-bold leading-none">Game ID</span><span className="text-sm font-black text-white leading-tight">{game.game_id}</span></div>
             <button className="h-9 w-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl"><Gift size={17} className="text-white/50" /></button>
           </div>
@@ -206,3 +207,7 @@ export default function BingoGame() {
     </div>
   );
 }
+
+
+
+
