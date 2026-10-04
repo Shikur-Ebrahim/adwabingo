@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+﻿import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown, Gift, RefreshCw } from "lucide-react";
 import WebApp from "@twa-dev/sdk";
@@ -114,7 +114,11 @@ export default function BingoGame() {
         <div className="bg-[#0a0d1f] px-3 pt-3 pb-3">
           <div className="flex items-center gap-2 mb-2">
             <button onClick={() => navigate(-1)} className="h-9 w-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl"><ArrowLeft size={18} className="text-white" /></button>
-            <div className="relative"><select value={currentStake} onChange={(e) => setCurrentStake(Number(e.target.value))} className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-3 pr-8 h-9 text-white font-black text-sm outline-none focus:border-white/30"><option value={10}>10 ETB</option><option value={20}>20 ETB</option><option value={50}>50 ETB</option><option value={100}>100 ETB</option></select><ChevronDown size={13} className="text-white/40 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" /></div>
+            <div className="flex gap-1.5">
+              {[10, 20, 50, 100].map(s => (
+                <button key={s} onClick={() => { if (game.status !== "calling") setCurrentStake(s); }} className={`flex-1 py-1.5 rounded-xl font-black text-[11px] border transition-all ${currentStake === s ? "bg-orange-500 text-black border-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.4)]" : "bg-white/5 text-white/40 border-white/10 active:scale-95"}`}>{s} ETB</button>
+              ))}
+            </div>
             <div className="flex-1 bg-white/5 border border-white/10 rounded-xl h-9 flex flex-col items-center justify-center"><span className="text-[9px] text-white/30 font-bold leading-none">Game ID</span><span className="text-sm font-black text-white leading-tight">{game.game_id}</span></div>
             <button className="h-9 w-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl"><Gift size={17} className="text-white/50" /></button>
           </div>
