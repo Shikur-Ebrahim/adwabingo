@@ -23,56 +23,70 @@ export default function Worker() {
   const setTimeframe = (preset: string) => {
     setActivePreset(preset);
     const now = new Date();
-    let from = '';
-    let to = '';
+    
+    let fromIso = '';
+    let toIso = '';
+
+    const startOf = (d: Date) => {
+      const copy = new Date(d);
+      copy.setHours(0, 0, 0, 0);
+      return copy.toISOString();
+    };
+
+    const endOf = (d: Date) => {
+      const copy = new Date(d);
+      copy.setHours(23, 59, 59, 999);
+      return copy.toISOString();
+    };
 
     if (preset === 'Today') {
-      from = toDateStr(now);
-      to = toDateStr(now);
+      fromIso = startOf(now);
+      toIso = endOf(now);
     } else if (preset === 'Yesterday') {
       const yest = new Date(now);
       yest.setDate(yest.getDate() - 1);
-      from = toDateStr(yest);
-      to = toDateStr(yest);
+      fromIso = startOf(yest);
+      toIso = endOf(yest);
     } else if (preset === '7 Days') {
       const d = new Date(now);
       d.setDate(d.getDate() - 7);
-      from = toDateStr(d);
-      to = toDateStr(now);
+      fromIso = startOf(d);
+      toIso = endOf(now);
     } else if (preset === '1 Month') {
       const d = new Date(now);
       d.setMonth(d.getMonth() - 1);
-      from = toDateStr(d);
-      to = toDateStr(now);
+      fromIso = startOf(d);
+      toIso = endOf(now);
     } else if (preset === '3 Months') {
       const d = new Date(now);
       d.setMonth(d.getMonth() - 3);
-      from = toDateStr(d);
-      to = toDateStr(now);
+      fromIso = startOf(d);
+      toIso = endOf(now);
     } else if (preset === '6 Months') {
       const d = new Date(now);
       d.setMonth(d.getMonth() - 6);
-      from = toDateStr(d);
-      to = toDateStr(now);
+      fromIso = startOf(d);
+      toIso = endOf(now);
     } else if (preset === '1 Year') {
       const d = new Date(now);
       d.setFullYear(d.getFullYear() - 1);
-      from = toDateStr(d);
-      to = toDateStr(now);
+      fromIso = startOf(d);
+      toIso = endOf(now);
     } else if (preset === 'All Time') {
-      from = '';
-      to = '';
+      fromIso = '';
+      toIso = '';
     }
-    fetchReport(from, to);
+    
+    fetchReport(fromIso, toIso);
   };
 
-  const fetchReport = useCallback(async (fromStr: string, toStr: string) => {
+  const fetchReport = useCallback(async (fromIso: string, toIso: string) => {
     setLoading(true);
     try {
       const initData = typeof WebApp !== 'undefined' ? WebApp.initData : '';
       const params = new URLSearchParams();
-      if (fromStr) params.append('from', fromStr + 'T00:00:00.000Z');
-      if (toStr) params.append('to', toStr + 'T23:59:59.999Z');
+      if (fromIso) params.append('from', fromIso);
+      if (toIso) params.append('to', toIso);
 
       const res = await fetch(`${API_URL}/admin/profit-report?${params}`, {
         headers: { 'x-telegram-init-data': initData }
@@ -88,7 +102,7 @@ export default function Worker() {
   }, []);
 
   useEffect(() => {
-    setTimeframe('Today');
+    setTimeframe('All Time');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
