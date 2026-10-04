@@ -432,7 +432,7 @@ router.get('/users', async (req, res) => {
 
   let query = supabase
     .from('users')
-    .select('id, telegram_id, username, first_name, last_name, role, main_balance, bonus_balance, total_games, total_wins, created_at', { count: 'exact' })
+    .select('id, telegram_id, username, first_name, role, main_balance, bonus_balance, total_games, total_wins, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limitNum - 1);
 
