@@ -23,19 +23,24 @@ export default function Admin() {
     fetchStats();
   }, []);
 
-  if (user?.role !== 'admin') return <div className="p-10 text-center font-bold text-slate-600 ">Admin only!</div>;
+  if (!user || (user.role !== 'admin' && user.role !== 'worker')) {
+    return <div className="p-10 text-center font-bold text-slate-600">Access Denied!</div>;
+  }
 
-  const adminModules = [
-    { id: 'dep_methods', title: 'Deposit Methods', icon: Landmark, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { id: 'with_methods', title: 'Withdraw Methods', icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-100' },
-    { id: 'deposits', title: 'Deposits', icon: ArrowDownToLine, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-    { id: 'withdrawals', title: 'Withdrawals', icon: ArrowUpFromLine, color: 'text-rose-600', bg: 'bg-rose-100' },
-    { id: 'users', title: 'Users', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-100' },
-    { id: 'workers', title: 'Workers', icon: UserCog, color: 'text-orange-600', bg: 'bg-orange-100' },
-    { id: 'games_report', title: 'Games Report', icon: Gamepad2, color: 'text-cyan-600', bg: 'bg-cyan-100' },
-    { id: 'tx_report', title: 'Transaction Report', icon: Receipt, color: 'text-teal-600', bg: 'bg-teal-100' },
-    { id: 'settings', title: 'Settings', icon: Settings2, color: 'text-slate-600', bg: 'bg-slate-100' },
-  ];
+  const perms = user.permissions || {};
+  const isAdmin = user.role === 'admin';
+
+  let adminModules = [
+    { id: 'dep_methods', title: 'Deposit Methods', icon: Landmark, color: 'text-blue-600', bg: 'bg-blue-100', show: isAdmin || perms.deposits },
+    { id: 'with_methods', title: 'Withdraw Methods', icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-100', show: isAdmin || perms.withdrawals },
+    { id: 'deposits', title: 'Deposits', icon: ArrowDownToLine, color: 'text-emerald-600', bg: 'bg-emerald-100', show: isAdmin || perms.deposits },
+    { id: 'withdrawals', title: 'Withdrawals', icon: ArrowUpFromLine, color: 'text-rose-600', bg: 'bg-rose-100', show: isAdmin || perms.withdrawals },
+    { id: 'users', title: 'Users', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-100', show: isAdmin || perms.users },
+    { id: 'workers', title: 'Workers', icon: UserCog, color: 'text-orange-600', bg: 'bg-orange-100', show: isAdmin },
+    { id: 'games_report', title: 'Games Report', icon: Gamepad2, color: 'text-cyan-600', bg: 'bg-cyan-100', show: isAdmin || perms.games },
+    { id: 'tx_report', title: 'Transaction Report', icon: Receipt, color: 'text-teal-600', bg: 'bg-teal-100', show: isAdmin || perms.reports },
+    { id: 'settings', title: 'Settings', icon: Settings2, color: 'text-slate-600', bg: 'bg-slate-100', show: isAdmin || perms.settings },
+  ].filter(m => m.show);
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50  p-4 pt-6 pb-8">

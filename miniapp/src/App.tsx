@@ -64,12 +64,8 @@ function Navigation() {
 function RoleRouter() {
   const { user } = useGameStore();
   
-  if (user?.role === 'admin') {
+  if (user?.role === 'admin' || user?.role === 'worker') {
     return <Navigate to="/admin" replace />;
-  }
-  
-  if (user?.role === 'worker') {
-    return <Navigate to="/worker" replace />;
   }
   
   // Default user role sees the normal bingo home page
@@ -83,6 +79,7 @@ import AdminWithdrawals from './pages/AdminWithdrawals';
 import AdminSettings from './pages/AdminSettings';
 import AdminTxReport from './pages/AdminTxReport';
 import AdminUsers from './pages/AdminUsers';
+import AdminWorkers from './pages/AdminWorkers';
 
 import DepositHistory from './pages/DepositHistory';
 import WithdrawHistory from './pages/WithdrawHistory';
@@ -176,6 +173,7 @@ function App() {
           <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/admin/tx-report" element={<AdminTxReport />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/workers" element={<AdminWorkers />} />
           <Route path="/worker" element={<Worker />} />
         </Routes>
         <Profile />

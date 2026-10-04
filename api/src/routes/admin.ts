@@ -7,12 +7,38 @@ const router = Router();
 // Middleware to ensure user is an admin
 const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   const telegramId = req.telegramUser!.id.toString();
-  const { data } = await supabase.from('users').select('role').eq('telegram_id', telegramId).single();
+  const { data } = await supabase.from('users').select('role, permissions').eq('telegram_id', telegramId).single();
   
-  if (!data || data.role !== 'admin') {
-    res.status(403).json({ error: 'Access denied. Admin only.' });
+  if (!data || (data.role !== 'admin' && data.role !== 'worker')) {
+    res.status(403).json({ error: 'Access denied.' });
     return;
   }
+  
+  if (data.role === 'admin') {
+    return next();
+  }
+
+  // Worker permissions check
+  const path = req.path;
+  const perms = data.permissions || {};
+
+  let allowed = false;
+  if (path.startsWith('/stats')) allowed = true; // Allow workers to view stats dashboard
+  else if (path.includes('deposit') && perms.deposits) allowed = true;
+  else if (path.includes('withdraw') && perms.withdrawals) allowed = true;
+  else if (path.startsWith('/users') && perms.users) allowed = true;
+  else if (path.startsWith('/settings') && perms.settings) allowed = true;
+  else if (path.startsWith('/tx-report') && perms.reports) allowed = true;
+  else if (path.startsWith('/games') && perms.games) allowed = true;
+  
+  // Explicitly deny /workers to anyone but admin
+  if (path.startsWith('/workers')) allowed = false;
+
+  if (!allowed) {
+    res.status(403).json({ error: 'Access denied. Missing permission.' });
+    return;
+  }
+
   next();
 };
 
@@ -518,6 +544,29 @@ router.put('/users/:telegramId/status', async (req, res) => {
   const { status } = req.body;
   if (!['active', 'inactive'].includes(status)) { res.status(400).json({ error: 'Invalid status' }); return; }
   const { error } = await supabase.from('users').update({ status }).eq('telegram_id', req.params.telegramId);
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ success: true });
+});
+
+// ─── WORKERS ───────────────────────────────────────────────────────────────────
+
+router.get('/workers', async (req, res) => {
+  const { data, error } = await supabase
+    .from('users')
+    .select('id, telegram_id, username, first_name, role, status, permissions, created_at')
+    .eq('role', 'worker')
+    .order('created_at', { ascending: false });
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ workers: data });
+});
+
+router.put('/workers/:telegramId/permissions', async (req, res) => {
+  const { permissions } = req.body;
+  const { error } = await supabase
+    .from('users')
+    .update({ permissions })
+    .eq('telegram_id', req.params.telegramId)
+    .eq('role', 'worker');
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.json({ success: true });
 });
