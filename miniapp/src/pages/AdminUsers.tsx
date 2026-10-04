@@ -10,8 +10,8 @@ interface User {
   telegram_id: string;
   username: string;
   first_name: string;
-  last_name?: string;
   role: string;
+  status: string;
   main_balance: number;
   bonus_balance: number;
   total_games: number;
@@ -167,6 +167,27 @@ export default function AdminUsers() {
     finally { setRoleSaving(false); }
   };
 
+  const [statusSaving, setStatusSaving] = useState(false);
+  const changeStatus = async (status: string) => {
+    if (!selected) return;
+    setStatusSaving(true);
+    try {
+      const res = await fetch(`${API_URL}/admin/users/${selected.telegram_id}/status`, {
+        method: 'PUT', headers: getHeaders(),
+        body: JSON.stringify({ status }),
+      });
+      const d = await res.json();
+      if (res.ok) {
+        showToast('success', `Account ${status === 'active' ? 'activated' : 'deactivated'}`);
+        setSelected(prev => prev ? { ...prev, status } : prev);
+        fetchUsers(search, 1);
+      } else {
+        showToast('error', d.error || 'Failed');
+      }
+    } catch { showToast('error', 'Network error'); }
+    finally { setStatusSaving(false); }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-slate-50 overflow-hidden">
       {/* Toast */}
@@ -231,6 +252,7 @@ export default function AdminUsers() {
               <div className="flex items-center space-x-1.5 mb-0.5">
                 <span className="font-black text-[13px] text-slate-800 truncate">{u.first_name}</span>
                 <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${ROLE_COLORS[u.role] || ROLE_COLORS['user']}`}>{u.role}</span>
+                {u.status === 'inactive' && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">Inactive</span>}
               </div>
               <p className="text-[10px] text-slate-400 font-medium truncate">@{u.username} · ID {u.telegram_id}</p>
               <div className="flex items-center space-x-3 mt-1">
@@ -285,6 +307,7 @@ export default function AdminUsers() {
                     <div className="flex items-center space-x-2">
                       <p className="font-black text-slate-800 text-sm">{selected.first_name} {selected.last_name || ''}</p>
                       <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${ROLE_COLORS[selected.role] || ROLE_COLORS['user']}`}>{selected.role}</span>
+                      {selected.status === 'inactive' && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">Inactive</span>}
                     </div>
                     <p className="text-[11px] text-slate-400 font-medium">@{selected.username} · {selected.telegram_id}</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">Joined {fmtDate(selected.created_at)}</p>
@@ -367,6 +390,21 @@ export default function AdminUsers() {
                         {r === 'admin' ? '👑 Admin' : r === 'worker' ? '🔧 Worker' : '👤 User'}
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                {/* ─── ACCOUNT STATUS ─── */}
+                <div className="bg-white border border-slate-200 rounded-2xl p-3 mb-3">
+                  <p className="text-[11px] font-black text-slate-700 mb-2">🔒 Account Status</p>
+                  <div className="flex space-x-1.5">
+                    <button onClick={() => changeStatus('active')} disabled={statusSaving || selected.status === 'active' || !selected.status}
+                      className={`flex-1 py-1.5 rounded-xl text-[10px] font-black border transition-all disabled:opacity-50 ${(selected.status === 'active' || !selected.status) ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-white text-slate-600 border-slate-200 active:scale-95'}`}>
+                      ✅ Active
+                    </button>
+                    <button onClick={() => changeStatus('inactive')} disabled={statusSaving || selected.status === 'inactive'}
+                      className={`flex-1 py-1.5 rounded-xl text-[10px] font-black border transition-all disabled:opacity-50 ${selected.status === 'inactive' ? 'bg-rose-50 text-rose-600 border-rose-200' : 'bg-white text-slate-600 border-slate-200 active:scale-95'}`}>
+                      🚫 Inactive
+                    </button>
                   </div>
                 </div>
 

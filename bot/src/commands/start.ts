@@ -20,7 +20,13 @@ export async function startCommand(ctx: Context) {
 
   try {
     await upsertUser(user.id.toString(), user.username || user.first_name, user.first_name, inviterId);
-  } catch (e) { console.error('Upsert user error:', e); }
+  } catch (e: any) {
+    if (e.message === 'ACCOUNT_INACTIVE') {
+      await ctx.reply('❌ Your account has been deactivated by the admin. You can no longer use this bot.');
+      return;
+    }
+    console.error('Upsert user error:', e); 
+  }
 
   const miniAppUrl = process.env.MINI_APP_URL || 'https://adwabingo.vercel.app';
   

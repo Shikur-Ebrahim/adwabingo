@@ -432,7 +432,7 @@ router.get('/users', async (req, res) => {
 
   let query = supabase
     .from('users')
-    .select('id, telegram_id, username, first_name, role, main_balance, bonus_balance, total_games, total_wins, created_at', { count: 'exact' })
+    .select('id, telegram_id, username, first_name, role, status, main_balance, bonus_balance, total_games, total_wins, created_at', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + limitNum - 1);
 
@@ -510,6 +510,14 @@ router.put('/users/:telegramId/role', async (req, res) => {
   const { role } = req.body;
   if (!['user', 'admin', 'worker'].includes(role)) { res.status(400).json({ error: 'Invalid role' }); return; }
   const { error } = await supabase.from('users').update({ role }).eq('telegram_id', req.params.telegramId);
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ success: true });
+});
+
+router.put('/users/:telegramId/status', async (req, res) => {
+  const { status } = req.body;
+  if (!['active', 'inactive'].includes(status)) { res.status(400).json({ error: 'Invalid status' }); return; }
+  const { error } = await supabase.from('users').update({ status }).eq('telegram_id', req.params.telegramId);
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.json({ success: true });
 });

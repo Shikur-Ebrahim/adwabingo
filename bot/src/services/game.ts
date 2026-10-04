@@ -5,6 +5,10 @@ export async function upsertUser(telegramId: string, username: string, firstName
   const { data: existing } = await supabase.from('users').select('*').eq('telegram_id', telegramId).single();
   
   if (existing) {
+    if (existing.status === 'inactive') {
+      throw new Error('ACCOUNT_INACTIVE');
+    }
+
     const { data, error } = await supabase
       .from('users')
       .update({ username, first_name: firstName })
