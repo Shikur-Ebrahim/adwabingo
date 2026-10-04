@@ -39,7 +39,13 @@ const STAKE_OPTIONS = [
 
 export default function BingoGame() {
   const navigate = useNavigate();
-  const { user, fetchUser: refreshUser } = useGameStore();
+  const { user, fetchUser: refreshUser, subscribeToBalance } = useGameStore();
+
+  // Subscribe to realtime balance updates — wallet updates INSTANTLY
+  useEffect(() => {
+    const unsub = subscribeToBalance();
+    return () => unsub();
+  }, [subscribeToBalance, user?.telegram_id]);
 
   // Stake selection phase
   const [selectedStake, setSelectedStake] = useState<number | null>(null);
@@ -98,14 +104,41 @@ export default function BingoGame() {
     return () => clearInterval(id);
   }, [game?.status, game?.start_at]);
 
-  // Join game
+  // Join game — OPTIMISTIC: UI updates INSTANTLY before server responds
   const joinGame = async (seat: number) => {
     if (!game || game.status !== "waiting") return;
     if (myCard) { setErrMsg("You already have a cartela!"); return; }
     if (taken.includes(seat)) { setErrMsg("Taken! Pick another."); return; }
-    const totalBal = Number(user?.main_balance || 0) + Number(user?.bonus_balance || 0);
+    const bonusBal = Number(user?.bonus_balance || 0);
+    const mainBal = Number(user?.main_balance || 0);
+    const totalBal = bonusBal + mainBal;
     if (!user || totalBal < game.stake) { setErrMsg(`Need ${game.stake} ETB`); return; }
     setBuying(seat); setErrMsg("");
+
+    // ── OPTIMISTIC UPDATES (instant, no waiting for server) ──
+    // 1. Mark cartela as taken immediately
+    setTaken(prev => [...prev, seat]);
+
+    // 2. Deduct balance from UI immediately (bonus first, then main)
+    const stakeAmt = game.stake;
+    let newBonus = bonusBal;
+    let newMain = mainBal;
+    if (newBonus >= stakeAmt) {
+      newBonus -= stakeAmt;
+    } else {
+      const remainder = stakeAmt - newBonus;
+      newBonus = 0;
+      newMain -= remainder;
+    }
+    useGameStore.setState(state => ({
+      user: state.user ? { ...state.user, main_balance: newMain, bonus_balance: newBonus } : state.user
+    }));
+
+    // 3. Update prize pool immediately
+    const newPlayerCount = taken.length + 1;
+    const newPrize = newPlayerCount < 3 ? newPlayerCount * stakeAmt : Math.floor(newPlayerCount * stakeAmt * 0.8);
+    setGame(prev => prev ? { ...prev, prize_pool: newPrize } : prev);
+
     try {
       const r = await fetch(`${API}/bingo/join`, {
         method: "POST", headers: hdrs(),
@@ -115,9 +148,17 @@ export default function BingoGame() {
       if (r.ok) {
         WebApp.HapticFeedback?.notificationOccurred("success");
         setMyCard({ cartela_number: seat, card_matrix: d.card_matrix });
-        setTaken(prev => [...prev, seat]);
+        // Server will push the real balance via realtime subscription
         refreshUser();
-      } else { setErrMsg(d.error ?? "Could not join. Try again."); }
+      } else {
+        // ── ROLLBACK on error ──
+        setTaken(prev => prev.filter(n => n !== seat));
+        useGameStore.setState(state => ({
+          user: state.user ? { ...state.user, main_balance: mainBal, bonus_balance: bonusBal } : state.user
+        }));
+        setErrMsg(d.error ?? "Could not join. Try again.");
+        fetchState(); // Re-sync from server
+      }
     } catch { setErrMsg("Network error"); } finally { setBuying(null); }
   };
 
