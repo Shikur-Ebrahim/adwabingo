@@ -424,10 +424,8 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
     wQuery = wQuery.gte('created_at', from);
   }
   if (to) {
-    const toDate = new Date(to as string);
-    toDate.setUTCHours(23, 59, 59, 999);
-    dQuery = dQuery.lte('created_at', toDate.toISOString());
-    wQuery = wQuery.lte('created_at', toDate.toISOString());
+    dQuery = dQuery.lte('created_at', to);
+    wQuery = wQuery.lte('created_at', to);
   }
 
   const [dRes, wRes] = await Promise.all([dQuery, wQuery]);

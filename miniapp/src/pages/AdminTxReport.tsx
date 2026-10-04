@@ -60,15 +60,21 @@ function fmtTime(iso: string) {
 
 export default function AdminTxReport() {
   const { user } = useGameStore();
-  const today = toDateStr(new Date());
-  const [from, setFrom] = useState(today);
-  const [to, setTo] = useState(today);
+
+  const startOf = (d: Date) => { const c = new Date(d); c.setHours(0,0,0,0); return c.toISOString(); };
+  const endOf   = (d: Date) => { const c = new Date(d); c.setHours(23,59,59,999); return c.toISOString(); };
+
+  const [fromIso, setFromIso] = useState(() => startOf(new Date()));
+  const [toIso,   setToIso  ] = useState(() => endOf(new Date()));
   const [activePreset, setActivePreset] = useState('Today');
   const [stats, setStats] = useState<Stats>({ totalDeposits: 0, totalWithdrawals: 0, totalDepBonus: 0, totalInvBonus: 0 });
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | Tx['type']>('all');
   const [showCustom, setShowCustom] = useState(false);
+  // Custom picker raw values
+  const [customFromRaw, setCustomFromRaw] = useState(toDateStr(new Date()));
+  const [customToRaw,   setCustomToRaw  ] = useState(toDateStr(new Date()));
 
   const getHeaders = () => ({
     'Content-Type': 'application/json',
@@ -80,29 +86,37 @@ export default function AdminTxReport() {
     setShowCustom(false);
     const now = new Date();
     if (preset.days === -1) {
-      setFrom('2024-01-01');
-      setTo(today);
+      setFromIso('2024-01-01T00:00:00.000Z');
+      setToIso(endOf(now));
     } else if (preset.days === 0) {
-      setFrom(today);
-      setTo(today);
+      setFromIso(startOf(now));
+      setToIso(endOf(now));
     } else if (preset.exact) {
+      // Yesterday
       const y = new Date(now); y.setDate(y.getDate() - 1);
-      const yStr = toDateStr(y);
-      setFrom(yStr);
-      setTo(yStr);
+      setFromIso(startOf(y));
+      setToIso(endOf(y));
     } else {
-      const from = new Date(now); from.setDate(from.getDate() - preset.days);
-      setFrom(toDateStr(from));
-      setTo(today);
+      const f = new Date(now); f.setDate(f.getDate() - preset.days);
+      setFromIso(startOf(f));
+      setToIso(endOf(now));
     }
+  };
+
+  const applyCustom = () => {
+    if (!customFromRaw || !customToRaw) return;
+    setActivePreset('Custom');
+    setShowCustom(false);
+    setFromIso(startOf(new Date(customFromRaw)));
+    setToIso(endOf(new Date(customToRaw)));
   };
 
   const fetchReport = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (from) params.set('from', from);
-      if (to) params.set('to', to);
+      if (fromIso) params.set('from', fromIso);
+      if (toIso)   params.set('to',   toIso);
       const res = await fetch(`${API_URL}/admin/tx-report?${params}`, { headers: getHeaders() });
       if (res.ok) {
         const data = await res.json();
@@ -114,7 +128,7 @@ export default function AdminTxReport() {
     } finally {
       setLoading(false);
     }
-  }, [from, to]);
+  }, [fromIso, toIso]);
 
   useEffect(() => { fetchReport(); }, [fetchReport]);
 
@@ -140,7 +154,9 @@ export default function AdminTxReport() {
         </Link>
         <div className="ml-3 flex-1">
           <h1 className="text-base font-black text-slate-800">Transaction Report</h1>
-          <p className="text-[10px] text-slate-400 font-medium">{from} → {to}</p>
+          <p className="text-[10px] text-slate-400 font-medium">
+            {fromIso ? new Date(fromIso).toLocaleDateString() : 'All'} → {toIso ? new Date(toIso).toLocaleDateString() : 'Now'}
+          </p>
         </div>
         <button onClick={fetchReport} disabled={loading} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200">
           <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
@@ -184,16 +200,16 @@ export default function AdminTxReport() {
             <div className="bg-white rounded-xl border border-slate-200 p-3 flex items-center space-x-2">
               <div className="flex-1">
                 <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">From</p>
-                <input type="date" value={from} onChange={e => setFrom(e.target.value)}
+                <input type="date" value={customFromRaw} max={toDateStr(new Date())} onChange={e => setCustomFromRaw(e.target.value)}
                   className="w-full text-xs font-bold text-slate-700 border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-violet-400" />
               </div>
               <div className="text-slate-300 font-black">→</div>
               <div className="flex-1">
                 <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">To</p>
-                <input type="date" value={to} onChange={e => setTo(e.target.value)}
+                <input type="date" value={customToRaw} max={toDateStr(new Date())} onChange={e => setCustomToRaw(e.target.value)}
                   className="w-full text-xs font-bold text-slate-700 border border-slate-200 rounded-lg px-2 py-1.5 outline-none focus:border-violet-400" />
               </div>
-              <button onClick={fetchReport} className="shrink-0 h-8 px-3 bg-slate-800 text-white text-[11px] font-black rounded-lg active:scale-95 transition-all">
+              <button onClick={applyCustom} className="shrink-0 h-8 px-3 bg-slate-800 text-white text-[11px] font-black rounded-lg active:scale-95 transition-all">
                 Go
               </button>
             </div>
