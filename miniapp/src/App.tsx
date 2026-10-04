@@ -10,6 +10,8 @@ import Withdraw from './pages/Withdraw';
 import Profile from './pages/Profile';
 import Admin from './pages/Admin';
 import Worker from './pages/Worker';
+import BingoGame from './pages/BingoGame';
+import AdminBingoGames from './pages/AdminBingoGames';
 
 function Navigation() {
   const location = useLocation();
@@ -165,11 +167,13 @@ function App() {
           <Route path="/deposit-history" element={<DepositHistory />} />
           <Route path="/withdraw-history" element={<WithdrawHistory />} />
           <Route path="/transfer" element={<Transfer />} />
+          <Route path="/bingo/live" element={<BingoGame />} />
           <Route path="/invite" element={<Invite />} />
           <Route path="/invited" element={<InvitedPeople />} />
           <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/leaderboard" element={<div className="p-4 text-center mt-10 font-bold">Leaderboard coming soon...</div>} />
           <Route path="/admin" element={<Admin />} />
+          <Route path="/admin/bingo-games" element={<AdminBingoGames />} />
           <Route path="/admin/deposit-methods" element={<AdminDepositMethods />} />
           <Route path="/admin/withdrawal-methods" element={<AdminWithdrawalMethods />} />
           <Route path="/admin/deposits" element={<AdminDeposits />} />

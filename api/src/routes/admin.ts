@@ -657,4 +657,38 @@ router.put('/settings', validateTelegramAuth, requireAdmin, async (req, res) => 
   res.json({ success: true });
 });
 
+// ─── BINGO ADMIN MONITORING ───────────────────────────────────────────────────
+
+// GET /admin/bingo-games — list recent games for monitoring
+router.get('/bingo-games', validateTelegramAuth, requireAdmin, async (_req, res) => {
+  const { data, error } = await supabase
+    .from('bingo_games')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(20);
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json(data);
+});
+
+// GET /admin/bingo-games/:id/players — get player count + list for a game
+router.get('/bingo-games/:id/players', validateTelegramAuth, requireAdmin, async (req, res) => {
+  const { data, error } = await supabase
+    .from('bingo_players')
+    .select('cartela_number, telegram_id, created_at')
+    .eq('game_id', req.params.id)
+    .order('created_at', { ascending: true });
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ count: (data || []).length, players: data });
+});
+
+// POST /admin/bingo-games/:id/finish — force-finish a stuck game
+router.post('/bingo-games/:id/finish', validateTelegramAuth, requireAdmin, async (req, res) => {
+  const { error } = await supabase
+    .from('bingo_games')
+    .update({ status: 'finished', finished_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', req.params.id);
+  if (error) { res.status(500).json({ error: error.message }); return; }
+  res.json({ success: true });
+});
+
 export default router;

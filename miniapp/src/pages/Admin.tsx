@@ -37,7 +37,8 @@ export default function Admin() {
     { id: 'withdrawals', title: 'Withdrawals', icon: ArrowUpFromLine, color: 'text-rose-600', bg: 'bg-rose-100', show: isAdmin || perms.withdrawals },
     { id: 'users', title: 'Users', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-100', show: isAdmin || perms.users },
     { id: 'workers', title: 'Workers', icon: UserCog, color: 'text-orange-600', bg: 'bg-orange-100', show: isAdmin },
-    { id: 'games_report', title: 'Games Report', icon: Gamepad2, color: 'text-cyan-600', bg: 'bg-cyan-100', show: isAdmin || perms.games },
+    { id: 'bingo_games', title: 'Bingo Games', icon: Gamepad2, color: 'text-yellow-600', bg: 'bg-yellow-100', show: isAdmin || perms.games },
+      { id: 'games_report', title: 'Games Report', icon: Gamepad2, color: 'text-cyan-600', bg: 'bg-cyan-100', show: isAdmin || perms.games },
     { id: 'tx_report', title: 'Transaction Report', icon: Receipt, color: 'text-teal-600', bg: 'bg-teal-100', show: isAdmin || perms.reports },
     { id: 'settings', title: 'Settings', icon: Settings2, color: 'text-slate-600', bg: 'bg-slate-100', show: isAdmin || perms.settings },
   ].filter(m => m.show);
@@ -126,6 +127,7 @@ export default function Admin() {
           const routeMap: Record<string, string> = {
             users: '/admin/users',
             workers: '/admin/workers',
+              bingo_games: '/admin/bingo-games',
             games_report: '/admin/games-report',
             tx_report: '/admin/tx-report',
             settings: '/admin/settings',

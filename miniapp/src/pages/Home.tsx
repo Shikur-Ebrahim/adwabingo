@@ -99,18 +99,22 @@ export default function Home() {
           </button>
         </div>
         
-        <div className="relative rounded-2xl overflow-hidden shadow-sm h-52 bg-white dark:bg-slate-900 flex items-center justify-center border border-gray-100 dark:border-slate-800">
-          <img 
-            src="/banner.jpg" 
-            alt="Adwa Bingo" 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute bottom-3 left-0 right-0 flex justify-center">
-            <div className="bg-yellow-400 text-yellow-950 px-8 py-2 rounded-full font-bold text-sm shadow-md border border-yellow-300">
-              PLAY NOW
+        <Link to="/bingo/live" className="block relative rounded-2xl overflow-hidden shadow-sm h-52 bg-gradient-to-br from-[#1a1a3e] to-[#0d0d1f] flex flex-col items-center justify-center border border-indigo-900/50">
+          <div className="absolute inset-0 opacity-20">
+            <div className="grid grid-cols-10 gap-2 p-3 h-full">
+              {Array.from({length: 40}).map((_, i) => <div key={i} className="bg-white rounded-sm opacity-50" />)}
             </div>
           </div>
-        </div>
+          
+          <div className="relative z-10 flex flex-col items-center text-center">
+            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1 flex items-center"><span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-1"></span> LIVE BINGO</span>
+            <span className="text-yellow-400 font-black text-3xl mb-1">JOIN NEXT GAME</span>
+            <span className="text-white/60 text-xs font-semibold mb-4">Pick your Cartela now!</span>
+            <div className="bg-yellow-400 text-yellow-950 px-8 py-2 rounded-full font-black text-sm shadow-[0_0_15px_rgba(250,204,21,0.4)]">
+              OPEN CARTELA →
+            </div>
+          </div>
+        </Link>
       </div>
 
       {/* MEDEB (STAKES) */}
