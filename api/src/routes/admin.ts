@@ -41,8 +41,14 @@ const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction)
   else if (path.startsWith('/tx-report') && perms.reports) allowed = true;
   else if (path.startsWith('/games') && perms.games) allowed = true;
   
-  // Explicitly deny /workers to anyone but admin
-  if (path.startsWith('/workers')) allowed = false;
+  // Explicitly deny these to anyone but admin
+  if (
+    path.startsWith('/workers') || 
+    path.startsWith('/deposit-methods') || 
+    path.startsWith('/withdrawal-methods')
+  ) {
+    allowed = false;
+  }
 
   if (!allowed) {
     res.status(403).json({ error: 'Access denied. Missing permission.' });

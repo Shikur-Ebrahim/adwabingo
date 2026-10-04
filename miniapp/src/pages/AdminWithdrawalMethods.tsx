@@ -145,7 +145,7 @@ export default function AdminWithdrawalMethods() {
     }
   };
 
-  if (!user || (user.role !== 'admin' && !(user.role === 'worker' && user.permissions?.withdrawals))) {
+  if (user?.role !== 'admin') {
     return <div className="p-10 text-center font-bold text-slate-600">Admin only!</div>;
   }
 

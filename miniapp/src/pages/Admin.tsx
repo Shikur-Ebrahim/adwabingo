@@ -31,8 +31,8 @@ export default function Admin() {
   const isAdmin = user.role === 'admin';
 
   let adminModules = [
-    { id: 'dep_methods', title: 'Deposit Methods', icon: Landmark, color: 'text-blue-600', bg: 'bg-blue-100', show: isAdmin || perms.deposits },
-    { id: 'with_methods', title: 'Withdraw Methods', icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-100', show: isAdmin || perms.withdrawals },
+    { id: 'dep_methods', title: 'Deposit Methods', icon: Landmark, color: 'text-blue-600', bg: 'bg-blue-100', show: isAdmin },
+    { id: 'with_methods', title: 'Withdraw Methods', icon: CreditCard, color: 'text-purple-600', bg: 'bg-purple-100', show: isAdmin },
     { id: 'deposits', title: 'Deposits', icon: ArrowDownToLine, color: 'text-emerald-600', bg: 'bg-emerald-100', show: isAdmin || perms.deposits },
     { id: 'withdrawals', title: 'Withdrawals', icon: ArrowUpFromLine, color: 'text-rose-600', bg: 'bg-rose-100', show: isAdmin || perms.withdrawals },
     { id: 'users', title: 'Users', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-100', show: isAdmin || perms.users },
