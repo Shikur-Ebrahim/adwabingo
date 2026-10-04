@@ -67,7 +67,7 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   if (existing) { res.status(400).json({ error: 'You already joined this game' }); return; }
 
   // Check & deduct balance
-  const { data: user } = await supabase.from('users').select('main_balance').eq('telegram_id', telegramId).single();
+  const { data: user } = await supabase.from('users').select('main_balance, first_name').eq('telegram_id', telegramId).single();
   if (!user) { res.status(404).json({ error: 'User not found' }); return; }
   if (Number(user.main_balance) < Number(game.stake)) {
     res.status(400).json({ error: `Insufficient balance — need ${game.stake} ETB` }); return;
@@ -88,6 +88,7 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   const { error: insertErr } = await supabase.from('bingo_players').insert({
     game_id: game.id,
     telegram_id: telegramId,
+    first_name: user.first_name || 'User',
     cartela_number: seat,
     card_matrix,
   });

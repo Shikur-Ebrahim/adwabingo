@@ -10,7 +10,7 @@ interface BGame {
   id: string; game_id: string; stake: number; prize_pool: number;
   status: 'waiting' | 'calling' | 'finished';
   called_numbers: number[];
-  winner_cartela: number | null; winner_prize: number | null;
+  winner_cartela: number | null; winner_prize: number | null; winner_first_name: string | null;
   start_at: string; finished_at: string | null; created_at: string;
 }
 
@@ -197,7 +197,7 @@ export default function AdminBingoGames() {
                     <p className="font-black text-slate-700 text-sm">Game #{g.game_id}</p>
                     <p className="text-xs text-slate-400">
                       {g.winner_cartela
-                        ? `🏆 Cartela #${g.winner_cartela} — ${g.winner_prize} ETB`
+                        ? `?? ${g.winner_first_name || 'Cartela'} #${g.winner_cartela} � ${g.winner_prize} ETB`
                         : '— No winner'}
                     </p>
                   </div>

@@ -161,7 +161,7 @@ class BingoEngine {
   private async checkWinners(gameId: string, gameLabel: string, called: number[], prizePool: number) {
     const { data: players } = await supabase
       .from('bingo_players')
-      .select('id, telegram_id, cartela_number, card_matrix')
+      .select('id, telegram_id, cartela_number, card_matrix, first_name')
       .eq('game_id', gameId);
 
     if (!players || players.length === 0) return;
@@ -174,6 +174,7 @@ class BingoEngine {
         await supabase.from('bingo_games').update({
           status: 'finished',
           winner_telegram_id: player.telegram_id,
+          winner_first_name: player.first_name,
           winner_cartela: player.cartela_number,
           winner_prize: prize,
           finished_at: new Date().toISOString(),

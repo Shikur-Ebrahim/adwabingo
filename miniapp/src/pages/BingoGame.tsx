@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ChevronDown, Gift, RefreshCw } from "lucide-react";
 import WebApp from "@twa-dev/sdk";
@@ -11,7 +11,7 @@ interface BGame {
   id: string; game_id: string; stake: number; prize_pool: number;
   status: "waiting" | "calling" | "finished";
   called_numbers: number[];
-  winner_cartela: number | null; winner_telegram_id: string | null; winner_prize: number | null;
+  winner_cartela: number | null; winner_telegram_id: string | null; winner_first_name: string | null; winner_prize: number | null;
   start_at: string; finished_at: string | null;
 }
 interface MyCard { cartela_number: number; card_matrix: number[][]; }
@@ -95,7 +95,7 @@ export default function BingoGame() {
   else if (game?.status === "calling") { statusTxt = "Active"; statusCls = "text-emerald-400"; }
 
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><RefreshCw size={28} className="text-orange-500 animate-spin" /></div>;
-  if (!game) return <div className="min-h-screen bg-[#05081a] flex flex-col items-center justify-center text-white gap-4"><span className="text-5xl">🎱</span><p className="font-bold text-lg">Preparing next game...</p><button onClick={fetchState} className="px-6 py-2.5 bg-orange-500 text-black font-black rounded-full text-sm">Refresh</button></div>;
+  if (!game) return <div className="min-h-screen bg-[#05081a] flex flex-col items-center justify-center text-white gap-4"><span className="text-5xl">??</span><p className="font-bold text-lg">Preparing next game...</p><button onClick={fetchState} className="px-6 py-2.5 bg-orange-500 text-black font-black rounded-full text-sm">Refresh</button></div>;
 
   return (
     <div className="min-h-screen bg-[#05081a] flex flex-col select-none">
@@ -171,7 +171,7 @@ export default function BingoGame() {
           <div className="absolute inset-0 backdrop-blur-[6px] bg-black/60 flex items-center justify-center p-6 z-10">
             <div className="bg-[#111]/95 border border-white/10 rounded-2xl px-6 py-7 text-center max-w-[280px] w-full shadow-2xl">
               {game.status === "finished" ? (
-                <><p className="text-4xl mb-3">&#127942;</p><p className="text-blue-400 text-xl font-black mb-1">Game Finished</p><p className="text-white/60 text-sm">Cartela #{game.winner_cartela} won {game.winner_prize} ETB!<br/>Next game starts soon.</p><button onClick={fetchState} className="mt-5 w-full py-2.5 bg-orange-500 text-black font-black rounded-xl text-sm active:scale-95">Join Next Game</button></>
+                <><p className="text-4xl mb-3">&#127942;</p><p className="text-blue-400 text-xl font-black mb-1">Game Finished</p><p className="text-white/60 text-sm">{game.winner_first_name || 'Cartela'} #{game.winner_cartela} won {game.winner_prize} ETB!<br/>Next game starts soon.</p><button onClick={fetchState} className="mt-5 w-full py-2.5 bg-orange-500 text-black font-black rounded-xl text-sm active:scale-95">Join Next Game</button></>
               ) : (
                 <><p className="text-4xl mb-3">&#9889;</p><p className="text-blue-400 text-xl font-black mb-1">Game Started!</p><p className="text-white/60 text-sm">You did not join this round. Wait for the next game.</p><button onClick={fetchState} className="mt-5 w-full py-2.5 bg-white/10 text-white font-black rounded-xl text-sm active:scale-95">Refresh</button></>
               )}
@@ -197,7 +197,7 @@ export default function BingoGame() {
             <div className="grid grid-cols-5 gap-1">
               {Array.from({ length: 5 }).flatMap((_, r) => Array.from({ length: 5 }).map((_, c) => {
                 const num = myCard.card_matrix[r][c]; const isFree = num === 0; const marked = isFree || called.includes(num); const isLast = num === lastNum;
-                return <div key={`${r}-${c}`} className={["aspect-square rounded-lg flex items-center justify-center font-black text-sm transition-all duration-300", isFree ? "bg-yellow-400 text-black text-lg" : isLast ? "bg-orange-400 text-black scale-105" : marked ? "bg-[#0f2e0f] text-emerald-400 border border-emerald-800" : "bg-white/5 text-white/70 border border-white/10"].join(" ")}>{isFree ? "★" : num}</div>;
+                return <div key={`${r}-${c}`} className={["aspect-square rounded-lg flex items-center justify-center font-black text-sm transition-all duration-300", isFree ? "bg-yellow-400 text-black text-lg" : isLast ? "bg-orange-400 text-black scale-105" : marked ? "bg-[#0f2e0f] text-emerald-400 border border-emerald-800" : "bg-white/5 text-white/70 border border-white/10"].join(" ")}>{isFree ? "?" : num}</div>;
               }))}
             </div>
           </div>
