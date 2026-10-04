@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '../types';
 import WebApp from '@twa-dev/sdk';
@@ -93,7 +93,7 @@ export const useGameStore = create<GameStore>()(
         if (!telegramId) return () => {};
 
         const channel = supabase
-          .channel(`user-balance-${telegramId}`)
+          .channel(`user-balance-${telegramId}-${Date.now()}`)
           .on(
             'postgres_changes',
             {
