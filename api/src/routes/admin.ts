@@ -4,10 +4,20 @@ import { supabase } from '../services/supabase';
 
 const router = Router();
 
-// Middleware to ensure user is an admin
 const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   const telegramId = req.telegramUser!.id.toString();
-  const { data } = await supabase.from('users').select('role, permissions').eq('telegram_id', telegramId).single();
+  
+  // Attempt to select role and permissions. Fallback to just role if permissions column is missing.
+  let { data, error } = await supabase.from('users').select('role, permissions').eq('telegram_id', telegramId).single();
+  
+  if (error && error.message.includes('permissions')) {
+    const fallback = await supabase.from('users').select('role').eq('telegram_id', telegramId).single();
+    if (fallback.data) {
+      data = { role: fallback.data.role, permissions: {} };
+    } else {
+      data = null;
+    }
+  }
   
   if (!data || (data.role !== 'admin' && data.role !== 'worker')) {
     res.status(403).json({ error: 'Access denied.' });
@@ -551,11 +561,22 @@ router.put('/users/:telegramId/status', async (req, res) => {
 // ─── WORKERS ───────────────────────────────────────────────────────────────────
 
 router.get('/workers', async (req, res) => {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('users')
     .select('id, telegram_id, username, first_name, role, status, permissions, created_at')
     .eq('role', 'worker')
     .order('created_at', { ascending: false });
+    
+  if (error && error.message.includes('permissions')) {
+    const fallback = await supabase
+      .from('users')
+      .select('id, telegram_id, username, first_name, role, status, created_at')
+      .eq('role', 'worker')
+      .order('created_at', { ascending: false });
+    data = fallback.data;
+    error = fallback.error;
+  }
+  
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.json({ workers: data });
 });
