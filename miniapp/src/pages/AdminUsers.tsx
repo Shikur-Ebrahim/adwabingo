@@ -305,7 +305,7 @@ export default function AdminUsers() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2">
-                      <p className="font-black text-slate-800 text-sm">{selected.first_name} {selected.last_name || ''}</p>
+                      <p className="font-black text-slate-800 text-sm">{selected.first_name}</p>
                       <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${ROLE_COLORS[selected.role] || ROLE_COLORS['user']}`}>{selected.role}</span>
                       {selected.status === 'inactive' && <span className="text-[9px] font-black px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">Inactive</span>}
                     </div>
