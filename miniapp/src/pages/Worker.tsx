@@ -93,6 +93,10 @@ export default function Worker() {
       });
       if (res.ok) {
         setStats(await res.json());
+      } else {
+        if (res.status === 404) {
+          alert("Backend update required! Please run 'git pull' and 'docker compose up -d --build' on your VPS.");
+        }
       }
     } catch (e) {
       console.error(e);
