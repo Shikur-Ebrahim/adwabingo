@@ -1,4 +1,4 @@
-import { supabase } from '../lib/supabase';
+import { supabase } from './supabase';
 
 const CALL_INTERVAL_MS = 5000;
 const TICK_MS          = 2000;
@@ -34,7 +34,7 @@ class BingoEngine {
   start() {
     if (this.timer) return;
     this.timer = setInterval(() => this.tick(), TICK_MS);
-    console.log('?? BingoEngine running � auto-game loop active');
+    console.log('🎰 BingoEngine running — auto-game loop active');
   }
 
   private async tick() {
@@ -79,7 +79,7 @@ class BingoEngine {
       called_numbers: [],
       start_at,
     });
-    console.log(?? Game # + game_id +  (Stake:  + stake + ) created, waiting for first player);
+    console.log(`🎰 Game #${game_id} (Stake: ${stake}) created, waiting for first player`);
   }
 
   private async handleWaiting(game: any) {
@@ -92,7 +92,7 @@ class BingoEngine {
       called_numbers: [],
       updated_at: new Date().toISOString(),
     }).eq('id', game.id);
-    console.log(?? Game # + game.game_id +  started!);
+    console.log(`🎰 Game #${game.game_id} started!`);
   }
 
   private async handleCalling(game: any) {
@@ -154,12 +154,12 @@ class BingoEngine {
         try {
           const token = process.env.BOT_TOKEN;
           if (token) {
-            await fetch(https://api.telegram.org/bot + token + /sendMessage, {
+            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 chat_id: player.telegram_id,
-                text: ?? BINGO! You won  + prize +  ETB on Cartela # + player.cartela_number + !
+                text: `🎉 BINGO! You won ${prize} ETB on Cartela #${player.cartela_number}!`
               })
             });
           }

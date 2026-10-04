@@ -5,7 +5,7 @@ import { generateBingoCard } from '../services/BingoEngine';
 
 const router = Router();
 
-// ── GET /api/bingo/current ────────────────────────────────────────────────────
+// ── GET /api/bingo/current ──────────────────────────────────────────────────
 // Returns current game state + taken cartela list + caller's card (if joined)
 router.get('/current', validateTelegramAuth, async (req: AuthRequest, res) => {
   const telegramId = req.telegramUser!.id.toString();
@@ -35,7 +35,7 @@ router.get('/current', validateTelegramAuth, async (req: AuthRequest, res) => {
   res.json({ game, taken_cartelas, my_card });
 });
 
-// ── POST /api/bingo/join ──────────────────────────────────────────────────────
+// ── POST /api/bingo/join ────────────────────────────────────────────────────
 // Buy a cartela seat. Deducts stake, generates 5×5 card server-side.
 router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   const telegramId = req.telegramUser!.id.toString();
@@ -81,7 +81,7 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   const bonusBal = Number(user.bonus_balance || 0);
   
   if (mainBal + bonusBal < stakeAmt) {
-    res.status(400).json({ error: Insufficient balance � need  ETB }); return;
+    res.status(400).json({ error: `Insufficient balance — need ${stakeAmt} ETB` }); return;
   }
 
   let toDeduct = stakeAmt;
@@ -102,7 +102,7 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
     .update({ main_balance: newMain, bonus_balance: newBonus })
     .eq('telegram_id', telegramId);
 
-  if (deductErr) { res.status(400).json({ error: 'Payment failed � please try again' }); return; }
+  if (deductErr) { res.status(400).json({ error: 'Payment failed — please try again' }); return; }
 
   // Generate card server-side
   const card_matrix = generateBingoCard();
@@ -136,6 +136,3 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
 });
 
 export default router;
-
-
-

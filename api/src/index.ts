@@ -10,7 +10,7 @@ import adminRouter from './routes/admin';
 import depositRouter from './routes/deposit';
 import withdrawRouter from './routes/withdraw';
 import bingoRouter from './routes/bingo';
-import { bingoEngine } from './services/BingoEngine';
+import { engine as bingoEngine } from './services/BingoEngine';
 
 const app = express();
 const PORT = process.env.PORT || 3002;
