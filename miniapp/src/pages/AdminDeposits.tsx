@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, RefreshCw, CheckCircle2, XCircle, Clock, ImageIcon, ChevronDown, ChevronUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
+import { useGameStore } from '../store/gameStore';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -24,6 +25,7 @@ const typeBadge: Record<string, string> = {
 };
 
 export default function AdminDeposits() {
+  const { user } = useGameStore();
   const [deposits, setDeposits] = useState<DepositRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -46,6 +48,10 @@ export default function AdminDeposits() {
   }, []);
 
   useEffect(() => { fetchDeposits(); }, [fetchDeposits]);
+
+  if (!user || (user.role !== 'admin' && !(user.role === 'worker' && user.permissions?.deposits))) {
+    return <div className="p-10 text-center font-bold text-slate-600">Access Denied</div>;
+  }
 
   const handleApprove = async (id: string) => {
     setProcessingId(id);

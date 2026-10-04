@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Settings, Save, Gift, Users, Headphones, Megaphone, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
+import { useGameStore } from '../store/gameStore';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -24,6 +25,7 @@ const SETTING_FIELDS: SettingField[] = [
 ];
 
 export default function AdminSettings() {
+  const { user } = useGameStore();
   const [values, setValues] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
@@ -60,6 +62,10 @@ export default function AdminSettings() {
   };
 
   useEffect(() => { fetchSettings(); }, []);
+
+  if (!user || (user.role !== 'admin' && !(user.role === 'worker' && user.permissions?.settings))) {
+    return <div className="p-10 text-center font-bold text-slate-600">Access Denied</div>;
+  }
 
   const handleSave = async (key: string) => {
     setSaving(key);

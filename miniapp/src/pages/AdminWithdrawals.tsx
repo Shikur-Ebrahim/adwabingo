@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, CheckCircle2, XCircle, Clock, User, Phone, RefreshCw, Copy, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
+import { useGameStore } from '../store/gameStore';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -42,6 +43,7 @@ const timeFilters = [
 ];
 
 export default function AdminWithdrawals() {
+  const { user } = useGameStore();
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
@@ -76,6 +78,10 @@ export default function AdminWithdrawals() {
   }, []);
 
   useEffect(() => { fetchWithdrawals(); }, [fetchWithdrawals]);
+
+  if (!user || (user.role !== 'admin' && !(user.role === 'worker' && user.permissions?.withdrawals))) {
+    return <div className="p-10 text-center font-bold text-slate-600">Access Denied</div>;
+  }
 
   const handleApprove = async (id: string) => {
     if (!window.confirm('Approve this withdrawal?')) return;

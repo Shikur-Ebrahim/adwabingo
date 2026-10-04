@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, RefreshCw, ArrowDownCircle, ArrowUpCircle, Gift, Users, Calendar, TrendingUp, ChevronDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
+import { useGameStore } from '../store/gameStore';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -55,6 +56,7 @@ function fmtTime(iso: string) {
 }
 
 export default function AdminTxReport() {
+  const { user } = useGameStore();
   const today = toDateStr(new Date());
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
@@ -112,6 +114,10 @@ export default function AdminTxReport() {
   }, [from, to]);
 
   useEffect(() => { fetchReport(); }, [fetchReport]);
+
+  if (!user || (user.role !== 'admin' && !(user.role === 'worker' && user.permissions?.reports))) {
+    return <div className="p-10 text-center font-bold text-slate-600">Access Denied</div>;
+  }
 
   const filtered = filter === 'all' ? transactions : transactions.filter(t => t.type === filter);
 

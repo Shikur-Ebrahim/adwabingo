@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Search, RefreshCw, Users, ChevronRight, X, Wallet, Gift, ArrowDownCircle, ArrowUpCircle, Shield, UserCheck, AlertCircle, CheckCircle2, Minus, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
+import { useGameStore } from '../store/gameStore';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -109,6 +110,11 @@ export default function AdminUsers() {
   };
 
   useEffect(() => { fetchUsers(); }, []);
+
+  const { user } = useGameStore();
+  if (!user || (user.role !== 'admin' && !(user.role === 'worker' && user.permissions?.users))) {
+    return <div className="p-10 text-center font-bold text-slate-600">Access Denied</div>;
+  }
 
   const handleSearch = (val: string) => {
     setSearch(val);
