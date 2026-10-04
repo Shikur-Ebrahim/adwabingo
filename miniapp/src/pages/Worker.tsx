@@ -18,6 +18,8 @@ export default function Worker() {
   const [activePreset, setActivePreset] = useState('Today');
   const [stats, setStats] = useState({ totalDeposits: 0, totalWithdrawals: 0, netProfit: 0 });
   const [loading, setLoading] = useState(true);
+  const [pendingDeposits, setPendingDeposits] = useState(0);
+  const [pendingWithdrawals, setPendingWithdrawals] = useState(0);
 
   // Custom date range state
   const [customFrom, setCustomFrom] = useState('');
@@ -115,8 +117,25 @@ export default function Worker() {
     fetchReport(startOf(from), endOf(to));
   };
 
+  const fetchPendingCounts = useCallback(async () => {
+    try {
+      const initData = typeof WebApp !== 'undefined' ? WebApp.initData : '';
+      const res = await fetch(`${API_URL}/admin/pending-counts`, {
+        headers: { 'x-telegram-init-data': initData }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPendingDeposits(data.pendingDeposits);
+        setPendingWithdrawals(data.pendingWithdrawals);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
   useEffect(() => {
     applyPreset('Today');
+    fetchPendingCounts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -151,10 +170,15 @@ export default function Worker() {
             <div className={`p-2 rounded-xl mr-3 ${perms.deposits ? 'bg-emerald-100' : 'bg-white/10'}`}>
               <ArrowDownToLine size={20} />
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-bold text-sm leading-tight">Verify</p>
               <p className={`text-[11px] ${perms.deposits ? 'text-emerald-600/70' : 'text-white/40'}`}>Deposits</p>
             </div>
+            {pendingDeposits > 0 && (
+              <span className="ml-auto bg-rose-500 text-white text-[10px] font-black rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+                {pendingDeposits}
+              </span>
+            )}
           </Link>
 
           <Link
@@ -164,10 +188,15 @@ export default function Worker() {
             <div className={`p-2 rounded-xl mr-3 ${perms.withdrawals ? 'bg-rose-100' : 'bg-white/10'}`}>
               <ArrowUpFromLine size={20} />
             </div>
-            <div>
+            <div className="flex-1">
               <p className="font-bold text-sm leading-tight">Verify</p>
               <p className={`text-[11px] ${perms.withdrawals ? 'text-rose-600/70' : 'text-white/40'}`}>Withdrawals</p>
             </div>
+            {pendingWithdrawals > 0 && (
+              <span className="ml-auto bg-rose-500 text-white text-[10px] font-black rounded-full min-w-[20px] h-5 px-1.5 flex items-center justify-center">
+                {pendingWithdrawals}
+              </span>
+            )}
           </Link>
         </div>
       </div>

@@ -34,6 +34,7 @@ const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction)
 
   let allowed = false;
   if (path.startsWith('/stats')) allowed = true; // Allow workers to view stats dashboard
+  else if (path.startsWith('/pending-counts')) allowed = true; // Workers always see pending counts
   else if (path.includes('deposit') && perms.deposits) allowed = true;
   else if (path.includes('withdraw') && perms.withdrawals) allowed = true;
   else if (path.startsWith('/users') && perms.users) allowed = true;
@@ -145,6 +146,15 @@ router.delete('/withdrawal-methods/:id', async (req, res) => {
   const { error } = await supabase.from('withdrawal_methods').delete().eq('id', req.params.id);
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.json({ success: true });
+});
+
+// ─── PENDING COUNTS (for worker badge) ────────────────────────────────────────
+router.get('/pending-counts', async (_req, res) => {
+  const [dRes, wRes] = await Promise.all([
+    supabase.from('deposits').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase.from('withdrawals').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+  ]);
+  res.json({ pendingDeposits: dRes.count ?? 0, pendingWithdrawals: wRes.count ?? 0 });
 });
 
 // ─── DEPOSIT VERIFICATION ─────────────────────────────────────────────────────
