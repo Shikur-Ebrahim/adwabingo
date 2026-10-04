@@ -87,12 +87,28 @@ class BingoEngine {
     if (startTime > Date.now() + 86400000) return; // Indefinite wait state
     if (Date.now() < startTime) return; // Still counting down 60s
 
+    // Time is up! Check player count.
+    const { count } = await supabase
+      .from('bingo_players')
+      .select('*', { count: 'exact', head: true })
+      .eq('game_id', game.id);
+
+    if ((count ?? 0) < 2) {
+      // Less than 2 players, cannot start! Extend timer by 30 seconds
+      await supabase.from('bingo_games').update({
+        start_at: new Date(Date.now() + 30_000).toISOString(),
+        updated_at: new Date().toISOString(),
+      }).eq('id', game.id);
+      console.log(`🎰 Game #${game.game_id} extended (only ${count} player)`);
+      return;
+    }
+
     await supabase.from('bingo_games').update({
       status: 'calling',
       called_numbers: [],
       updated_at: new Date().toISOString(),
     }).eq('id', game.id);
-    console.log(`🎰 Game #${game.game_id} started!`);
+    console.log(`🎰 Game #${game.game_id} started with ${count} players!`);
   }
 
   private async handleCalling(game: any) {

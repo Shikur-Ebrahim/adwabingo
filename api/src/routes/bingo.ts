@@ -123,7 +123,7 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   }
 
   // Add to prize pool
-  await supabase.rpc('bingo_add_to_prize', { p_game_id: game.id, p_amount: stakeAmt * 0.8 });
+  await supabase.rpc('bingo_add_to_prize', { p_game_id: game.id });
 
   // TRIGGER 60s COUNTDOWN IF FIRST PLAYER
   if (new Date(game.start_at).getTime() > Date.now() + 86400000) {

@@ -92,7 +92,7 @@ export default function BingoGame() {
   const formatMoney = (a: number | undefined) => (a || 0).toLocaleString("en-US");
   const initial = user?.first_name ? user.first_name.charAt(0).toUpperCase() : "U";
   let statusTxt = "Finished", statusCls = "text-slate-400";
-  if (game?.status === "waiting") { statusTxt = `${timeLeft}s`; statusCls = "text-orange-400"; }
+  if (game?.status === "waiting") { statusTxt = timeLeft > 86400 ? "Waiting..." : `${timeLeft}s`; statusCls = "text-orange-400"; }
   else if (game?.status === "calling") { statusTxt = "Active"; statusCls = "text-emerald-400"; }
 
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><RefreshCw size={28} className="text-orange-500 animate-spin" /></div>;
@@ -207,6 +207,7 @@ export default function BingoGame() {
     </div>
   );
 }
+
 
 
 
