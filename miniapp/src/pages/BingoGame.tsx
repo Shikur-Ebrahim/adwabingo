@@ -298,14 +298,14 @@ export default function BingoGame() {
           if (isMounted) setCelebration({ winner_name: game.winner_first_name || 'Player', winner_cartela: game.winner_cartela!, winner_prize: game.winner_prize!, winner_matrix: null, iWon, called: [...game.called_numbers] });
         });
 
-      // Automatically dismiss the celebration screen after 8 seconds
+      // Automatically dismiss the celebration screen after 3 seconds
       const timer = setTimeout(() => {
         if (isMounted) {
           setCelebration(null);
           fetchState();
           refreshUser();
         }
-      }, 8000);
+      }, 3000);
 
       return () => { isMounted = false; clearTimeout(timer); };
     }
