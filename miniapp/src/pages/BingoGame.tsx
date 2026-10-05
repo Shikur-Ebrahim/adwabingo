@@ -110,7 +110,7 @@ export default function BingoGame() {
 
   const urlStake = searchParams.get("stake");
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [soundEnabled, setSoundEnabled] = useState(false);
   const [volume, setVolume] = useState(1.0);
   const [audioAvailable, setAudioAvailable] = useState(false);
   const [lastCallNum, setLastCallNum] = useState<number | null>(null);
@@ -510,8 +510,14 @@ export default function BingoGame() {
               </div>
             </div>
           ) : (
-            <div className="h-24 flex items-center justify-center bg-slate-800/20 rounded-xl border border-slate-800">
-              <p className="text-slate-400 text-sm font-bold">You are spectating</p>
+            <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-b from-red-500/10 to-orange-500/10 rounded-2xl border border-red-500/20 p-6 text-center mt-2 min-h-[240px]">
+              <div className="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center mb-4 border border-red-500/30">
+                <span className="text-2xl animate-pulse">⏳</span>
+              </div>
+              <h3 className="text-red-400 font-black text-base uppercase tracking-widest mb-2 shadow-red-500/50">Match in Progress</h3>
+              <p className="text-slate-400 text-xs font-bold leading-relaxed">
+                You are currently spectating.<br/>Please wait for this round to finish before joining the next game.
+              </p>
             </div>
           )}
         </div>
