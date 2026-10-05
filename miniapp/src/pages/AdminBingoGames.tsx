@@ -67,7 +67,7 @@ export default function AdminBingoGames() {
 
   const fetchSettings = useCallback(async () => {
     try {
-      const r = await fetch(`${API}/admin/settings`, { headers: hdrs() });
+      const r = await fetch(`${API}/admin/game-settings`, { headers: hdrs() });
       if (r.ok) {
         const raw = await r.json();
         // Merge with DEFAULT so any missing/null fields fall back to defaults
@@ -89,7 +89,7 @@ export default function AdminBingoGames() {
   const saveSettings = async () => {
     setSaving(true); setSaveMsg("");
     try {
-      const r = await fetch(`${API}/admin/settings`, {
+      const r = await fetch(`${API}/admin/game-settings`, {
         method: "PUT", headers: hdrs(), body: JSON.stringify(draft),
       });
       const body = await r.json().catch(() => ({}));

@@ -30,7 +30,7 @@ app.use('/api/withdraw', withdrawRouter);
 app.use('/api/bingo', bingoRouter);
 app.use('/api/leaderboard', leaderboardRouter);
 app.use('/api/games-report', gamesReportRouter);
-app.use('/api/admin/settings', adminSettingsRouter);
+app.use('/api/admin/game-settings', adminSettingsRouter);
 
 app.listen(PORT, () => {
   console.log(`🚀 API running on port ${PORT}`);
