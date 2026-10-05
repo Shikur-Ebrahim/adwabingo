@@ -1,25 +1,70 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-// When the app comes back from background after >30 seconds, force a clean reload.
-// This clears stale timers, dead Supabase channels and frozen React state that
-// pile up while Android suspends the Telegram WebView.
-let hiddenAt: number | null = null;
-const RELOAD_THRESHOLD_MS = 30_000; // 30 seconds
+const BACKGROUND_THRESHOLD_MS = 15_000; // 15 seconds away = force fresh remount
 
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') {
-    hiddenAt = Date.now();
-  } else if (document.visibilityState === 'visible') {
-    if (hiddenAt !== null && Date.now() - hiddenAt > RELOAD_THRESHOLD_MS) {
-      window.location.reload();
+function Root() {
+  const [appKey, setAppKey] = useState(0);
+  const hiddenAtRef = useRef<number | null>(null);
+
+  const forceRemount = useCallback(() => {
+    setAppKey(k => k + 1);
+  }, []);
+
+  const handleReturn = useCallback(() => {
+    const hidden = hiddenAtRef.current;
+    hiddenAtRef.current = null;
+    if (hidden !== null && Date.now() - hidden > BACKGROUND_THRESHOLD_MS) {
+      forceRemount();
     }
-    hiddenAt = null;
-  }
-});
+  }, [forceRemount]);
+
+  const handleHide = useCallback(() => {
+    hiddenAtRef.current = Date.now();
+  }, []);
+
+  useEffect(() => {
+    // 1. visibilitychange — fires when tab/window visibility changes
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') handleHide();
+      else handleReturn();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+
+    // 2. window focus — fires when window regains focus
+    window.addEventListener('focus', handleReturn);
+
+    // 3. pageshow — fires on BFCache restore (back/forward cache)
+    window.addEventListener('pageshow', handleReturn);
+
+    // 4. Telegram-specific 'activated' event (fires when mini app becomes active)
+    try {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.onEvent) {
+        tg.onEvent('activated', handleReturn);
+        tg.onEvent('deactivated', handleHide);
+      }
+    } catch (_) {}
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', handleReturn);
+      window.removeEventListener('pageshow', handleReturn);
+      try {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg?.offEvent) {
+          tg.offEvent('activated', handleReturn);
+          tg.offEvent('deactivated', handleHide);
+        }
+      } catch (_) {}
+    };
+  }, [handleReturn, handleHide]);
+
+  return <App key={appKey} />;
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode><App /></React.StrictMode>
+  <React.StrictMode><Root /></React.StrictMode>
 );
