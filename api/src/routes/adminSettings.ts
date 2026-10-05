@@ -76,12 +76,20 @@ router.put('/', async (req: AuthRequest, res) => {
     updated_at:       new Date().toISOString(),
   };
 
-  // Upsert single-row settings (use id=1)
-  const { error } = await supabase.from('game_settings').upsert({ id: 1, ...payload });
+  // Try UPDATE first, INSERT if no row exists
+  const { data: existing } = await supabase.from('game_settings').select('id').eq('id', 1).maybeSingle();
+
+  let error;
+  if (existing) {
+    ({ error } = await supabase.from('game_settings').update(payload).eq('id', 1));
+  } else {
+    ({ error } = await supabase.from('game_settings').insert({ id: 1, ...payload }));
+  }
+
   if (error) return res.status(500).json({ error: error.message });
 
   invalidateSettingsCache();
-  res.json({ ok: true, settings: payload });
+  res.json({ ok: true, settings: { ...payload } });
 });
 
 export default router;
