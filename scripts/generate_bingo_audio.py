@@ -42,7 +42,7 @@ RANGES = {
 }
 
 SPECIAL = {
-    'bingo_win':  ('ቢንጎ! እንኳን ደስ አለዎ!', VOICE_AM),
+    'bingo_win':  ('Bingo!', VOICE_EN),
     'game_start': ('ጨዋታ ጀምሯል! ቁጥሮቹን ተዘጋጁ!',   VOICE_AM),
     'good_luck':  ('መልካም ዕድል!',                    VOICE_AM),
 }
