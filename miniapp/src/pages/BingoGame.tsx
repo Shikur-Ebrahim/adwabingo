@@ -383,30 +383,31 @@ export default function BingoGame() {
     const currentAmharic = lastNum ? AMHARIC_NUM[lastNum] : null;
 
     return (
-      <div className="flex flex-col px-2 w-full pb-20">
+      <div className="h-full flex flex-col px-2 pt-1 pb-2 gap-1">
+
         {/* Top Info Bar */}
-        <div className="flex items-center justify-between bg-[#0f172a] px-2 py-1.5 rounded-xl border border-slate-800 shrink-0 mb-1.5 mt-1">
-          <div className="text-slate-400 text-[10px] font-bold">ID: {game.game_id}</div>
-          <div className="flex items-center gap-1 text-yellow-400 text-[10px] font-bold"><Trophy size={11}/> {game.prize_pool} ETB</div>
-          <div className="flex items-center gap-1 text-blue-400 text-[10px] font-bold"><Users size={11}/> {taken.length}</div>
-          <div className="flex items-center gap-1 text-emerald-400 text-[10px] font-bold"><Clock size={11}/> {called.length}/75</div>
-          <div className="text-[9px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-black animate-pulse">LIVE</div>
+        <div className="flex items-center justify-between bg-[#0f172a] px-2 py-1 rounded-xl border border-slate-800 shrink-0">
+          <div className="text-slate-400 text-[9px] font-bold">ID: {game.game_id}</div>
+          <div className="flex items-center gap-1 text-yellow-400 text-[9px] font-bold"><Trophy size={10}/> {game.prize_pool} ETB</div>
+          <div className="flex items-center gap-1 text-blue-400 text-[9px] font-bold"><Users size={10}/> {taken.length}</div>
+          <div className="flex items-center gap-1 text-emerald-400 text-[9px] font-bold"><Clock size={10}/> {called.length}/75</div>
+          <div className="text-[8px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-black animate-pulse">LIVE</div>
         </div>
 
         {/* 1-75 Tracker Board */}
-        <div className="bg-[#0b1120] rounded-xl p-1.5 border border-slate-800 shrink-0 mb-1.5 w-full">
+        <div className="bg-[#0b1120] rounded-xl px-1.5 py-1 border border-slate-800 shrink-0">
           <div className="flex flex-col gap-[2px]">
             {BINGO_LETTERS.map((letter, rowIndex) => (
-              <div key={letter} className="flex items-center gap-1">
-                <div className="w-4 flex-shrink-0 flex items-center justify-center font-black text-[10px]" style={{ color: LETTER_COLOR[letter] }}>{letter}</div>
+              <div key={letter} className="flex items-center gap-0.5">
+                <div className="w-3.5 flex-shrink-0 flex items-center justify-center font-black text-[9px]" style={{ color: LETTER_COLOR[letter] }}>{letter}</div>
                 <div className="flex-1 grid gap-[2px]" style={{ gridTemplateColumns: 'repeat(15, minmax(0, 1fr))' }}>
                   {Array.from({ length: 15 }, (_, i) => {
                     const num = rowIndex * 15 + i + 1;
                     const isCalled = called.includes(num);
                     const isLatest = num === lastNum;
                     return (
-                      <div key={num} className={`aspect-[3/4] rounded-[2px] flex items-center justify-center text-[7px] font-bold transition-all ${
-                        isLatest ? 'bg-white text-black shadow-[0_0_6px_rgba(255,255,255,0.8)] scale-110 z-10' :
+                      <div key={num} className={`h-[14px] rounded-[2px] flex items-center justify-center text-[7px] font-bold transition-all ${
+                        isLatest ? 'bg-white text-black shadow-[0_0_4px_rgba(255,255,255,0.8)]' :
                         isCalled ? 'bg-yellow-500 text-yellow-950' : 'bg-slate-800/60 text-slate-500'
                       }`}>{num}</div>
                     );
@@ -417,88 +418,81 @@ export default function BingoGame() {
           </div>
         </div>
 
-        {/* ── COMPACT CALLER SECTION ── */}
-        <div className="shrink-0 mb-2 w-full bg-[#0a0f1e] rounded-xl border border-white/5 px-2 py-1.5">
+        {/* Caller Row */}
+        <div className="shrink-0 bg-[#0a0f1e] rounded-xl border border-white/5 px-2 py-1.5">
           <div className="flex items-center justify-between">
-            {/* Recent Balls */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               {recent.length === 0 ? (
-                <span className="text-slate-500 text-[10px] font-bold animate-pulse">Waiting for first draw...</span>
+                <span className="text-slate-500 text-[10px] font-bold animate-pulse">Waiting...</span>
               ) : recent.map((num, idx) => {
                 const l = getLetter(num);
                 const isFirst = idx === 0;
-
                 if (isFirst) {
                   return (
                     <div key={`${num}-${idx}`} className="flex items-center gap-2">
-                      <div className="w-12 h-12 flex flex-col items-center justify-center rounded-full font-black border-2 border-yellow-400 bg-yellow-400/20 shadow-[0_0_15px_rgba(250,204,21,0.3)]">
-                        <span style={{ color: LETTER_COLOR[l] }} className="text-[10px] leading-none">{l}</span>
-                        <span className="text-white text-xl leading-none font-black">{num}</span>
+                      <div className="w-11 h-11 flex flex-col items-center justify-center rounded-full font-black border-2 border-yellow-400 bg-yellow-400/20 shadow-[0_0_12px_rgba(250,204,21,0.3)]">
+                        <span style={{ color: LETTER_COLOR[l] }} className="text-[10px] leading-none font-black">{l}</span>
+                        <span className="text-white text-lg leading-none font-black">{num}</span>
                       </div>
-                      <div className="flex flex-col justify-center">
-                        <span className="text-yellow-400 font-black text-[13px] tracking-wider">{AMHARIC_NUM[num]}</span>
-                        <span className="text-white/40 text-[8px] font-bold uppercase tracking-widest flex items-center gap-1">
-                          <div className={`w-1 h-1 rounded-full ${audioAvailable ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
-                          {audioAvailable ? 'Pro Audio' : 'TTS Audio'}
-                        </span>
-                      </div>
+                      <span className="text-yellow-400 font-black text-sm">{AMHARIC_NUM[num]}</span>
                     </div>
                   );
                 }
-
                 return (
-                  <div key={`${num}-${idx}`} className="w-8 h-8 flex flex-col items-center justify-center rounded-full font-black border border-slate-700 bg-slate-800/60 opacity-60 ml-1">
-                    <span style={{ color: LETTER_COLOR[l] }} className="text-[7px] leading-none">{l}</span>
-                    <span className="text-white text-xs leading-none font-black">{num}</span>
+                  <div key={`${num}-${idx}`} className="w-7 h-7 flex flex-col items-center justify-center rounded-full border border-slate-700 bg-slate-800/60 opacity-50">
+                    <span style={{ color: LETTER_COLOR[l] }} className="text-[7px] leading-none font-black">{l}</span>
+                    <span className="text-white text-[10px] leading-none font-black">{num}</span>
                   </div>
                 );
               })}
             </div>
-
-            {/* Sound controls */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button onClick={replayLastCall} disabled={!lastCallNum} className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center active:scale-90 disabled:opacity-30">
-                <RotateCcw size={14} className="text-blue-400" />
+                <RotateCcw size={13} className="text-blue-400" />
               </button>
               <button onClick={() => { setSoundEnabled(s => !s); initWebAudio(); }}
                 className={`w-8 h-8 rounded-lg border flex items-center justify-center active:scale-90 ${soundEnabled ? 'bg-blue-500/20 border-blue-500/50' : 'bg-slate-800 border-slate-700'}`}>
-                {soundEnabled ? <Volume2 size={14} className="text-blue-400" /> : <VolumeX size={14} className="text-red-400" />}
+                {soundEnabled ? <Volume2 size={13} className="text-blue-400" /> : <VolumeX size={13} className="text-red-400" />}
               </button>
             </div>
           </div>
         </div>
 
-        {/* My Card — fully visible, no clipping */}
+        {/* My Card — flex-1, fills remaining space, NO scroll */}
         {myCard ? (
-          <div className="w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 mb-2" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
+          <div className="flex-1 min-h-0 rounded-2xl overflow-hidden border border-white/10 flex flex-col" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
             {/* BINGO Header */}
-            <div className="grid grid-cols-5">
+            <div className="grid grid-cols-5 shrink-0">
               {BINGO_LETTERS.map(l => (
-                <div key={l} className="flex items-center justify-center py-2.5 font-black text-white text-lg" style={{ background: LETTER_BG[l] }}>{l}</div>
+                <div key={l} className="flex items-center justify-center py-2 font-black text-white text-base" style={{ background: LETTER_BG[l] }}>{l}</div>
               ))}
             </div>
-            {/* Card Grid */}
-            <div className="grid grid-cols-5 gap-[4px] p-[4px] bg-[#0a0f1e]">
-              {Array.from({ length: 5 }).flatMap((_, r) => Array.from({ length: 5 }).map((_, c) => {
-                const num = myCard.card_matrix[r][c];
-                const isFree = num === 0, marked = isFree || called.includes(num), isLast = num === lastNum;
-                return (
-                  <div key={`${r}-${c}`} className={`aspect-square rounded-lg flex items-center justify-center font-black text-base transition-all duration-300 ${
-                    isFree ? 'bg-yellow-400 text-yellow-900' :
-                    isLast ? 'bg-orange-500 text-white scale-105 z-10 shadow-[0_0_12px_rgba(249,115,22,0.7)]' :
-                    marked ? 'bg-emerald-500 text-white' : 'bg-white text-[#1a2540]'
-                  }`}>{isFree ? '★' : num}</div>
-                );
-              }))}
+            {/* Card Grid — flex rows fill remaining height */}
+            <div className="flex-1 min-h-0 flex flex-col gap-[3px] p-[3px] bg-[#0a0f1e]">
+              {Array.from({ length: 5 }, (_, r) => (
+                <div key={r} className="flex-1 flex gap-[3px]">
+                  {Array.from({ length: 5 }, (_, c) => {
+                    const num = myCard.card_matrix[r][c];
+                    const isFree = num === 0, marked = isFree || called.includes(num), isLast = num === lastNum;
+                    return (
+                      <div key={c} className={`flex-1 flex items-center justify-center font-black text-base rounded-lg transition-all duration-300 ${
+                        isFree ? 'bg-yellow-400 text-yellow-900' :
+                        isLast ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
+                        marked ? 'bg-emerald-500 text-white' : 'bg-white text-[#1a2540]'
+                      }`}>{isFree ? '★' : num}</div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
             {/* Cartela Label */}
-            <div className="py-2 text-center bg-[#0a0f1e] border-t border-white/10">
-              <p className="text-white/70 font-black text-[11px] tracking-widest uppercase">CARTELA # {myCard.cartela_number}</p>
+            <div className="py-1.5 text-center bg-[#0a0f1e] border-t border-white/10 shrink-0">
+              <p className="text-white/70 font-black text-[10px] tracking-widest uppercase">CARTELA # {myCard.cartela_number}</p>
             </div>
           </div>
         ) : (
-          <div className="text-center py-4 bg-slate-800/30 rounded-xl border border-slate-800">
-            <p className="text-slate-400 text-xs font-bold">You are spectating</p>
+          <div className="flex-1 flex items-center justify-center bg-slate-800/20 rounded-xl border border-slate-800">
+            <p className="text-slate-400 text-sm font-bold">You are spectating</p>
           </div>
         )}
       </div>
@@ -568,7 +562,7 @@ export default function BingoGame() {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto overscroll-contain">
+      <div className={`flex-1 min-h-0 ${game.status === 'waiting' ? 'overflow-y-auto' : 'overflow-hidden'}`}>
         {game.status === 'waiting' ? renderCartelaPicker() : renderCallingBoard()}
       </div>
 

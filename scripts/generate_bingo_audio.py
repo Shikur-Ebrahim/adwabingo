@@ -31,11 +31,11 @@ SPECIAL = {
 }
 
 RANGES = {
-    'B': range(1,16), 
-    'I': range(16,31), 
-    'N': range(31,46), 
-    'G': range(46,61), 
-    'O': range(61,76)
+    'B': (range(1,16),  'ቢ'),    # B sounds like "Bi" in Amharic
+    'I': (range(16,31), 'አይ'),   # I sounds like "Ai"
+    'N': (range(31,46), 'ኤን'),   # N sounds like "En"
+    'G': (range(46,61), 'ጂ'),    # G sounds like "Ji"
+    'O': (range(61,76), 'ኦ'),    # O sounds like "O"
 }
 
 async def generate_file(text, filename, force=False):
@@ -57,12 +57,12 @@ async def main():
     print(f"Using Voice: {VOICE}")
     print(f"Output Directory: {OUTPUT_DIR}\n")
     
-    # Generate numbers 1 to 75
-    # Format: "B, አንድ" — just the BINGO letter + Amharic number
-    for letter, nums in RANGES.items():
+    # Format: "ቢ, አንድ" — Amharic letter name + Amharic number
+    # This ensures the Amharic neural voice pronounces both parts perfectly
+    for letter, (nums, amharic_letter) in RANGES.items():
         for num in nums:
-            amharic = AMHARIC_NUMS[num]
-            text = f"{letter}, {amharic}"
+            amharic_num = AMHARIC_NUMS[num]
+            text = f"{amharic_letter}! {amharic_num}"
             filename = f"bingo_{num:02d}.mp3"
             await generate_file(text, filename, force=True)
         
