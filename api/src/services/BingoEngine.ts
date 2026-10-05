@@ -68,7 +68,6 @@ class BingoEngine {
 
   private async createGame(stake: number) {
     const game_id = Math.floor(100 + Math.random() * 900).toString();
-    // Wait indefinitely until first player joins
     const start_at = new Date(Date.now() + 86400000 * 365).toISOString();
 
     await supabase.from('bingo_games').insert({
@@ -84,17 +83,15 @@ class BingoEngine {
 
   private async handleWaiting(game: any) {
     const startTime = new Date(game.start_at).getTime();
-    if (startTime > Date.now() + 86400000) return; // Indefinite wait state
-    if (Date.now() < startTime) return; // Still counting down 60s
+    if (startTime > Date.now() + 86400000) return;
+    if (Date.now() < startTime) return;
 
-    // Time is up! Check player count.
     const { count } = await supabase
       .from('bingo_players')
       .select('*', { count: 'exact', head: true })
       .eq('game_id', game.id);
 
     if ((count ?? 0) < 2) {
-      // Less than 2 players, cannot start! Extend timer by 30 seconds
       await supabase.from('bingo_games').update({
         start_at: new Date(Date.now() + 30_000).toISOString(),
         updated_at: new Date().toISOString(),
@@ -135,10 +132,16 @@ class BingoEngine {
       updated_at: new Date().toISOString(),
     }).eq('id', game.id);
 
-    await this.checkWinners(game.id, game.game_id, newCalled, game.prize_pool);
+    await this.checkWinners(game.id, game.game_id, newCalled, game.prize_pool, game.stake);
   }
 
-  private async checkWinners(gameId: string, gameLabel: string, called: number[], prizePool: number) {
+  private async checkWinners(
+    gameId: string,
+    gameLabel: string,
+    called: number[],
+    prizePool: number,
+    stake: number,
+  ) {
     const { data: players } = await supabase
       .from('bingo_players')
       .select('id, telegram_id, cartela_number, card_matrix, first_name')
@@ -146,43 +149,122 @@ class BingoEngine {
 
     if (!players || players.length === 0) return;
 
-    for (const player of players) {
-      if (checkBingo(player.card_matrix as number[][], called)) {
-        const prize = Number(prizePool);
-        await supabase.from('bingo_games').update({
-          status: 'finished',
-          winner_telegram_id: player.telegram_id,
-          winner_first_name: player.first_name,
-          winner_cartela: player.cartela_number,
-          winner_prize: prize,
-          finished_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        }).eq('id', gameId);
+    // ── Find ALL simultaneous winners ─────────────────────────────────────────
+    const winners = players.filter(p => checkBingo(p.card_matrix as number[][], called));
+    if (winners.length === 0) return;
 
-        const { data: u } = await supabase.from('users').select('main_balance, total_wins').eq('telegram_id', player.telegram_id).single();
+    const prize = Number(prizePool);
+    const token = process.env.BOT_TOKEN;
+
+    // ── Helper: send Telegram notification ────────────────────────────────────
+    const notify = async (chatId: string, text: string) => {
+      try {
+        if (token) {
+          await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: chatId, text }),
+          });
+        }
+      } catch { /* ignore */ }
+    };
+
+    // ── CASE 1: Single winner ─────────────────────────────────────────────────
+    if (winners.length === 1) {
+      const w = winners[0];
+      await supabase.from('bingo_games').update({
+        status:             'finished',
+        winner_telegram_id: w.telegram_id,
+        winner_first_name:  w.first_name,
+        winner_cartela:     w.cartela_number,
+        winner_prize:       prize,
+        finished_at:        new Date().toISOString(),
+        updated_at:         new Date().toISOString(),
+      }).eq('id', gameId);
+
+      const { data: u } = await supabase.from('users')
+        .select('main_balance, total_wins')
+        .eq('telegram_id', w.telegram_id)
+        .single();
+      if (u) {
+        await supabase.from('users').update({
+          main_balance: Number(u.main_balance) + prize,
+          total_wins:   Number(u.total_wins) + 1,
+        }).eq('telegram_id', w.telegram_id);
+      }
+
+      await notify(w.telegram_id, `🎉 BINGO! You won ${prize} ETB on Cartela #${w.cartela_number}!`);
+      console.log(`🏆 Game #${gameLabel}: Single winner ${w.first_name} — ${prize} ETB`);
+      return;
+    }
+
+    // ── CASE 2: Exactly 2 winners — split prize ───────────────────────────────
+    if (winners.length === 2) {
+      const splitPrize = Math.floor(prize / 2);
+      const w1 = winners[0];
+      const w2 = winners[1];
+
+      await supabase.from('bingo_games').update({
+        status:             'finished',
+        winner_telegram_id: w1.telegram_id,
+        winner_first_name:  `${w1.first_name} & ${w2.first_name}`,
+        winner_cartela:     w1.cartela_number,
+        winner_prize:       splitPrize,         // prize shown per winner
+        tie_count:          2,                  // optional metadata
+        finished_at:        new Date().toISOString(),
+        updated_at:         new Date().toISOString(),
+      }).eq('id', gameId);
+
+      for (const w of winners) {
+        const { data: u } = await supabase.from('users')
+          .select('main_balance, total_wins')
+          .eq('telegram_id', w.telegram_id)
+          .single();
         if (u) {
           await supabase.from('users').update({
-            main_balance: Number(u.main_balance) + prize,
-            total_wins: Number(u.total_wins) + 1,
-          }).eq('telegram_id', player.telegram_id);
+            main_balance: Number(u.main_balance) + splitPrize,
+            total_wins:   Number(u.total_wins) + 1,
+          }).eq('telegram_id', w.telegram_id);
         }
-
-        try {
-          const token = process.env.BOT_TOKEN;
-          if (token) {
-            await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                chat_id: player.telegram_id,
-                text: `🎉 BINGO! You won ${prize} ETB on Cartela #${player.cartela_number}!`
-              })
-            });
-          }
-        } catch { /* ignore */ }
-        break; // Only one winner gets the prize pool
+        await notify(
+          w.telegram_id,
+          `🎉 BINGO! You tied with another player! You each won ${splitPrize} ETB (prize split on Cartela #${w.cartela_number})!`
+        );
       }
+      console.log(`🤝 Game #${gameLabel}: 2-way tie — ${w1.first_name} & ${w2.first_name} — ${splitPrize} ETB each`);
+      return;
     }
+
+    // ── CASE 3: 3 or more winners — REMATCH ──────────────────────────────────
+    // Refund stake to every player, mark game finished as REMATCH
+    console.log(`🔄 Game #${gameLabel}: ${winners.length}-way tie — triggering REMATCH & stake refund`);
+
+    await supabase.from('bingo_games').update({
+      status:            'finished',
+      winner_first_name: 'REMATCH',
+      winner_prize:      0,
+      winner_cartela:    null,
+      finished_at:       new Date().toISOString(),
+      updated_at:        new Date().toISOString(),
+    }).eq('id', gameId);
+
+    // Refund ALL players their stake
+    for (const p of players) {
+      const { data: u } = await supabase.from('users')
+        .select('main_balance')
+        .eq('telegram_id', p.telegram_id)
+        .single();
+      if (u) {
+        await supabase.from('users').update({
+          main_balance: Number(u.main_balance) + Number(stake),
+        }).eq('telegram_id', p.telegram_id);
+      }
+      await notify(
+        p.telegram_id,
+        `🔄 REMATCH! ${winners.length} players hit BINGO at the same time on Game #${gameLabel}. Your ${stake} ETB stake has been refunded. A new game is starting!`
+      );
+    }
+    // Engine will auto-create a new game for this stake on next tick
   }
 }
 

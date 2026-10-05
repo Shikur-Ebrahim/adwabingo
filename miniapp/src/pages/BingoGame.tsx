@@ -339,30 +339,45 @@ export default function BingoGame() {
 
   // Fire celebration when game finishes — play sound + fetch winner card
   useEffect(() => {
-    if (game?.status === 'finished' && game.winner_cartela) {
-      const iWon = game.winner_telegram_id === String(user?.telegram_id);
-      let isMounted = true;
-      if (hasCelebratedRef.current !== game.id) {
-        hasCelebratedRef.current = game.id;
-        playSpecial('bingo_win');
-      }
-      fetch(`${API}/bingo/card?game_id=${game.id}&cartela=${game.winner_cartela}`, { headers: hdrs() })
-        .then(r => r.json())
-        .then(data => {
-          if (!isMounted) return;
-          setCelebration({
-            winner_name: game.winner_first_name || 'Player',
-            winner_cartela: game.winner_cartela!,
-            winner_prize: game.winner_prize!,
-            winner_matrix: data.matrix || null,
-            iWon, called: [...game.called_numbers]
-          });
-        }).catch(() => {
-          if (isMounted) setCelebration({ winner_name: game.winner_first_name || 'Player', winner_cartela: game.winner_cartela!, winner_prize: game.winner_prize!, winner_matrix: null, iWon, called: [...game.called_numbers] });
-        });
-      return () => { isMounted = false; };
+    if (game?.status !== 'finished') return;
+    if (hasCelebratedRef.current === game.id) return;
+    hasCelebratedRef.current = game.id;
+
+    // ── REMATCH: 3+ way tie ───────────────────────────────────────────────────
+    if (game.winner_first_name === 'REMATCH') {
+      playSpecial('bingo_win');
+      setCelebration({
+        winner_name: 'REMATCH',
+        winner_cartela: 0,
+        winner_prize: 0,
+        winner_matrix: null,
+        iWon: false,
+        called: [...(game.called_numbers || [])],
+      });
+      return;
     }
-  }, [game?.status, game?.id, game?.winner_cartela]);
+
+    // ── Normal or 2-way tie ───────────────────────────────────────────────────
+    if (!game.winner_cartela) return;
+    const iWon = game.winner_telegram_id === String(user?.telegram_id);
+    let isMounted = true;
+    playSpecial('bingo_win');
+    fetch(`${API}/bingo/card?game_id=${game.id}&cartela=${game.winner_cartela}`, { headers: hdrs() })
+      .then(r => r.json())
+      .then(data => {
+        if (!isMounted) return;
+        setCelebration({
+          winner_name: game.winner_first_name || 'Player',
+          winner_cartela: game.winner_cartela!,
+          winner_prize: game.winner_prize!,
+          winner_matrix: data.matrix || null,
+          iWon, called: [...game.called_numbers]
+        });
+      }).catch(() => {
+        if (isMounted) setCelebration({ winner_name: game.winner_first_name || 'Player', winner_cartela: game.winner_cartela!, winner_prize: game.winner_prize!, winner_matrix: null, iWon, called: [...game.called_numbers] });
+      });
+    return () => { isMounted = false; };
+  }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name]);
 
   // Auto-dismiss celebration after 2 seconds — separate effect so it's never reset by other deps
   useEffect(() => {
@@ -772,43 +787,73 @@ export default function BingoGame() {
       {celebration && (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md overflow-y-auto pt-8 pb-20">
           <div className="bg-[#111] border border-white/10 rounded-3xl p-5 text-center max-w-sm w-full shadow-2xl flex flex-col items-center">
-            <span className="text-5xl mb-2 block animate-bounce">🏆</span>
-            <h2 className="text-4xl font-black text-yellow-400 mb-2 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">BINGO!</h2>
-            <div className="bg-white/5 rounded-xl p-3 mb-3 w-full border border-white/5">
-              <p className="text-white/60 text-[10px] uppercase tracking-widest mb-1">Winner</p>
-              <p className="text-white font-black text-2xl">{celebration.winner_name}</p>
-              <p className="text-slate-400 text-sm font-bold">Cartela #{celebration.winner_cartela}</p>
-              <div className="mt-2 inline-block bg-emerald-500/20 text-emerald-400 px-4 py-1 rounded-full font-black text-lg border border-emerald-500/30">
-                WON {celebration.winner_prize} ETB
+
+            {/* ── REMATCH: 3+ way tie ────────────────────────────────────── */}
+            {celebration.winner_name === 'REMATCH' ? (<>
+              <span className="text-5xl mb-2 block animate-spin">🔄</span>
+              <h2 className="text-4xl font-black text-orange-400 mb-2 drop-shadow-[0_0_15px_rgba(251,146,60,0.6)]">REMATCH!</h2>
+              <div className="bg-white/5 rounded-xl p-4 mb-3 w-full border border-orange-500/20">
+                <p className="text-orange-300 font-black text-base mb-1">3+ Players hit BINGO simultaneously!</p>
+                <p className="text-white/60 text-sm">Your stake has been refunded.</p>
+                <p className="text-white/40 text-xs mt-2">A new game is starting...</p>
               </div>
-            </div>
-            {celebration.winner_matrix && (() => {
-              const winCells = getWinningCells(celebration.winner_matrix, celebration.called);
-              return (
-                <div className="w-full bg-[#131b31] rounded-xl overflow-hidden border border-indigo-500/30 mb-4">
-                  <div className="grid grid-cols-5">
-                    {BINGO_LETTERS.map(l => <div key={l} className="flex items-center justify-center py-1 font-black text-white text-xs" style={{ background: LETTER_BG[l] }}>{l}</div>)}
-                  </div>
-                  <div className="grid grid-cols-5 gap-[2px] p-[2px] bg-[#0a0f1e]">
-                    {Array.from({ length: 5 }).flatMap((_, r) => Array.from({ length: 5 }).map((_, c) => {
-                      const num = celebration.winner_matrix![r][c];
-                      const isFree = num === 0, isWin = winCells.has(`${r}-${c}`), isCalled = celebration.called.includes(num);
-                      return (
-                        <div key={`${r}-${c}`} className={`aspect-square rounded flex items-center justify-center font-black text-xs ${
-                          isFree ? 'bg-yellow-400 text-yellow-900' :
-                          isWin ? 'bg-emerald-500 text-white shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                          isCalled ? 'bg-slate-700 text-slate-300' : 'bg-slate-800 text-slate-500'
-                        }`}>{isFree ? "★" : num}</div>
-                      );
-                    }))}
-                  </div>
-                  <div className="py-1 text-center border-t border-white/5 bg-[#0a0f1e]">
-                    <p className="text-white/40 text-[9px] font-bold tracking-widest uppercase">CARTELA # {celebration.winner_cartela}</p>
-                  </div>
+              <p className="text-white/40 text-xs font-bold animate-pulse mt-1">Starting rematch...</p>
+
+            {/* ── 2-WAY TIE: split prize ─────────────────────────────────── */}
+            </>) : celebration.winner_name.includes(' & ') ? (<>
+              <span className="text-5xl mb-2 block animate-bounce">🤝</span>
+              <h2 className="text-4xl font-black text-yellow-400 mb-2 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">TIE!</h2>
+              <div className="bg-white/5 rounded-xl p-3 mb-3 w-full border border-white/5">
+                <p className="text-white/60 text-[10px] uppercase tracking-widest mb-1">2 Winners</p>
+                <p className="text-white font-black text-xl">{celebration.winner_name}</p>
+                <p className="text-white/50 text-xs mt-1">Prize split equally</p>
+                <div className="mt-2 inline-block bg-emerald-500/20 text-emerald-400 px-4 py-1 rounded-full font-black text-lg border border-emerald-500/30">
+                  {celebration.winner_prize} ETB each
                 </div>
-              );
-            })()}
-            <p className="text-white/40 text-xs font-bold animate-pulse mt-1">Returning to game...</p>
+              </div>
+              <p className="text-white/40 text-xs font-bold animate-pulse mt-1">Returning to game...</p>
+
+            {/* ── SINGLE WINNER: normal ──────────────────────────────────── */}
+            </>) : (<>
+              <span className="text-5xl mb-2 block animate-bounce">🏆</span>
+              <h2 className="text-4xl font-black text-yellow-400 mb-2 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">BINGO!</h2>
+              <div className="bg-white/5 rounded-xl p-3 mb-3 w-full border border-white/5">
+                <p className="text-white/60 text-[10px] uppercase tracking-widest mb-1">Winner</p>
+                <p className="text-white font-black text-2xl">{celebration.winner_name}</p>
+                <p className="text-slate-400 text-sm font-bold">Cartela #{celebration.winner_cartela}</p>
+                <div className="mt-2 inline-block bg-emerald-500/20 text-emerald-400 px-4 py-1 rounded-full font-black text-lg border border-emerald-500/30">
+                  WON {celebration.winner_prize} ETB
+                </div>
+              </div>
+              {celebration.winner_matrix && (() => {
+                const winCells = getWinningCells(celebration.winner_matrix, celebration.called);
+                return (
+                  <div className="w-full bg-[#131b31] rounded-xl overflow-hidden border border-indigo-500/30 mb-4">
+                    <div className="grid grid-cols-5">
+                      {BINGO_LETTERS.map(l => <div key={l} className="flex items-center justify-center py-1 font-black text-white text-xs" style={{ background: LETTER_BG[l] }}>{l}</div>)}
+                    </div>
+                    <div className="grid grid-cols-5 gap-[2px] p-[2px] bg-[#0a0f1e]">
+                      {Array.from({ length: 5 }).flatMap((_, r) => Array.from({ length: 5 }).map((_, c) => {
+                        const num = celebration.winner_matrix![r][c];
+                        const isFree = num === 0, isWin = winCells.has(`${r}-${c}`), isCalled = celebration.called.includes(num);
+                        return (
+                          <div key={`${r}-${c}`} className={`aspect-square rounded flex items-center justify-center font-black text-xs ${
+                            isFree ? 'bg-yellow-400 text-yellow-900' :
+                            isWin ? 'bg-emerald-500 text-white shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                            isCalled ? 'bg-slate-700 text-slate-300' : 'bg-slate-800 text-slate-500'
+                          }`}>{isFree ? "★" : num}</div>
+                        );
+                      }))}
+                    </div>
+                    <div className="py-1 text-center border-t border-white/5 bg-[#0a0f1e]">
+                      <p className="text-white/40 text-[9px] font-bold tracking-widest uppercase">CARTELA # {celebration.winner_cartela}</p>
+                    </div>
+                  </div>
+                );
+              })()}
+              <p className="text-white/40 text-xs font-bold animate-pulse mt-1">Returning to game...</p>
+            </>)}
+
           </div>
         </div>
       )}
