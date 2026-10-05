@@ -10,6 +10,7 @@ import adminRouter from './routes/admin';
 import depositRouter from './routes/deposit';
 import withdrawRouter from './routes/withdraw';
 import bingoRouter from './routes/bingo';
+import leaderboardRouter from './routes/leaderboard';
 import { engine as bingoEngine } from './services/BingoEngine';
 
 const app = express();
@@ -25,6 +26,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/deposit', depositRouter);
 app.use('/api/withdraw', withdrawRouter);
 app.use('/api/bingo', bingoRouter);
+app.use('/api/leaderboard', leaderboardRouter);
 
 app.listen(PORT, () => {
   console.log(`🚀 API running on port ${PORT}`);
