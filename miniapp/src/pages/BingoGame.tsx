@@ -65,8 +65,7 @@ const AMHARIC_NUM: Record<number, string> = {
 
 const getLetter = (num: number) => BINGO_LETTERS[Math.floor((num - 1) / 15)];
 const getAudioSrc = (num: number) => {
-  const l = getLetter(num);
-  return `/audio/bingo/${l}${String(num).padStart(2, '0')}.mp3`;
+  return `/audio/bingo/bingo_${String(num).padStart(2, '0')}.mp3`;
 };
 
 // Check if pre-generated audio files exist
@@ -76,7 +75,7 @@ async function checkAudioAvailable() {
   if (_audioCacheChecked) return _audioFilesAvailable;
   _audioCacheChecked = true;
   try {
-    const r = await fetch('/audio/bingo/B01.mp3', { method: 'HEAD' });
+    const r = await fetch('/audio/bingo/bingo_01.mp3', { method: 'HEAD' });
     _audioFilesAvailable = r.ok;
   } catch { _audioFilesAvailable = false; }
   return _audioFilesAvailable;
@@ -135,25 +134,21 @@ export default function BingoGame() {
   };
 
   const playSpecial = useCallback(async (name: string) => {
-    if (!soundEnabled) return;
-    if (audioAvailable) {
-      try {
-        const a = new Audio(`/audio/bingo/${name}.mp3`);
-        a.volume = volume;
-        await a.play();
-        return;
-      } catch(e) {}
-    }
-    // Fallback: backend proxy
+    if (!soundEnabled || !audioCtxRef.current) return;
     try {
-      const texts: Record<string, string> = {
-        bingo_win: 'ቢንጎ! ቢንጎ! እንኳን ደስ አለዎ!',
-        game_start: 'ጨዋታ ጀምሯል!',
-        good_luck: 'መልካም ዕድል!',
-      };
-      const t = texts[name];
-      if (!t || !audioCtxRef.current) return;
-      const res = await fetch(`${API}/bingo/tts?text=` + encodeURIComponent(t));
+      let res: Response;
+      if (audioAvailable) {
+        res = await fetch(`/audio/bingo/${name}.mp3`);
+      } else {
+        const texts: Record<string, string> = {
+          bingo_win: 'ቢንጎ! ቢንጎ! እንኳን ደስ አለዎ!',
+          game_start: 'ጨዋታ ጀምሯል!',
+          good_luck: 'መልካም ዕድል!',
+        };
+        const t = texts[name];
+        if (!t) return;
+        res = await fetch(`${API}/bingo/tts?text=` + encodeURIComponent(t));
+      }
       if (!res.ok) return;
       const buf = await audioCtxRef.current.decodeAudioData(await res.arrayBuffer());
       const src = audioCtxRef.current.createBufferSource();
@@ -166,37 +161,34 @@ export default function BingoGame() {
     } catch(e) {}
   }, [soundEnabled, volume, audioAvailable]);
 
+  const activeAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
+
   const playCallAudio = useCallback(async (num: number) => {
-    if (!soundEnabled) return;
+    if (!soundEnabled || !audioCtxRef.current) return;
     // Stop any currently playing call
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current.currentTime = 0;
+    if (activeAudioSourceRef.current) {
+      try { activeAudioSourceRef.current.stop(); } catch(e) {}
+      activeAudioSourceRef.current = null;
     }
     setLastCallNum(num);
     setCallAnim(false);
     setTimeout(() => setCallAnim(true), 20);
 
-    if (audioAvailable) {
-      // Use high-quality pre-generated MP3 (Azure neural voice)
-      const audio = new Audio(getAudioSrc(num));
-      audio.volume = volume;
-      currentAudioRef.current = audio;
-      try { await audio.play(); } catch(e) {}
-      return;
-    }
-
-    // Fallback: backend Google TTS proxy (female voice, lower quality)
     try {
-      if (!audioCtxRef.current) return;
-      const letter = getLetter(num);
-      const text = `${letter}... ${AMHARIC_NUM[num]}`;
-      const res = await fetch(`${API}/bingo/tts?text=` + encodeURIComponent(text));
+      let res: Response;
+      if (audioAvailable) {
+        res = await fetch(getAudioSrc(num));
+      } else {
+        const letter = getLetter(num);
+        const text = `${letter}... ${AMHARIC_NUM[num]}`;
+        res = await fetch(`${API}/bingo/tts?text=` + encodeURIComponent(text));
+      }
       if (!res.ok) return;
       const buf = await audioCtxRef.current.decodeAudioData(await res.arrayBuffer());
       const src = audioCtxRef.current.createBufferSource();
+      activeAudioSourceRef.current = src;
       const gn = audioCtxRef.current.createGain();
-      gn.gain.value = volume * 2;
+      gn.gain.value = volume * (audioAvailable ? 1 : 2); // Pro audio is already normalized
       src.buffer = buf;
       src.connect(gn);
       gn.connect(audioCtxRef.current.destination);
@@ -391,9 +383,9 @@ export default function BingoGame() {
     const currentAmharic = lastNum ? AMHARIC_NUM[lastNum] : null;
 
     return (
-      <div className="flex flex-col p-2 max-w-[340px] mx-auto w-full h-full overflow-hidden pt-1 pb-14">
+      <div className="flex flex-col px-1.5 max-w-[380px] mx-auto w-full h-full overflow-hidden pt-1 pb-14">
         {/* Top Info Bar */}
-        <div className="flex items-center justify-between bg-[#0f172a] px-2 py-1.5 rounded-xl border border-slate-800 shrink-0 mb-1.5">
+        <div className="flex items-center justify-between bg-[#0f172a] px-2 py-1.5 rounded-xl border border-slate-800 shrink-0 mb-1">
           <div className="text-slate-400 text-[10px] font-bold">ID: {game.game_id}</div>
           <div className="flex items-center gap-1 text-yellow-400 text-[10px] font-bold"><Trophy size={11}/> {game.prize_pool} ETB</div>
           <div className="flex items-center gap-1 text-blue-400 text-[10px] font-bold"><Users size={11}/> {taken.length}</div>
@@ -402,7 +394,7 @@ export default function BingoGame() {
         </div>
 
         {/* 1-75 Tracker Board */}
-        <div className="bg-[#0b1120] rounded-xl p-1.5 border border-slate-800 shrink-0 mb-1.5">
+        <div className="bg-[#0b1120] rounded-xl p-1.5 border border-slate-800 shrink-0 mb-1 w-full overflow-hidden">
           <div className="flex flex-col gap-[2px]">
             {BINGO_LETTERS.map((letter, rowIndex) => (
               <div key={letter} className="flex items-center gap-1">
@@ -413,7 +405,7 @@ export default function BingoGame() {
                     const isCalled = called.includes(num);
                     const isLatest = num === lastNum;
                     return (
-                      <div key={num} className={`aspect-square rounded-[2px] flex items-center justify-center text-[7px] font-bold transition-all ${
+                      <div key={num} className={`aspect-[4/5] rounded-[2px] flex items-center justify-center text-[8px] font-bold transition-all ${
                         isLatest ? 'bg-white text-black shadow-[0_0_6px_rgba(255,255,255,0.8)] scale-110 z-10' :
                         isCalled ? 'bg-yellow-500 text-yellow-950' : 'bg-slate-800/60 text-slate-500'
                       }`}>{num}</div>
@@ -425,80 +417,53 @@ export default function BingoGame() {
           </div>
         </div>
 
-        {/* ── PROFESSIONAL CALLER SECTION ── */}
-        <div className="shrink-0 mb-1.5">
-          <div className="bg-[#0a0f1e] rounded-2xl border border-white/10 overflow-hidden">
-            {/* Recent balls row + controls */}
-            <div className="flex items-center justify-between px-3 py-1.5 border-b border-white/5">
-              <div className="flex items-center gap-1.5">
-                {recent.length === 0 ? (
-                  <span className="text-slate-500 text-[10px] font-bold animate-pulse">Waiting...</span>
-                ) : recent.map((num, idx) => {
-                  const l = getLetter(num);
-                  const isFirst = idx === 0;
+        {/* ── COMPACT CALLER SECTION ── */}
+        <div className="shrink-0 mb-2 w-full">
+          <div className="flex items-center justify-between px-1">
+            {/* Recent Balls */}
+            <div className="flex items-center gap-1.5">
+              {recent.length === 0 ? (
+                <span className="text-slate-500 text-[10px] font-bold animate-pulse">Waiting for first draw...</span>
+              ) : recent.map((num, idx) => {
+                const l = getLetter(num);
+                const isFirst = idx === 0;
+                
+                if (isFirst) {
                   return (
-                    <div key={`${num}-${idx}`} className={`flex flex-col items-center justify-center rounded-full font-black border-2 transition-all ${
-                      isFirst ? 'w-10 h-10 opacity-70 border-slate-600 bg-slate-700/50' : 'w-7 h-7 opacity-40 border-slate-700 bg-slate-800/50'
-                    }`}>
-                      <span style={{ color: LETTER_COLOR[l] }} className="text-[7px] leading-none">{l}</span>
-                      <span className="text-white text-[10px] leading-none font-black">{num}</span>
+                    <div key={`${num}-${idx}`} className="flex items-center gap-2">
+                      <div className="w-12 h-12 flex flex-col items-center justify-center rounded-full font-black border-2 border-yellow-400 bg-yellow-400/20 shadow-[0_0_15px_rgba(250,204,21,0.3)] scale-110 z-10">
+                        <span style={{ color: LETTER_COLOR[l] }} className="text-[10px] leading-none drop-shadow-md">{l}</span>
+                        <span className="text-white text-xl leading-none font-black drop-shadow-md">{num}</span>
+                      </div>
+                      <div className="flex flex-col justify-center">
+                        <span className="text-yellow-400 font-black text-[11px] tracking-wider animate-pulse">{AMHARIC_NUM[num]}</span>
+                        <span className="text-white/40 text-[8px] font-bold uppercase tracking-widest flex items-center gap-1">
+                          <div className={`w-1 h-1 rounded-full ${audioAvailable ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
+                          {audioAvailable ? 'Pro Audio' : 'TTS Audio'}
+                        </span>
+                      </div>
                     </div>
                   );
-                })}
-              </div>
-              {/* Sound controls */}
-              <div className="flex items-center gap-1.5">
-                <button onClick={replayLastCall} disabled={!lastCallNum} className="w-7 h-7 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center active:scale-90 disabled:opacity-30">
-                  <RotateCcw size={13} className="text-blue-400" />
-                </button>
-                <input type="range" min="0" max="1" step="0.1" value={volume}
-                  onChange={e => setVolume(Number(e.target.value))}
-                  className="w-14 h-1 accent-blue-500 cursor-pointer" />
-                <button onClick={() => { setSoundEnabled(s => !s); initWebAudio(); }}
-                  className={`w-7 h-7 rounded-lg border flex items-center justify-center active:scale-90 ${soundEnabled ? 'bg-blue-500/20 border-blue-500/50' : 'bg-slate-800 border-slate-700'}`}>
-                  {soundEnabled ? <Volume2 size={13} className="text-blue-400" /> : <VolumeX size={13} className="text-red-400" />}
-                </button>
-              </div>
-            </div>
+                }
 
-            {/* BIG CALL DISPLAY */}
-            <div className="flex flex-col items-center justify-center py-3 min-h-[88px] relative overflow-hidden">
-              {lastNum ? (
-                <div className={`flex flex-col items-center transition-all duration-300 ${callAnim ? 'scale-100 opacity-100' : 'scale-75 opacity-0'}`}>
-                  {/* Letter + Number */}
-                  <div className="flex items-baseline gap-2 mb-0.5">
-                    <span className="font-black text-5xl leading-none drop-shadow-lg" style={{ color: LETTER_COLOR[currentLetter!] }}>
-                      {currentLetter}
-                    </span>
-                    <span className="font-black text-5xl text-white leading-none drop-shadow-lg">
-                      {lastNum}
-                    </span>
+                return (
+                  <div key={`${num}-${idx}`} className="w-8 h-8 flex flex-col items-center justify-center rounded-full font-black border border-slate-700 bg-slate-800/60 opacity-60 ml-1">
+                    <span style={{ color: LETTER_COLOR[l] }} className="text-[7px] leading-none">{l}</span>
+                    <span className="text-white text-xs leading-none font-black">{num}</span>
                   </div>
-                  {/* Amharic name */}
-                  <p className="text-yellow-400 font-black text-base tracking-wide leading-tight">
-                    {currentAmharic}
-                  </p>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center opacity-30">
-                  <p className="text-white font-black text-lg">– – –</p>
-                  <p className="text-slate-400 text-xs font-bold mt-1">Waiting for first call</p>
-                </div>
-              )}
-              {/* Glow */}
-              {lastNum && callAnim && (
-                <div className="absolute inset-0 pointer-events-none" style={{
-                  background: `radial-gradient(ellipse at center, ${LETTER_COLOR[currentLetter!]}15 0%, transparent 70%)`
-                }} />
-              )}
+                );
+              })}
             </div>
 
-            {/* Audio quality indicator */}
-            <div className="flex items-center justify-center gap-1.5 py-1 border-t border-white/5">
-              <div className={`w-1.5 h-1.5 rounded-full ${audioAvailable ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
-              <p className="text-[9px] text-white/40 font-bold">
-                {audioAvailable ? 'Professional Audio Active' : 'Tap sound icon to enable audio'}
-              </p>
+            {/* Sound controls */}
+            <div className="flex items-center gap-1.5 bg-[#0a0f1e] p-1.5 rounded-xl border border-white/5">
+              <button onClick={replayLastCall} disabled={!lastCallNum} className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center active:scale-90 disabled:opacity-30">
+                <RotateCcw size={14} className="text-blue-400" />
+              </button>
+              <button onClick={() => { setSoundEnabled(s => !s); initWebAudio(); }}
+                className={`w-8 h-8 rounded-lg border flex items-center justify-center active:scale-90 ${soundEnabled ? 'bg-blue-500/20 border-blue-500/50' : 'bg-slate-800 border-slate-700'}`}>
+                {soundEnabled ? <Volume2 size={14} className="text-blue-400" /> : <VolumeX size={14} className="text-red-400" />}
+              </button>
             </div>
           </div>
         </div>
