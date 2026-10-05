@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowLeft, RefreshCw, Eye, AlertCircle, Users,
@@ -66,8 +66,22 @@ export default function AdminBingoGames() {
   }, []);
 
   const fetchSettings = useCallback(async () => {
-    const r = await fetch(`${API}/admin/settings`, { headers: hdrs() });
-    if (r.ok) { const s: GameSettings = await r.json(); setSettings(s); setDraft(s); }
+    try {
+      const r = await fetch(`${API}/admin/settings`, { headers: hdrs() });
+      if (r.ok) {
+        const raw = await r.json();
+        // Merge with DEFAULT so any missing/null fields fall back to defaults
+        const s: GameSettings = {
+          call_interval_ms: Number(raw.call_interval_ms) || DEFAULT.call_interval_ms,
+          waiting_period_s: Number(raw.waiting_period_s) || DEFAULT.waiting_period_s,
+          min_players:      Number(raw.min_players)      || DEFAULT.min_players,
+          max_players:      Number(raw.max_players)      || DEFAULT.max_players,
+          prize_percent:    Number(raw.prize_percent)    || DEFAULT.prize_percent,
+        };
+        setSettings(s); setDraft(s);
+      }
+      // If not ok, keep DEFAULT values (already initialized)
+    } catch { /* keep defaults */ }
   }, []);
 
   useEffect(() => { fetchGames(); fetchSettings(); }, [fetchGames, fetchSettings]);
@@ -78,12 +92,23 @@ export default function AdminBingoGames() {
       const r = await fetch(`${API}/admin/settings`, {
         method: "PUT", headers: hdrs(), body: JSON.stringify(draft),
       });
+      const body = await r.json().catch(() => ({}));
       if (r.ok) {
-        const { settings: saved } = await r.json();
+        const saved: GameSettings = {
+          call_interval_ms: Number(body.settings?.call_interval_ms) || draft.call_interval_ms,
+          waiting_period_s: Number(body.settings?.waiting_period_s) || draft.waiting_period_s,
+          min_players:      Number(body.settings?.min_players)      || draft.min_players,
+          max_players:      Number(body.settings?.max_players)      || draft.max_players,
+          prize_percent:    Number(body.settings?.prize_percent)    || draft.prize_percent,
+        };
         setSettings(saved); setDraft(saved); setEditing(false);
         setSaveMsg("Settings saved and applied!");
         setTimeout(() => setSaveMsg(""), 3000);
-      } else { setSaveMsg("Failed to save."); }
+      } else {
+        setSaveMsg(`Failed to save: ${body.error || r.status}`);
+      }
+    } catch (e: any) {
+      setSaveMsg(`Error: ${e?.message || "unknown"}`);
     } finally { setSaving(false); }
   };
 
