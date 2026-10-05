@@ -110,6 +110,7 @@ export default function BingoGame() {
 
   const urlStake = searchParams.get("stake");
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
+  const [maxPlayers, setMaxPlayers] = useState<number>(150);
   const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string; players: number }>>({});
   const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
   const [soundEnabled, setSoundEnabled] = useState(false);
@@ -285,6 +286,7 @@ export default function BingoGame() {
       const r = await fetch(`${API}/bingo/current?stake=${selectedStake}`, { headers: hdrs() });
       if (r.ok) {
         const d = await r.json();
+        if (d.max_players) setMaxPlayers(Number(d.max_players));
         if (d.game && d.game.id !== gameIdRef.current) {
           setGame(d.game); setTaken(d.taken_cartelas ?? []); setMyCard(d.my_card ?? null);
           gameIdRef.current = d.game.id;
@@ -708,11 +710,11 @@ export default function BingoGame() {
   const renderCartelaPicker = () => (
     <div className="flex-1 overflow-y-auto relative p-2 pb-16">
       <p className="text-center text-[10px] text-cyan-300 font-black uppercase tracking-widest mb-2">
-        {!myCard ? `TAP TO PICK YOUR CARTELA — ${taken.length}/150 TAKEN` : `CARTELA #${myCard.cartela_number} SECURED ✓`}
+        {!myCard ? `TAP TO PICK YOUR CARTELA — ${taken.length}/${maxPlayers} TAKEN` : `CARTELA #${myCard.cartela_number} SECURED ✓`}
       </p>
       <div className="rounded-2xl border-[3px] border-cyan-400 overflow-hidden bg-[#05081a] shadow-[0_0_25px_rgba(34,211,238,0.4)]">
         <div className="grid gap-[2px] p-[2px]" style={{ gridTemplateColumns: "repeat(10, 1fr)" }}>
-          {Array.from({ length: 150 }, (_, i) => {
+          {Array.from({ length: maxPlayers }, (_, i) => {
             const n = i + 1;
             const isTaken = taken.includes(n), isMine = myCard?.cartela_number === n, isBuying = buying === n;
 

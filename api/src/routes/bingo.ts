@@ -1,12 +1,12 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import { AuthRequest, validateTelegramAuth } from '../middleware/auth';
 import { supabase } from '../services/supabase';
 import { generateBingoCard } from '../services/BingoEngine';
+import { getSettings } from './adminSettings';
 
 const router = Router();
 
 // ── GET /api/bingo/current ──────────────────────────────────────────────────
-// Returns current game state + taken cartela list + caller's card (if joined)
 router.get('/current', validateTelegramAuth, async (req: AuthRequest, res) => {
   const telegramId = req.telegramUser!.id.toString();
   const stake = Number(req.query.stake) || 10;
@@ -19,7 +19,7 @@ router.get('/current', validateTelegramAuth, async (req: AuthRequest, res) => {
     .limit(1)
     .maybeSingle();
 
-  if (!game) { res.json({ game: null, taken_cartelas: [], my_card: null }); return; }
+  if (!game) { res.json({ game: null, taken_cartelas: [], my_card: null, max_players: 150 }); return; }
 
   const { data: rows } = await supabase
     .from('bingo_players')
@@ -32,21 +32,21 @@ router.get('/current', validateTelegramAuth, async (req: AuthRequest, res) => {
     ? { cartela_number: mine.cartela_number, card_matrix: mine.card_matrix }
     : null;
 
-  res.json({ game, taken_cartelas, my_card });
+  const cfg = await getSettings();
+  res.json({ game, taken_cartelas, my_card, max_players: cfg.max_players });
 });
 
 // ── POST /api/bingo/join ────────────────────────────────────────────────────
-// Buy a cartela seat. Deducts stake, generates 5×5 card server-side.
 router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   const telegramId = req.telegramUser!.id.toString();
   const { cartela_number } = req.body;
   const seat = Number(cartela_number);
+  const cfg = await getSettings();
 
-  if (!seat || seat < 1 || seat > 150) {
-    res.status(400).json({ error: 'Pick a cartela between 1 and 150' }); return;
+  if (!seat || seat < 1 || seat > cfg.max_players) {
+    res.status(400).json({ error: `Pick a cartela between 1 and ${cfg.max_players}` }); return;
   }
 
-  // Also, allow specifying a stake room
   const requestedStake = req.body.stake || 10;
 
   let query = supabase
@@ -63,7 +63,6 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
     res.status(400).json({ error: 'No game accepting players for this stake right now.' }); return;
   }
 
-  // Already in this game?
   const { data: existing } = await supabase
     .from('bingo_players')
     .select('id')
@@ -72,7 +71,6 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
     .maybeSingle();
   if (existing) { res.status(400).json({ error: 'You already joined this game' }); return; }
 
-  // Check & deduct balance
   const { data: user } = await supabase.from('users').select('main_balance, bonus_balance, first_name').eq('telegram_id', telegramId).single();
   if (!user) { res.status(404).json({ error: 'User not found' }); return; }
   
@@ -104,10 +102,8 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
 
   if (deductErr) { res.status(400).json({ error: 'Payment failed — please try again' }); return; }
 
-  // Generate card server-side
   const card_matrix = generateBingoCard();
 
-  // Insert player row
   const { error: insertErr } = await supabase.from('bingo_players').insert({
     game_id: game.id,
     telegram_id: telegramId,
@@ -117,24 +113,22 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   });
 
   if (insertErr) {
-    // Refund
     await supabase.from('users').update({ main_balance: mainBal, bonus_balance: bonusBal }).eq('telegram_id', telegramId);
     res.status(400).json({ error: 'Seat taken or error' }); return;
   }
 
-  // Calculate prize pool dynamically in Node.js (no RPC needed)
   const { count } = await supabase.from('bingo_players').select('*', { count: 'exact', head: true }).eq('game_id', game.id);
   const playersCount = count || 1;
   
-  // 0% commission for 1-2 players, 20% commission for 3+ players
-  const prizePool = playersCount < 3 
-    ? playersCount * stakeAmt 
-    : playersCount * stakeAmt * 0.8;
+  // Use dynamic prize_percent from settings (0% commission for <3 players, dynamic% for 3+)
+  const prizePool = playersCount < 3
+    ? playersCount * stakeAmt
+    : Math.floor(playersCount * stakeAmt * cfg.prize_percent / 100);
 
   let newStartAt = game.start_at;
-  // TRIGGER 60s COUNTDOWN IF FIRST PLAYER
+  // Trigger countdown from settings waiting_period_s when first player joins
   if (new Date(game.start_at).getTime() > Date.now() + 86400000) {
-    newStartAt = new Date(Date.now() + 60_000).toISOString();
+    newStartAt = new Date(Date.now() + cfg.waiting_period_s * 1000).toISOString();
   }
 
   await supabase.from('bingo_games').update({
