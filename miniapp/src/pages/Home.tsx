@@ -1,11 +1,55 @@
-﻿import { useGameStore } from '../store/gameStore';
+import { useState, useEffect } from 'react';
+import { useGameStore } from '../store/gameStore';
 import { Gift, ArrowDownToLine, Share2, PlusCircle, Info } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
+import { supabase } from '../lib/supabase';
 
 export default function Home() {
   const { user } = useGameStore();
   const navigate = useNavigate();
+
+  const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string }>>({});
+  const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
+
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchPools = async () => {
+      const { data } = await supabase.from('bingo_games').select('stake, prize_pool, start_at, status').in('status', ['waiting', 'calling']);
+      if (data && isMounted) {
+        const p: Record<number, any> = {};
+        data.forEach(g => { p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status }; });
+        setHomeGames(p);
+      }
+    };
+    fetchPools();
+
+    const ch = supabase.channel('home_pools_root')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_games' }, () => {
+        if (isMounted) fetchPools();
+      })
+      .subscribe();
+
+    return () => { isMounted = false; supabase.removeChannel(ch); };
+  }, []);
+
+  useEffect(() => {
+    const update = () => {
+      setHomeTimeLeft(prev => {
+        const next: Record<number, number> = {};
+        for (const [stake, g] of Object.entries(homeGames)) {
+          if (g.status === 'waiting' && g.start_at) {
+            next[Number(stake)] = Math.max(0, Math.ceil((new Date(g.start_at).getTime() - Date.now()) / 1000));
+          }
+        }
+        return next;
+      });
+    };
+    update();
+    const id = setInterval(update, 500);
+    return () => clearInterval(id);
+  }, [homeGames]);
 
   const handleInvite = () => {
     navigate('/invite');
@@ -127,19 +171,50 @@ export default function Home() {
             { amount: 20, color: 'from-emerald-400 to-emerald-600' },
             { amount: 50, color: 'from-purple-400 to-purple-600' },
             { amount: 100, color: 'from-rose-400 to-rose-600' }
-          ].map((stake) => (
+          ].map((stake) => {
+            const hg = homeGames[stake.amount];
+            const pool = hg?.pool || 0;
+            const hasGame = pool > 0;
+            const isWaiting = hg?.status === 'waiting';
+            const isCalling = hg?.status === 'calling';
+            const tl = homeTimeLeft[stake.amount] || 0;
+            
+            let statusTxt = "-";
+            let statusCls = "text-slate-400 dark:text-slate-500";
+            if (isWaiting) {
+              statusTxt = tl > 86400 ? "Waiting..." : `${tl}s`;
+              statusCls = "text-orange-500";
+            } else if (isCalling) {
+              statusTxt = "Active";
+              statusCls = "text-emerald-500";
+            }
+
+            return (
             <div key={stake.amount} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col">
               <div className={`h-16 bg-gradient-to-br ${stake.color} flex items-center justify-center relative`}>
-                <span className="text-white font-black text-2xl drop-shadow-sm">{stake.amount}</span>
+                <span className="text-white font-black text-3xl drop-shadow-sm">{stake.amount}</span>
                 <span className="absolute top-1.5 right-1.5 bg-white/20 px-1.5 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-wider">ETB</span>
               </div>
-              <div className="p-3 text-center">
-                <button onClick={() => navigate(`/bingo/live?stake=${stake.amount}`)} className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-2.5 rounded-lg text-xs transition-colors">
-                  Join Room
+              
+              {/* Derash and Status section */}
+              <div className="w-full bg-slate-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 flex h-[35px] shrink-0">
+                <div className="flex-1 flex flex-col items-center justify-center border-r border-gray-100 dark:border-slate-800">
+                  <span className="text-slate-400 dark:text-slate-500 text-[7px] font-bold uppercase tracking-wider">Derash</span>
+                  <span className={`text-[10px] font-black ${hasGame ? 'text-yellow-600 dark:text-yellow-400 animate-pulse' : 'text-slate-400 dark:text-slate-500'}`}>{pool > 0 ? `${pool} ETB` : '-'}</span>
+                </div>
+                <div className="flex-1 flex flex-col items-center justify-center">
+                  <span className="text-slate-400 dark:text-slate-500 text-[7px] font-bold uppercase tracking-wider">Status</span>
+                  <span className={`text-[10px] font-black ${statusCls}`}>{statusTxt}</span>
+                </div>
+              </div>
+
+              <div className="p-2 text-center">
+                <button onClick={() => navigate(`/bingo/live?stake=${stake.amount}`)} className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-2 rounded-lg text-xs transition-colors">
+                  {isWaiting ? 'Join Match 🔥' : 'Join Room'}
                 </button>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       </div>
 
