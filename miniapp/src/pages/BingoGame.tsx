@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+﻿import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, ChevronDown, Gift, RefreshCw, Users, Clock, Trophy } from "lucide-react";
 import WebApp from "@twa-dev/sdk";
@@ -75,12 +75,17 @@ export default function BingoGame() {
   const urlStake = searchParams.get("stake");
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    audioRef.current = new Audio();
+  }, []);
+
   const unlockAudio = () => {
     try {
-      if (window.speechSynthesis) {
-        const u = new SpeechSynthesisUtterance("");
-        u.volume = 0;
-        window.speechSynthesis.speak(u);
+      if (audioRef.current) {
+        audioRef.current.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+        audioRef.current.play().catch(() => {});
       }
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
       if (AudioContext) {
@@ -109,18 +114,13 @@ export default function BingoGame() {
       }
     } catch (e) {}
 
-    if (window.speechSynthesis) {
+    if (audioRef.current) {
       const letter = BINGO_LETTERS[Math.floor((num - 1) / 15)];
       const amLetter = getAmharicLetter(letter);
-      window.speechSynthesis.cancel();
-      const msg = new SpeechSynthesisUtterance(`${amLetter} ${num}`);
-      msg.lang = 'am-ET';
-      msg.rate = 0.9;
-      msg.volume = 1;
-      window.speechSynthesis.speak(msg);
+      audioRef.current.src = 'https://translate.google.com/translate_tts?ie=UTF-8&tl=am&client=tw-ob&q=' + encodeURIComponent(amLetter + ' ' + num);
+      audioRef.current.play().catch(() => {});
     }
   }, []);
-
   useEffect(() => {
     if (!user?.telegram_id) return;
     const unsub = subscribeToBalance();
