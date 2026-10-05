@@ -110,8 +110,35 @@ export default function BingoGame() {
 
   const urlStake = searchParams.get("stake");
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
+  const [livePools, setLivePools] = useState<Record<number, number>>({ 10: 0, 20: 0, 50: 0, 100: 0 });
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [volume, setVolume] = useState(1.0);
+
+  // Fetch and listen for active derash (prize pools) on the stake selection screen
+  useEffect(() => {
+    if (selectedStake) return;
+    let isMounted = true;
+    
+    const fetchPools = async () => {
+      const { data } = await supabase.from('active_bingo_games').select('stake, prize_pool').eq('status', 'waiting');
+      if (data && isMounted) {
+        const p: Record<number, number> = { 10: 0, 20: 0, 50: 0, 100: 0 };
+        data.forEach(g => { p[g.stake] = g.prize_pool; });
+        setLivePools(p);
+      }
+    };
+    fetchPools();
+
+    const ch = supabase.channel('home_pools')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'active_bingo_games', filter: "status=eq.waiting" }, (payload) => {
+        if (!isMounted) return;
+        const game = payload.new as any;
+        if (game && game.stake) setLivePools(prev => ({ ...prev, [game.stake]: game.prize_pool }));
+      })
+      .subscribe();
+
+    return () => { isMounted = false; supabase.removeChannel(ch); };
+  }, [selectedStake]);
   const [audioAvailable, setAudioAvailable] = useState(false);
   const [lastCallNum, setLastCallNum] = useState<number | null>(null);
   const [callAnim, setCallAnim] = useState(false);
@@ -364,22 +391,52 @@ export default function BingoGame() {
 
   if (!selectedStake) {
     return (
-      <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-y-auto" onClick={initWebAudio}>
-        <Header />
-        <div className="flex-1 flex flex-col items-center justify-center p-6">
-          <p className="text-4xl mb-3">🎱</p>
-          <h2 className="text-white font-black text-2xl mb-1">ADWA Bingo</h2>
-          <p className="text-white/50 text-sm mb-8">Select your stake to enter a game</p>
-          <div className="grid grid-cols-2 gap-3 w-full max-w-[300px]">
-            {STAKE_OPTIONS.map(opt => (
-              <button key={opt.value} onClick={() => { setSelectedStake(opt.value); initWebAudio(); }}
-                className={`bg-gradient-to-br ${opt.color} rounded-2xl p-5 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all shadow-lg`}>
-                <span className="text-white font-black text-3xl">{opt.value}</span>
-                <span className="text-white/80 font-bold text-xs uppercase tracking-wider">ETB</span>
-              </button>
-            ))}
+      <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-y-auto relative" onClick={initWebAudio}>
+        {/* Transparent faint cartela background */}
+        <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
+        <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#05081a] via-transparent to-[#05081a] pointer-events-none"></div>
+
+        <div className="relative z-10 flex flex-col h-full">
+          <Header />
+          <div className="flex-1 flex flex-col items-center justify-center p-6 pb-12">
+            <div className="w-20 h-20 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full flex items-center justify-center mb-4 border border-white/10 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
+              <span className="text-5xl animate-bounce">🎱</span>
+            </div>
+            <h2 className="text-white font-black text-3xl mb-1 tracking-tight">ADWA BINGO</h2>
+            <p className="text-white/50 text-xs uppercase tracking-widest mb-8 font-bold">Select Stake & Win Big</p>
+            
+            <div className="grid grid-cols-2 gap-4 w-full max-w-[320px]">
+              {STAKE_OPTIONS.map(opt => {
+                const pool = livePools[opt.value] || 0;
+                return (
+                  <button key={opt.value} onClick={() => { setSelectedStake(opt.value); initWebAudio(); }}
+                    className="relative overflow-hidden bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-5 flex flex-col items-center justify-center gap-1 active:scale-95 transition-all duration-300 hover:bg-white/10 group shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+                    <div className={`absolute inset-0 bg-gradient-to-br ${opt.color} opacity-20 group-hover:opacity-30 transition-opacity`}></div>
+                    
+                    {/* Live Derash Badge */}
+                    {pool > 0 && (
+                      <div className="absolute top-0 right-0 bg-yellow-500 text-yellow-950 text-[10px] font-black px-3 py-1 rounded-bl-xl rounded-tr-3xl shadow-sm z-20">
+                        {pool} ETB DERASH
+                      </div>
+                    )}
+                    
+                    <span className="text-white font-black text-3xl relative z-10 drop-shadow-md mt-2">{opt.value}</span>
+                    <span className="text-white/60 font-bold text-[10px] uppercase tracking-widest relative z-10">Stake ETB</span>
+                    
+                    {pool === 0 && (
+                      <div className="absolute bottom-2 text-[8px] text-white/30 font-bold uppercase tracking-wider relative z-10 mt-2">
+                        Start Match
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            
+            <button onClick={() => navigate(-1)} className="mt-10 px-8 py-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-white/60 text-xs font-bold tracking-widest uppercase active:scale-95 transition-all hover:bg-white/10 hover:text-white shadow-lg">
+              Back to Games
+            </button>
           </div>
-          <button onClick={() => navigate(-1)} className="mt-8 px-6 py-2 bg-white/5 border border-white/10 rounded-full text-white/50 text-sm font-bold active:scale-95">Back to Games</button>
         </div>
       </div>
     );
