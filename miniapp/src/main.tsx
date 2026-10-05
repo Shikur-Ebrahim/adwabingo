@@ -10,10 +10,16 @@ function Root() {
   const hiddenAtRef = useRef<number | null>(null);
 
   const forceRemount = useCallback(() => {
+    // Re-expand WebView first (fixes collapsed WebView on return)
+    try { (window as any).Telegram?.WebApp?.expand(); } catch (_) {}
     setAppKey(k => k + 1);
   }, []);
 
   const handleReturn = useCallback(() => {
+    // Always re-expand WebView when returning from background
+    // (Telegram may have collapsed it, causing click targets to be misaligned)
+    try { (window as any).Telegram?.WebApp?.expand(); } catch (_) {}
+
     const hidden = hiddenAtRef.current;
     hiddenAtRef.current = null;
     if (hidden !== null && Date.now() - hidden > BACKGROUND_THRESHOLD_MS) {
@@ -26,20 +32,16 @@ function Root() {
   }, []);
 
   useEffect(() => {
-    // 1. visibilitychange — fires when tab/window visibility changes
+    // ── Event-based detection ──────────────────────────────────────────────
     const onVisibility = () => {
       if (document.visibilityState === 'hidden') handleHide();
       else handleReturn();
     };
     document.addEventListener('visibilitychange', onVisibility);
-
-    // 2. window focus — fires when window regains focus
     window.addEventListener('focus', handleReturn);
-
-    // 3. pageshow — fires on BFCache restore (back/forward cache)
     window.addEventListener('pageshow', handleReturn);
 
-    // 4. Telegram-specific 'activated' event (fires when mini app becomes active)
+    // Telegram-specific activated/deactivated events
     try {
       const tg = (window as any).Telegram?.WebApp;
       if (tg?.onEvent) {
@@ -48,10 +50,27 @@ function Root() {
       }
     } catch (_) {}
 
+    // ── Heartbeat suspension detector ─────────────────────────────────────
+    // The ONLY reliable way to detect Android JS engine suspension.
+    // While JS is suspended, this interval doesn't fire.
+    // When JS resumes, if the gap is > threshold → force remount.
+    let lastBeat = Date.now();
+    const beatId = setInterval(() => {
+      const now = Date.now();
+      const gap = now - lastBeat;
+      lastBeat = now;
+      if (gap > BACKGROUND_THRESHOLD_MS) {
+        // JS engine was suspended for too long — force fresh remount
+        try { (window as any).Telegram?.WebApp?.expand(); } catch (_) {}
+        setAppKey(k => k + 1);
+      }
+    }, 3000); // check every 3 seconds
+
     return () => {
       document.removeEventListener('visibilitychange', onVisibility);
       window.removeEventListener('focus', handleReturn);
       window.removeEventListener('pageshow', handleReturn);
+      clearInterval(beatId);
       try {
         const tg = (window as any).Telegram?.WebApp;
         if (tg?.offEvent) {
