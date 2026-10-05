@@ -74,50 +74,49 @@ export default function BingoGame() {
 
   const urlStake = searchParams.get("stake");
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
-  const [soundEnabled, setSoundEnabled] = useState(false); // Default silent
+  const [soundEnabled, setSoundEnabled] = useState(true); // Default ON
 
   const audioCtxRef = useRef<AudioContext | null>(null);
 
+  // Unlock Web Audio on any tap (required by mobile browsers)
   const initWebAudio = () => {
-    if (!audioCtxRef.current) {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContextClass) {
-        audioCtxRef.current = new AudioContextClass();
+    try {
+      if (!audioCtxRef.current) {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioContextClass) audioCtxRef.current = new AudioContextClass();
       }
-    }
-    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume();
-    }
+      if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume();
+    } catch(e) {}
   };
 
   const toggleSound = () => {
     const next = !soundEnabled;
     setSoundEnabled(next);
-    if (next) initWebAudio();
+    initWebAudio();
   };
+
+  const playAudioText = useCallback(async (text: string, pitchRate = 0.72, gain = 5.0) => {
+    if (!audioCtxRef.current) return;
+    try {
+      const res = await fetch(`${API}/bingo/tts?text=` + encodeURIComponent(text));
+      if (!res.ok) return;
+      const buf = await audioCtxRef.current.decodeAudioData(await res.arrayBuffer());
+      const src = audioCtxRef.current.createBufferSource();
+      src.buffer = buf;
+      src.playbackRate.value = pitchRate; // 0.72 = very deep male voice
+      const gn = audioCtxRef.current.createGain();
+      gn.gain.value = gain; // 5x louder than default
+      src.connect(gn);
+      gn.connect(audioCtxRef.current.destination);
+      src.start(0);
+    } catch(e) { console.error('Audio err', e); }
+  }, []);
 
   const speakNumber = useCallback(async (num: number) => {
     if (!soundEnabled || !audioCtxRef.current) return;
-    try {
-      const letter = BINGO_LETTERS[Math.floor((num - 1) / 15)];
-      const amLetter = getAmharicLetter(letter);
-      const text = amLetter + '፣ ' + num;
-      const res = await fetch(`${API}/bingo/tts?text=` + encodeURIComponent(text));
-      if (!res.ok) return;
-      const arrayBuffer = await res.arrayBuffer();
-      const audioBuffer = await audioCtxRef.current.decodeAudioData(arrayBuffer);
-      const source = audioCtxRef.current.createBufferSource();
-      source.buffer = audioBuffer;
-      source.playbackRate.value = 0.85;
-      const gainNode = audioCtxRef.current.createGain();
-      gainNode.gain.value = 3.0;
-      source.connect(gainNode);
-      gainNode.connect(audioCtxRef.current.destination);
-      source.start(0);
-    } catch (e) {
-      console.error('Audio error', e);
-    }
-  }, [soundEnabled]);
+    const letter = BINGO_LETTERS[Math.floor((num - 1) / 15)];
+    await playAudioText(getAmharicLetter(letter) + '፣ ' + num, 0.72, 5.0);
+  }, [soundEnabled, playAudioText]);
 
   useEffect(() => {
     if (!user?.telegram_id) return;
@@ -198,22 +197,9 @@ export default function BingoGame() {
       const iWon = game.winner_telegram_id === String(user?.telegram_id);
       let isMounted = true;
 
-      // Play BINGO sound
+      // Play BINGO sound with deep male voice
       if (soundEnabled && audioCtxRef.current) {
-        fetch(`${API}/bingo/tts?text=` + encodeURIComponent("ቢንጎ"))
-          .then(r => r.arrayBuffer())
-          .then(ab => audioCtxRef.current!.decodeAudioData(ab))
-          .then(audioBuf => {
-            if (!isMounted) return;
-            const src = audioCtxRef.current!.createBufferSource();
-            src.buffer = audioBuf;
-            src.playbackRate.value = 0.85;
-            const gn = audioCtxRef.current!.createGain();
-            gn.gain.value = 3.0;
-            src.connect(gn);
-            gn.connect(audioCtxRef.current!.destination);
-            src.start(0);
-          }).catch(()=>{});
+        playAudioText("ቢንጎ", 0.72, 5.0).catch(()=>{});
       }
 
       fetch(`${API}/bingo/card?game_id=${game.id}&cartela=${game.winner_cartela}`, { headers: hdrs() })
@@ -471,7 +457,7 @@ export default function BingoGame() {
   );
 
   return (
-    <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-hidden">
+    <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-hidden" onClick={initWebAudio}>
       {/* Header Bar */}
       <div className="sticky top-0 z-40 bg-[#05081a] flex flex-col shrink-0">
         <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
