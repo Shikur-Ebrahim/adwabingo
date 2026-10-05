@@ -167,7 +167,7 @@ export default function Profile() {
               <ChevronRight size={12} className="text-slate-300" />
             </button>
 
-            <button onClick={() => { if(typeof WebApp !== 'undefined') WebApp.showAlert('Games Report coming soon!') }} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 dark:bg-slate-900 rounded-lg transition-colors active:bg-slate-100 dark:bg-slate-800 text-left">
+            <button onClick={() => navigateTo('/games-report')} className="w-full flex items-center px-2 py-1.5 hover:bg-slate-50 dark:bg-slate-900 rounded-lg transition-colors active:bg-slate-100 dark:bg-slate-800 text-left">
               <div className="w-7 h-7 rounded-full bg-teal-50 text-teal-500 flex items-center justify-center mr-2.5 shrink-0">
                 <BarChart2 size={14} />
               </div>
