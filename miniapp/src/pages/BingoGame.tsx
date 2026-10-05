@@ -110,35 +110,55 @@ export default function BingoGame() {
 
   const urlStake = searchParams.get("stake");
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
-  const [livePools, setLivePools] = useState<Record<number, number>>({ 10: 0, 20: 0, 50: 0, 100: 0 });
+  const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string }>>({});
+  const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [volume, setVolume] = useState(1.0);
 
-  // Fetch and listen for active derash (prize pools) on the stake selection screen
+  // Fetch and listen for active derash & status on stake selection screen
   useEffect(() => {
     if (selectedStake) return;
     let isMounted = true;
     
     const fetchPools = async () => {
-      const { data } = await supabase.from('active_bingo_games').select('stake, prize_pool').eq('status', 'waiting');
+      // Fetch any active games (waiting or calling)
+      const { data } = await supabase.from('active_bingo_games').select('stake, prize_pool, start_at, status');
       if (data && isMounted) {
-        const p: Record<number, number> = { 10: 0, 20: 0, 50: 0, 100: 0 };
-        data.forEach(g => { p[g.stake] = g.prize_pool; });
-        setLivePools(p);
+        const p: Record<number, any> = {};
+        data.forEach(g => { p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status }; });
+        setHomeGames(p);
       }
     };
     fetchPools();
 
+    // Listen to actual bingo_games table because active_bingo_games view might not trigger realtime properly
     const ch = supabase.channel('home_pools')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'active_bingo_games', filter: "status=eq.waiting" }, (payload) => {
-        if (!isMounted) return;
-        const game = payload.new as any;
-        if (game && game.stake) setLivePools(prev => ({ ...prev, [game.stake]: game.prize_pool }));
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_games' }, () => {
+        if (isMounted) fetchPools();
       })
       .subscribe();
 
     return () => { isMounted = false; supabase.removeChannel(ch); };
   }, [selectedStake]);
+
+  // Tick timer for home screen
+  useEffect(() => {
+    if (selectedStake) return;
+    const update = () => {
+      setHomeTimeLeft(prev => {
+        const next: Record<number, number> = {};
+        for (const [stake, g] of Object.entries(homeGames)) {
+          if (g.status === 'waiting' && g.start_at) {
+            next[Number(stake)] = Math.max(0, Math.ceil((new Date(g.start_at).getTime() - Date.now()) / 1000));
+          }
+        }
+        return next;
+      });
+    };
+    update();
+    const id = setInterval(update, 500);
+    return () => clearInterval(id);
+  }, [selectedStake, homeGames]);
   const [audioAvailable, setAudioAvailable] = useState(false);
   const [lastCallNum, setLastCallNum] = useState<number | null>(null);
   const [callAnim, setCallAnim] = useState(false);
@@ -402,36 +422,70 @@ export default function BingoGame() {
 
         <div className="relative z-10 flex flex-col h-full">
           <Header />
-          <div className="px-4 pt-2">
-            <div className="w-full rounded-xl overflow-hidden border border-white/10 shadow-[0_0_20px_rgba(99,102,241,0.2)]" style={{ height: '110px' }}>
-              <img src="/hero.png" alt="ADWA Bingo" className="w-full h-full object-cover object-center" />
-            </div>
+          
+          {/* Seamless White Banner for Logo */}
+          <div className="w-full bg-white flex justify-center py-2 shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-20 shrink-0">
+            <img src="/hero.png" alt="ADWA Bingo" className="max-w-[340px] h-[90px] object-contain" />
           </div>
-          <p className="text-center text-white/40 text-[10px] uppercase tracking-widest font-bold pt-2 pb-1">Select Stake & Win Big</p>
+
+          <p className="text-center text-white/40 text-[10px] uppercase tracking-widest font-bold pt-3 pb-1">Select Stake & Win Big</p>
+          
           <div className="flex-1 grid grid-cols-2 gap-3 px-4 pb-2 min-h-0">
             {STAKE_OPTIONS.map(opt => {
-              const pool = livePools[opt.value] || 0;
+              const hg = homeGames[opt.value];
+              const pool = hg?.pool || 0;
               const hasGame = pool > 0;
+              const isWaiting = hg?.status === 'waiting';
+              const isCalling = hg?.status === 'calling';
+              const tl = homeTimeLeft[opt.value] || 0;
+              
+              let statusTxt = "-";
+              let statusCls = "text-white/20";
+              if (isWaiting) {
+                statusTxt = tl > 86400 ? "..." : `${tl}s`;
+                statusCls = "text-orange-400";
+              } else if (isCalling) {
+                statusTxt = "Active";
+                statusCls = "text-emerald-400";
+              }
+
               return (
                 <button key={opt.value} onClick={() => { setSelectedStake(opt.value); initWebAudio(); }}
-                  className="relative overflow-hidden bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col items-center justify-center active:scale-95 transition-all duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${opt.color} opacity-25`}></div>
-                  {hasGame ? (
-                    <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-950 text-[8px] font-black px-2 py-0.5 rounded-bl-lg rounded-tr-2xl z-20 animate-pulse">🏆 {pool} ETB</div>
-                  ) : (
-                    <div className="absolute top-0 right-0 bg-emerald-500/90 text-white text-[8px] font-black px-2 py-0.5 rounded-bl-lg rounded-tr-2xl z-20">NEW</div>
-                  )}
-                  <span className="text-white font-black text-4xl relative z-10 leading-none">{opt.value}</span>
-                  <span className="text-white/50 font-bold text-[9px] uppercase tracking-widest relative z-10 mt-0.5">Stake ETB</span>
-                  <div className="relative z-10 mt-1">
-                    {hasGame ? <span className="text-yellow-300 text-[9px] font-black uppercase">🔥 Join Now!</span>
-                      : <span className="text-white/25 text-[9px] font-bold uppercase">Start Match</span>}
+                  className="relative overflow-hidden bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col active:scale-95 transition-all duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
+                  <div className={`absolute inset-0 bg-gradient-to-br ${opt.color} opacity-20`}></div>
+                  
+                  {/* Top: STAKE */}
+                  <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10 pt-2">
+                    <span className="text-white/40 font-bold text-[8px] uppercase tracking-widest">Stake</span>
+                    <span className="text-white font-black text-3xl leading-none mt-0.5">{opt.value}</span>
+                    <span className="text-white/40 font-bold text-[8px] uppercase tracking-widest mt-0.5">ETB</span>
+                  </div>
+
+                  {/* Middle: Derash & Status split */}
+                  <div className="w-full bg-black/40 border-t border-b border-white/10 flex h-[35px] shrink-0 relative z-10">
+                    <div className="flex-1 flex flex-col items-center justify-center border-r border-white/10">
+                      <span className="text-white/40 text-[7px] font-bold uppercase tracking-wider">Derash</span>
+                      <span className={`text-[10px] font-black ${hasGame ? 'text-yellow-400 animate-pulse' : 'text-white/20'}`}>{pool > 0 ? `${pool} ETB` : '-'}</span>
+                    </div>
+                    <div className="flex-1 flex flex-col items-center justify-center">
+                      <span className="text-white/40 text-[7px] font-bold uppercase tracking-wider">Status</span>
+                      <span className={`text-[10px] font-black ${statusCls}`}>{statusTxt}</span>
+                    </div>
+                  </div>
+
+                  {/* Bottom: Action */}
+                  <div className="w-full h-[30px] flex items-center justify-center relative z-10">
+                    {isWaiting ? (
+                      <span className="text-yellow-300 text-[9px] font-black uppercase tracking-wider">🔥 Join Now</span>
+                    ) : (
+                      <span className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Start Match</span>
+                    )}
                   </div>
                 </button>
               );
             })}
           </div>
-          <div className="pb-3 flex justify-center shrink-0">
+          <div className="pb-3 flex justify-center shrink-0 relative z-10 mt-1">
             <button onClick={() => navigate(-1)} className="px-6 py-1.5 bg-white/5 border border-white/10 rounded-full text-white/40 text-[10px] font-bold uppercase tracking-widest active:scale-95">← Back to Games</button>
           </div>
         </div>
