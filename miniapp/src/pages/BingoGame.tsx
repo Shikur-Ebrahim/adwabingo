@@ -391,12 +391,20 @@ export default function BingoGame() {
 
   if (!selectedStake) {
     return (
-      <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-y-auto relative" onClick={initWebAudio}>
-        {/* Transparent faint cartela background */}
-        <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }}></div>
-        <div className="absolute inset-0 z-0 bg-gradient-to-t from-[#05081a] via-transparent to-[#05081a] pointer-events-none"></div>
+      <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-hidden relative" onClick={initWebAudio}>
+        
+        {/* Background: real 150-cartela grid rendered very faintly */}
+        <div className="absolute inset-0 z-0 pointer-events-none flex flex-col justify-center opacity-[0.07]">
+          <div className="grid gap-[2px] p-[2px]" style={{ gridTemplateColumns: 'repeat(15, minmax(0, 1fr))' }}>
+            {Array.from({ length: 150 }, (_, i) => (
+              <div key={i} className="aspect-square flex items-center justify-center rounded-sm bg-white text-[#05081a] font-black text-[7px]">{i + 1}</div>
+            ))}
+          </div>
+        </div>
+        {/* top + bottom fade overlay */}
+        <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#05081a] via-transparent to-[#05081a]"></div>
 
-        <div className="relative z-10 flex flex-col h-full">
+        <div className="relative z-10 flex flex-col h-full overflow-y-auto">
           <Header />
           <div className="flex-1 flex flex-col items-center justify-center p-6 pb-12">
             <div className="w-20 h-20 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full flex items-center justify-center mb-4 border border-white/10 shadow-[0_0_30px_rgba(99,102,241,0.2)]">
@@ -404,35 +412,42 @@ export default function BingoGame() {
             </div>
             <h2 className="text-white font-black text-3xl mb-1 tracking-tight">ADWA BINGO</h2>
             <p className="text-white/50 text-xs uppercase tracking-widest mb-8 font-bold">Select Stake & Win Big</p>
-            
+
             <div className="grid grid-cols-2 gap-4 w-full max-w-[320px]">
               {STAKE_OPTIONS.map(opt => {
                 const pool = livePools[opt.value] || 0;
+                const hasGame = pool > 0;
                 return (
                   <button key={opt.value} onClick={() => { setSelectedStake(opt.value); initWebAudio(); }}
-                    className="relative overflow-hidden bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-5 flex flex-col items-center justify-center gap-1 active:scale-95 transition-all duration-300 hover:bg-white/10 group shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+                    className="relative overflow-hidden bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-5 flex flex-col items-center justify-center gap-1 active:scale-95 transition-all duration-300 group shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
                     <div className={`absolute inset-0 bg-gradient-to-br ${opt.color} opacity-20 group-hover:opacity-30 transition-opacity`}></div>
-                    
-                    {/* Live Derash Badge */}
-                    {pool > 0 && (
-                      <div className="absolute top-0 right-0 bg-yellow-500 text-yellow-950 text-[10px] font-black px-3 py-1 rounded-bl-xl rounded-tr-3xl shadow-sm z-20">
-                        {pool} ETB DERASH
+
+                    {/* Badge: DERASH when game is live, NEW when not */}
+                    {hasGame ? (
+                      <div className="absolute top-0 right-0 bg-yellow-400 text-yellow-950 text-[9px] font-black px-2.5 py-1 rounded-bl-xl rounded-tr-3xl z-20 flex items-center gap-1 animate-pulse">
+                        🏆 {pool} ETB
+                      </div>
+                    ) : (
+                      <div className="absolute top-0 right-0 bg-emerald-500 text-white text-[9px] font-black px-2.5 py-1 rounded-bl-xl rounded-tr-3xl z-20">
+                        NEW
                       </div>
                     )}
-                    
-                    <span className="text-white font-black text-3xl relative z-10 drop-shadow-md mt-2">{opt.value}</span>
+
+                    <span className="text-white font-black text-3xl relative z-10 drop-shadow-md mt-3">{opt.value}</span>
                     <span className="text-white/60 font-bold text-[10px] uppercase tracking-widest relative z-10">Stake ETB</span>
-                    
-                    {pool === 0 && (
-                      <div className="absolute bottom-2 text-[8px] text-white/30 font-bold uppercase tracking-wider relative z-10 mt-2">
-                        Start Match
-                      </div>
-                    )}
+
+                    <div className="relative z-10 mt-1">
+                      {hasGame ? (
+                        <span className="text-yellow-300 text-[9px] font-black uppercase tracking-wider">🔥 Join now!</span>
+                      ) : (
+                        <span className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Start match</span>
+                      )}
+                    </div>
                   </button>
                 );
               })}
             </div>
-            
+
             <button onClick={() => navigate(-1)} className="mt-10 px-8 py-3 bg-white/5 backdrop-blur-md border border-white/10 rounded-full text-white/60 text-xs font-bold tracking-widest uppercase active:scale-95 transition-all hover:bg-white/10 hover:text-white shadow-lg">
               Back to Games
             </button>
