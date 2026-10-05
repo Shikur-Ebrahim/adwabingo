@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { HashRouter, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { Gamepad2, Wallet, Trophy, User } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 import { useGameStore } from './store/gameStore';
@@ -140,6 +140,14 @@ function App() {
     WebApp.expand();
     // Always start with profile closed (prevent persisted open state)
     setProfileOpen(false);
+
+    // CRITICAL: Reset URL to root on every app open.
+    // Telegram WebView caches the last URL (e.g. /bingo/live).
+    // When the user comes back, it restores that URL, breaking navigation.
+    // We force-reset to '/' so the app always starts clean.
+    if (window.location.pathname !== '/') {
+      window.history.replaceState(null, '', '/');
+    }
     
     // Apply dark mode on initial load
     if (isDarkMode) {
@@ -199,7 +207,7 @@ function App() {
   }
 
   return (
-    <HashRouter>
+    <BrowserRouter>
       <TelegramBackButton />
       <ScrollToTop />
       <div className="min-h-screen bg-slate-50 pb-20 font-sans text-slate-800">
@@ -229,7 +237,7 @@ function App() {
         <Profile />
         <Navigation />
       </div>
-    </HashRouter>
+    </BrowserRouter>
   );
 }
 
