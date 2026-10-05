@@ -150,8 +150,8 @@ export default function Profile() {
             </button>
           </div>
 
-          {/* List items */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl px-1.5 py-1 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col shrink-0">
+          {/* List items — flex-1 fills all remaining height, justify-around spreads evenly */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl px-1.5 shadow-sm border border-gray-100 dark:border-slate-700 flex flex-col flex-1 justify-around py-1">
 
             <button onClick={() => navigateTo('/deposit-history')} className={row}>
               <div className={icon('bg-blue-50 text-blue-500')}><History size={12} /></div>
