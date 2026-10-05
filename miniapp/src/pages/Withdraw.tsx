@@ -98,9 +98,19 @@ export default function Withdraw() {
     setError('');
 
     const amtNum = parseFloat(amount);
-    if (isNaN(amtNum) || amtNum <= 0) { setError('Please enter a valid amount.'); return; }
-    if (amtNum < selected.min_withdrawal) { setError(`Minimum withdrawal is ${selected.min_withdrawal} ETB`); return; }
-    if (amtNum > userBalance) { setError(`Insufficient balance. Your balance is ${userBalance.toLocaleString('en-US')} ETB`); return; }
+    // Check for empty / invalid number first
+    if (!amount || amount.trim() === '' || isNaN(amtNum) || amtNum <= 0) {
+      setError('Please enter a valid withdrawal amount.');
+      return;
+    }
+    if (amtNum < selected.min_withdrawal) {
+      setError(`Minimum withdrawal for this method is ${selected.min_withdrawal.toLocaleString('en-US')} ETB`);
+      return;
+    }
+    if (amtNum > userBalance) {
+      setError(`Insufficient balance. Your balance is ${userBalance.toLocaleString('en-US')} ETB`);
+      return;
+    }
     if (!accountName.trim()) { setError('Please enter your full name.'); return; }
     if (!accountNumber.trim()) { setError('Please enter your account/phone number.'); return; }
 
@@ -259,7 +269,10 @@ export default function Withdraw() {
                 />
               </div>
               <div className="flex justify-between mt-1">
-                <p className="text-xs text-slate-400">Min: {selected.min_withdrawal} ETB</p>
+                <p className={`text-xs font-bold ${amount && parseFloat(amount) > 0 && parseFloat(amount) < selected.min_withdrawal ? 'text-red-500' : 'text-slate-400'}`}>
+                  Min: {selected.min_withdrawal.toLocaleString('en-US')} ETB
+                  {amount && parseFloat(amount) > 0 && parseFloat(amount) < selected.min_withdrawal && ' ⚠️ Too low'}
+                </p>
                 <button
                   type="button"
                   onClick={() => setAmount(String(userBalance))}
@@ -320,7 +333,7 @@ export default function Withdraw() {
                   : `bg-gradient-to-r ${gradient}`
               }`}
             >
-              {submitting ? 'Processing...' : `Withdraw ${amount ? parseFloat(amount).toLocaleString('en-US') : '0'} ETB`}
+              {submitting ? 'Processing...' : `Withdraw ${(amount && !isNaN(parseFloat(amount))) ? parseFloat(amount).toLocaleString('en-US') : '0'} ETB`}
             </button>
           </div>
         </form>
