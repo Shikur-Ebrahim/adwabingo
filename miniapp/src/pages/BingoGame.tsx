@@ -121,8 +121,8 @@ export default function BingoGame() {
     let isMounted = true;
     
     const fetchPools = async () => {
-      // Fetch any active games (waiting or calling)
-      const { data } = await supabase.from('active_bingo_games').select('stake, prize_pool, start_at, status');
+      // Fetch from real table, active games only
+      const { data } = await supabase.from('bingo_games').select('stake, prize_pool, start_at, status').in('status', ['waiting', 'calling']);
       if (data && isMounted) {
         const p: Record<number, any> = {};
         data.forEach(g => { p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status }; });
@@ -411,24 +411,34 @@ export default function BingoGame() {
 
   if (!selectedStake) {
     return (
-      <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-hidden relative" onClick={initWebAudio}>
-
-        {/* Full-screen 150-cartela grid background */}
-        <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.12]" style={{ display: 'grid', gridTemplateColumns: 'repeat(15, minmax(0, 1fr))', gap: '2px', padding: '2px' }}>
+      <div className="h-[calc(100dvh-80px)] w-full bg-white flex flex-col select-none overflow-hidden relative" onClick={initWebAudio}>
+        
+        {/* Background grid (Light mode) */}
+        <div className="absolute inset-0 z-0 pointer-events-none opacity-[0.04]" style={{ display: 'grid', gridTemplateColumns: 'repeat(15, minmax(0, 1fr))', gap: '2px', padding: '2px' }}>
           {Array.from({ length: 150 }, (_, i) => (
-            <div key={i} className="flex items-center justify-center bg-white/80 rounded-[3px] text-[#05081a] font-black" style={{ fontSize: '6px' }}>{i + 1}</div>
+            <div key={i} className="flex items-center justify-center bg-black rounded-[3px] text-black font-black" style={{ fontSize: '6px' }}>{i + 1}</div>
           ))}
         </div>
 
         <div className="relative z-10 flex flex-col h-full">
-          <Header />
+          {/* Light Header specifically for home screen */}
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between shrink-0 bg-white">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg">{initial}</div>
+              <p className="font-bold text-sm uppercase tracking-wider text-slate-800">{user?.first_name || "USER"}</p>
+            </div>
+            <div className="flex items-center space-x-4 text-right">
+              <div className="flex flex-col items-center"><Gift size={14} className="text-purple-600 mb-0.5" /><p className="text-xs font-bold text-slate-700">{fm(user?.bonus_balance)} ETB</p></div>
+              <div className="flex flex-col items-end"><p className="text-[11px] text-slate-500">Wallet</p><p className="text-sm font-bold text-green-600">{fm(user?.main_balance)} ETB</p></div>
+            </div>
+          </div>
           
           {/* Seamless White Banner for Logo */}
-          <div className="w-full bg-white flex justify-center py-2 shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-20 shrink-0">
+          <div className="w-full bg-white flex justify-center py-2 z-20 shrink-0">
             <img src="/hero.png" alt="ADWA Bingo" className="max-w-[340px] h-[90px] object-contain" />
           </div>
 
-          <p className="text-center text-white/40 text-[10px] uppercase tracking-widest font-bold pt-3 pb-1">Select Stake & Win Big</p>
+          <p className="text-center text-slate-400 text-[10px] uppercase tracking-widest font-bold pt-3 pb-1">Select Stake & Win Big</p>
           
           <div className="flex-1 grid grid-cols-2 gap-3 px-4 pb-2 min-h-0">
             {STAKE_OPTIONS.map(opt => {
@@ -440,45 +450,45 @@ export default function BingoGame() {
               const tl = homeTimeLeft[opt.value] || 0;
               
               let statusTxt = "-";
-              let statusCls = "text-white/20";
+              let statusCls = "text-slate-400";
               if (isWaiting) {
-                statusTxt = tl > 86400 ? "..." : `${tl}s`;
-                statusCls = "text-orange-400";
+                statusTxt = tl > 86400 ? "Waiting..." : `${tl}s`;
+                statusCls = "text-orange-500";
               } else if (isCalling) {
                 statusTxt = "Active";
-                statusCls = "text-emerald-400";
+                statusCls = "text-emerald-500";
               }
 
               return (
                 <button key={opt.value} onClick={() => { setSelectedStake(opt.value); initWebAudio(); }}
-                  className="relative overflow-hidden bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl flex flex-col active:scale-95 transition-all duration-300 shadow-[0_4px_20px_rgba(0,0,0,0.4)]">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${opt.color} opacity-20`}></div>
+                  className="relative overflow-hidden bg-white border border-slate-200 rounded-2xl flex flex-col active:scale-95 transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.08)]">
+                  <div className={`absolute inset-0 bg-gradient-to-br ${opt.color} opacity-10`}></div>
                   
                   {/* Top: STAKE */}
                   <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10 pt-2">
-                    <span className="text-white/40 font-bold text-[8px] uppercase tracking-widest">Stake</span>
-                    <span className="text-white font-black text-3xl leading-none mt-0.5">{opt.value}</span>
-                    <span className="text-white/40 font-bold text-[8px] uppercase tracking-widest mt-0.5">ETB</span>
+                    <span className="text-slate-500 font-bold text-[8px] uppercase tracking-widest">Stake</span>
+                    <span className="text-slate-800 font-black text-4xl leading-none mt-1">{opt.value}</span>
+                    <span className="text-slate-500 font-bold text-[8px] uppercase tracking-widest mt-1">ETB</span>
                   </div>
 
                   {/* Middle: Derash & Status split */}
-                  <div className="w-full bg-black/40 border-t border-b border-white/10 flex h-[35px] shrink-0 relative z-10">
-                    <div className="flex-1 flex flex-col items-center justify-center border-r border-white/10">
-                      <span className="text-white/40 text-[7px] font-bold uppercase tracking-wider">Derash</span>
-                      <span className={`text-[10px] font-black ${hasGame ? 'text-yellow-400 animate-pulse' : 'text-white/20'}`}>{pool > 0 ? `${pool} ETB` : '-'}</span>
+                  <div className="w-full bg-slate-50 border-t border-b border-slate-100 flex h-[35px] shrink-0 relative z-10">
+                    <div className="flex-1 flex flex-col items-center justify-center border-r border-slate-100">
+                      <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">Derash</span>
+                      <span className={`text-[10px] font-black ${hasGame ? 'text-yellow-600 animate-pulse' : 'text-slate-400'}`}>{pool > 0 ? `${pool} ETB` : '-'}</span>
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center">
-                      <span className="text-white/40 text-[7px] font-bold uppercase tracking-wider">Status</span>
+                      <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">Status</span>
                       <span className={`text-[10px] font-black ${statusCls}`}>{statusTxt}</span>
                     </div>
                   </div>
 
                   {/* Bottom: Action */}
-                  <div className="w-full h-[30px] flex items-center justify-center relative z-10">
+                  <div className="w-full h-[30px] flex items-center justify-center relative z-10 bg-white">
                     {isWaiting ? (
-                      <span className="text-yellow-300 text-[9px] font-black uppercase tracking-wider">🔥 Join Now</span>
+                      <span className="text-orange-500 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">🔥 Join Now</span>
                     ) : (
-                      <span className="text-white/30 text-[9px] font-bold uppercase tracking-wider">Start Match</span>
+                      <span className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Start Match</span>
                     )}
                   </div>
                 </button>
@@ -486,7 +496,7 @@ export default function BingoGame() {
             })}
           </div>
           <div className="pb-3 flex justify-center shrink-0 relative z-10 mt-1">
-            <button onClick={() => navigate(-1)} className="px-6 py-1.5 bg-white/5 border border-white/10 rounded-full text-white/40 text-[10px] font-bold uppercase tracking-widest active:scale-95">← Back to Games</button>
+            <button onClick={() => navigate(-1)} className="px-6 py-1.5 bg-slate-100 border border-slate-200 rounded-full text-slate-500 text-[10px] font-bold uppercase tracking-widest active:scale-95 shadow-sm">← Back to Games</button>
           </div>
         </div>
       </div>
