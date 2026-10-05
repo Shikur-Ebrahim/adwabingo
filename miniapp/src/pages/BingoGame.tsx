@@ -101,14 +101,18 @@ export default function BingoGame() {
     try {
       const letter = BINGO_LETTERS[Math.floor((num - 1) / 15)];
       const amLetter = getAmharicLetter(letter);
-      const text = `${amLetter} ${num}`;
+      const text = amLetter + '፣ ' + num;
       const res = await fetch(`${API}/bingo/tts?text=` + encodeURIComponent(text));
       if (!res.ok) return;
       const arrayBuffer = await res.arrayBuffer();
       const audioBuffer = await audioCtxRef.current.decodeAudioData(arrayBuffer);
       const source = audioCtxRef.current.createBufferSource();
       source.buffer = audioBuffer;
-      source.connect(audioCtxRef.current.destination);
+      source.playbackRate.value = 0.85;
+      const gainNode = audioCtxRef.current.createGain();
+      gainNode.gain.value = 3.0;
+      source.connect(gainNode);
+      gainNode.connect(audioCtxRef.current.destination);
       source.start(0);
     } catch (e) {
       console.error('Audio error', e);
@@ -193,6 +197,25 @@ export default function BingoGame() {
     if (game?.status === 'finished' && game.winner_cartela) {
       const iWon = game.winner_telegram_id === String(user?.telegram_id);
       let isMounted = true;
+
+      // Play BINGO sound
+      if (soundEnabled && audioCtxRef.current) {
+        fetch(`${API}/bingo/tts?text=` + encodeURIComponent("ቢንጎ"))
+          .then(r => r.arrayBuffer())
+          .then(ab => audioCtxRef.current!.decodeAudioData(ab))
+          .then(audioBuf => {
+            if (!isMounted) return;
+            const src = audioCtxRef.current!.createBufferSource();
+            src.buffer = audioBuf;
+            src.playbackRate.value = 0.85;
+            const gn = audioCtxRef.current!.createGain();
+            gn.gain.value = 3.0;
+            src.connect(gn);
+            gn.connect(audioCtxRef.current!.destination);
+            src.start(0);
+          }).catch(()=>{});
+      }
+
       fetch(`${API}/bingo/card?game_id=${game.id}&cartela=${game.winner_cartela}`, { headers: hdrs() })
         .then(r => r.json())
         .then(data => {
@@ -205,18 +228,14 @@ export default function BingoGame() {
             iWon,
             called: [...game.called_numbers]
           });
-          setTimeout(() => {
-            if (isMounted) { setCelebration(null); fetchState(); refreshUser(); }
-          }, 3000); // Show for 3 seconds
         }).catch(() => {
           if (isMounted) {
             setCelebration({ winner_name: game.winner_first_name || 'Player', winner_cartela: game.winner_cartela!, winner_prize: game.winner_prize!, winner_matrix: null, iWon, called: [...game.called_numbers] });
-            setTimeout(() => { if (isMounted) { setCelebration(null); fetchState(); refreshUser(); } }, 3000);
           }
         });
       return () => { isMounted = false; };
     }
-  }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name, game?.winner_prize, game?.winner_telegram_id, game?.called_numbers, user?.telegram_id, fetchState, refreshUser]);
+  }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name, game?.winner_prize, game?.winner_telegram_id, game?.called_numbers, user?.telegram_id, soundEnabled]);
 
   const joinGame = async (seat: number) => {
     if (!game || game.status !== "waiting") return;
@@ -540,7 +559,12 @@ export default function BingoGame() {
               );
             })()}
             
-            <p className="text-slate-500 text-xs font-bold animate-pulse">Starting next round in 3 seconds...</p>
+            <button 
+              onClick={() => { setCelebration(null); fetchState(); refreshUser(); }} 
+              className="mt-4 w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl font-black text-white text-lg active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+            >
+              PLAY NEXT ROUND
+            </button>
           </div>
         </div>
       )}
