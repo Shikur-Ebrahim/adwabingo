@@ -273,16 +273,15 @@ export default function BingoGame() {
 
   const hasCelebratedRef = useRef<string | null>(null);
 
+  // Fire celebration when game finishes — play sound + fetch winner card
   useEffect(() => {
     if (game?.status === 'finished' && game.winner_cartela) {
       const iWon = game.winner_telegram_id === String(user?.telegram_id);
       let isMounted = true;
-      
       if (hasCelebratedRef.current !== game.id) {
         hasCelebratedRef.current = game.id;
         playSpecial('bingo_win');
       }
-
       fetch(`${API}/bingo/card?game_id=${game.id}&cartela=${game.winner_cartela}`, { headers: hdrs() })
         .then(r => r.json())
         .then(data => {
@@ -297,19 +296,22 @@ export default function BingoGame() {
         }).catch(() => {
           if (isMounted) setCelebration({ winner_name: game.winner_first_name || 'Player', winner_cartela: game.winner_cartela!, winner_prize: game.winner_prize!, winner_matrix: null, iWon, called: [...game.called_numbers] });
         });
-
-      // Automatically dismiss the celebration screen after 3 seconds
-      const timer = setTimeout(() => {
-        if (isMounted) {
-          setCelebration(null);
-          fetchState();
-          refreshUser();
-        }
-      }, 3000);
-
-      return () => { isMounted = false; clearTimeout(timer); };
+      return () => { isMounted = false; };
     }
-  }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name, game?.winner_prize, game?.winner_telegram_id, game?.called_numbers, user?.telegram_id, playSpecial]);
+  }, [game?.status, game?.id, game?.winner_cartela]);
+
+  // Auto-dismiss celebration after 2 seconds — separate effect so it's never reset by other deps
+  useEffect(() => {
+    if (!celebration) return;
+    const timer = setTimeout(() => {
+      setCelebration(null);
+      setMyCard(null);
+      setTaken([]);
+      fetchState();
+      refreshUser();
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, [celebration]);
 
   const joinGame = async (seat: number) => {
     initWebAudio();
@@ -624,10 +626,7 @@ export default function BingoGame() {
                 </div>
               );
             })()}
-            <button onClick={() => { setCelebration(null); fetchState(); refreshUser(); }}
-              className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl font-black text-white text-lg active:scale-95 shadow-[0_0_20px_rgba(16,185,129,0.4)]">
-              PLAY NEXT ROUND
-            </button>
+            <p className="text-white/40 text-xs font-bold animate-pulse mt-1">Returning to game...</p>
           </div>
         </div>
       )}
