@@ -13,9 +13,9 @@ export const DEFAULT_SETTINGS = {
   max_players:       150,
   prize_percent:     80,   // % of total stakes (for 3+ players)
   early_call_8_enabled: false,
-  early_call_8_rewards: { 10: 100, 20: 200, 50: 500, 100: 1000 },
+  early_call_8_rewards: { '10': 100, '20': 200, '50': 500, '100': 1000 } as Record<string, number>,
   early_call_10_enabled: false,
-  early_call_10_rewards: { 10: 70, 20: 210, 50: 350, 100: 700 },
+  early_call_10_rewards: { '10': 70, '20': 210, '50': 350, '100': 700 } as Record<string, number>,
 };
 
 // Cache so BingoEngine doesn't hammer DB every tick

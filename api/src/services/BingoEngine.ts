@@ -180,7 +180,8 @@ class BingoEngine {
 
       // Check 8-call
       if (cfg.early_call_8_enabled && called.length <= 8) {
-        const rew = cfg.early_call_8_rewards[String(stake)] || cfg.early_call_8_rewards[stake];
+        const rewards8 = cfg.early_call_8_rewards as Record<string, number>;
+        const rew = rewards8[String(stake)] || rewards8[stake.toString()];
         if (rew) {
           finalPrize = Number(rew);
           isEarlyCall = true;
@@ -189,7 +190,8 @@ class BingoEngine {
       }
       // Check 10-call (only if not already an 8-call win)
       else if (cfg.early_call_10_enabled && called.length <= 10) {
-        const rew = cfg.early_call_10_rewards[String(stake)] || cfg.early_call_10_rewards[stake];
+        const rewards10 = cfg.early_call_10_rewards as Record<string, number>;
+        const rew = rewards10[String(stake)] || rewards10[stake.toString()];
         if (rew) {
           finalPrize = Number(rew);
           isEarlyCall = true;
