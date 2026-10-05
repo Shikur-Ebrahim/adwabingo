@@ -510,14 +510,31 @@ export default function BingoGame() {
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center bg-gradient-to-b from-red-500/10 to-orange-500/10 rounded-2xl border border-red-500/20 p-6 text-center mt-2 min-h-[240px]">
-              <div className="w-14 h-14 bg-red-500/20 rounded-full flex items-center justify-center mb-4 border border-red-500/30">
-                <span className="text-2xl animate-pulse">⏳</span>
+            <div className="relative rounded-2xl overflow-hidden border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] mt-1" style={{ background: 'linear-gradient(145deg,#3f0f18,#1a050a)' }}>
+              {/* BINGO Header (Deactivated) */}
+              <div className="grid grid-cols-5 opacity-30">
+                {BINGO_LETTERS.map(l => (
+                  <div key={l} className="flex items-center justify-center py-1.5 font-black text-white/50 text-sm bg-slate-900">{l}</div>
+                ))}
               </div>
-              <h3 className="text-red-400 font-black text-base uppercase tracking-widest mb-2 shadow-red-500/50">Match in Progress</h3>
-              <p className="text-slate-400 text-xs font-bold leading-relaxed">
-                You are currently spectating.<br/>Please wait for this round to finish before joining the next game.
-              </p>
+              
+              {/* Dummy Grid */}
+              <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0507] opacity-20">
+                {Array.from({ length: 25 }).map((_, i) => (
+                  <div key={i} className="aspect-square flex items-center justify-center bg-slate-800 rounded-lg"></div>
+                ))}
+              </div>
+
+              {/* Overlay Text */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[2px]">
+                <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mb-3 border border-red-500/30">
+                  <span className="text-xl animate-pulse">⏳</span>
+                </div>
+                <h3 className="text-red-400 font-black text-lg uppercase tracking-widest mb-1 shadow-red-500/50">Match is active</h3>
+                <p className="text-white/60 text-[10px] font-bold text-center px-4 leading-relaxed uppercase tracking-wider">
+                  Please wait for<br/>the next match
+                </p>
+              </div>
             </div>
           )}
         </div>
