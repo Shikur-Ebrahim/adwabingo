@@ -286,9 +286,6 @@ export default function Leaderboard() {
                     <p className={`font-bold text-sm truncate ${isMine ? 'text-yellow-700' : 'text-slate-800'}`}>
                       {p.first_name} {isMine && <span className="text-[10px] text-yellow-500">(You)</span>}
                     </p>
-                    {p.username && (
-                      <p className="text-[10px] text-slate-400 truncate">@{p.username}</p>
-                    )}
                   </div>
                   <div className="text-right">
                     <p className={`font-black text-sm ${i === 0 ? 'text-yellow-500' : 'text-slate-600'}`}>
@@ -317,9 +314,6 @@ export default function Leaderboard() {
                     <p className={`font-bold text-sm truncate ${isMine ? 'text-yellow-700' : 'text-slate-800'}`}>
                       {p.first_name} {isMine && <span className="text-[10px] text-yellow-500">(You)</span>}
                     </p>
-                    {p.username && (
-                      <p className="text-[10px] text-slate-400 truncate">@{p.username}</p>
-                    )}
                   </div>
                   <div className="text-right">
                     <p className="font-black text-sm text-slate-600">
