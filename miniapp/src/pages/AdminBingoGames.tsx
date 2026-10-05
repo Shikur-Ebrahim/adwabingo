@@ -1,35 +1,51 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, Eye, AlertCircle, Users, ChevronDown, ChevronUp } from 'lucide-react';
-import WebApp from '@twa-dev/sdk';
-import { useGameStore } from '../store/gameStore';
+﻿import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router-dom";
+import {
+  ArrowLeft, RefreshCw, Eye, AlertCircle, Users,
+  ChevronDown, ChevronUp, Settings, Save, X, Edit3,
+  Clock, Zap, Trophy, UserCheck, Percent
+} from "lucide-react";
+import WebApp from "@twa-dev/sdk";
+import { useGameStore } from "../store/gameStore";
 
-const API = import.meta.env.VITE_API_URL || '/api';
+const API = import.meta.env.VITE_API_URL || "/api";
 
 interface BGame {
   id: string; game_id: string; stake: number; prize_pool: number;
-  status: 'waiting' | 'calling' | 'finished';
+  status: "waiting" | "calling" | "finished";
   called_numbers: number[];
   winner_cartela: number | null; winner_prize: number | null; winner_first_name: string | null;
   start_at: string; finished_at: string | null; created_at: string;
 }
-
+interface GameSettings {
+  call_interval_ms: number;
+  waiting_period_s: number;
+  min_players: number;
+  max_players: number;
+  prize_percent: number;
+}
+const DEFAULT: GameSettings = { call_interval_ms: 5000, waiting_period_s: 60, min_players: 2, max_players: 150, prize_percent: 80 };
 const STATUS_COLOR: Record<string, string> = {
-  waiting:  'bg-amber-100 text-amber-700',
-  calling:  'bg-emerald-100 text-emerald-700',
-  finished: 'bg-slate-100 text-slate-500',
+  waiting:  "bg-amber-100 text-amber-700",
+  calling:  "bg-emerald-100 text-emerald-700",
+  finished: "bg-slate-100 text-slate-500",
 };
 
 export default function AdminBingoGames() {
   const { user } = useGameStore();
-  const [games, setGames]     = useState<BGame[]>([]);
-  const [counts, setCounts]   = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
+  const [games, setGames]       = useState<BGame[]>([]);
+  const [counts, setCounts]     = useState<Record<string, number>>({});
+  const [loading, setLoading]   = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [settings, setSettings] = useState<GameSettings>(DEFAULT);
+  const [editing, setEditing]   = useState(false);
+  const [draft, setDraft]       = useState<GameSettings>(DEFAULT);
+  const [saving, setSaving]     = useState(false);
+  const [saveMsg, setSaveMsg]   = useState("");
 
   const hdrs = () => ({
-    'Content-Type': 'application/json',
-    'x-telegram-init-data': WebApp?.initData ?? '',
+    "Content-Type": "application/json",
+    "x-telegram-init-data": WebApp?.initData ?? "",
   });
 
   const fetchGames = useCallback(async () => {
@@ -39,9 +55,7 @@ export default function AdminBingoGames() {
       if (!r.ok) return;
       const data: BGame[] = await r.json();
       setGames(data);
-
-      // Fetch player counts for active/recent games
-      const live = data.filter(g => g.status !== 'finished').slice(0, 3);
+      const live = data.filter(g => g.status !== "finished").slice(0, 3);
       const newCounts: Record<string, number> = {};
       await Promise.all(live.map(async g => {
         const r2 = await fetch(`${API}/admin/bingo-games/${g.id}/players`, { headers: hdrs() });
@@ -51,15 +65,35 @@ export default function AdminBingoGames() {
     } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { fetchGames(); }, [fetchGames]);
+  const fetchSettings = useCallback(async () => {
+    const r = await fetch(`${API}/admin/settings`, { headers: hdrs() });
+    if (r.ok) { const s: GameSettings = await r.json(); setSettings(s); setDraft(s); }
+  }, []);
+
+  useEffect(() => { fetchGames(); fetchSettings(); }, [fetchGames, fetchSettings]);
+
+  const saveSettings = async () => {
+    setSaving(true); setSaveMsg("");
+    try {
+      const r = await fetch(`${API}/admin/settings`, {
+        method: "PUT", headers: hdrs(), body: JSON.stringify(draft),
+      });
+      if (r.ok) {
+        const { settings: saved } = await r.json();
+        setSettings(saved); setDraft(saved); setEditing(false);
+        setSaveMsg("Settings saved and applied!");
+        setTimeout(() => setSaveMsg(""), 3000);
+      } else { setSaveMsg("Failed to save."); }
+    } finally { setSaving(false); }
+  };
 
   const forceFinish = async (id: string) => {
-    if (!confirm('Force-stop this game? No winner will be declared.')) return;
-    await fetch(`${API}/admin/bingo-games/${id}/finish`, { method: 'POST', headers: hdrs() });
+    if (!confirm("Force-stop this game? No winner will be declared.")) return;
+    await fetch(`${API}/admin/bingo-games/${id}/finish`, { method: "POST", headers: hdrs() });
     fetchGames();
   };
 
-  if (user?.role !== 'admin') {
+  if (user?.role !== "admin") {
     return (
       <div className="min-h-screen flex items-center justify-center text-slate-500">
         <div className="text-center">
@@ -70,11 +104,19 @@ export default function AdminBingoGames() {
     );
   }
 
-  const liveGame = games.find(g => g.status !== 'finished');
+  const liveGame = games.find(g => g.status !== "finished");
+
+  type FieldKey = keyof GameSettings;
+  const FIELDS: { key: FieldKey; label: string; unit: string; Icon: any; min: number; max: number; step: number; hint: string }[] = [
+    { key: "call_interval_ms", label: "Call Interval",   unit: "ms", Icon: Zap,       min: 1000, max: 30000, step: 500,  hint: "1000-30000ms" },
+    { key: "waiting_period_s", label: "Waiting Period",  unit: "s",  Icon: Clock,     min: 10,   max: 3600,  step: 5,    hint: "10-3600s" },
+    { key: "min_players",      label: "Min Players",     unit: "",   Icon: UserCheck,  min: 2,    max: 50,    step: 1,    hint: "2-50" },
+    { key: "max_players",      label: "Max Players",     unit: "",   Icon: Users,      min: 10,   max: 500,   step: 10,   hint: "10-500" },
+    { key: "prize_percent",    label: "Prize %",         unit: "%",  Icon: Percent,   min: 50,   max: 100,   step: 5,    hint: "50-100%" },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50 pb-10">
-      {/* Header */}
       <div className="bg-gradient-to-r from-orange-600 to-amber-500 text-white px-4 pt-5 pb-5">
         <div className="flex items-center gap-3">
           <Link to="/admin" className="p-2 rounded-full bg-white/20 active:scale-90">
@@ -82,40 +124,104 @@ export default function AdminBingoGames() {
           </Link>
           <div className="flex-1">
             <h1 className="text-xl font-black">Bingo Monitor</h1>
-            <p className="text-orange-100 text-xs">⚡ Fully automated engine</p>
+            <p className="text-orange-100 text-xs">Fully automated engine</p>
           </div>
           <button onClick={fetchGames} className="p-2 bg-white/20 rounded-full active:scale-90">
-            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
           </button>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
 
-        {/* Engine status card */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-orange-100">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <h3 className="font-black text-slate-700">Engine Running</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">
-            {[
-              ['Mode', '🤖 Fully Automatic'],
-              ['Call interval', '5 seconds'],
-              ['Waiting period', '60 seconds'],
-              ['Max players', '150 per game'],
-              ['Prize', '80% of total stakes'],
-              ['Winner check', 'Server-side (secure)'],
-            ].map(([k, v]) => (
-              <div key={k} className="bg-slate-50 rounded-xl p-2">
-                <p className="text-[9px] font-bold text-slate-400 uppercase">{k}</p>
-                <p className="font-black text-slate-700 text-xs">{v}</p>
+        {/* Engine Settings */}
+        <div className="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden">
+          <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-slate-50">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <h3 className="font-black text-slate-700">Engine Settings</h3>
+            </div>
+            {!editing ? (
+              <button onClick={() => { setDraft(settings); setEditing(true); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-600 rounded-xl text-xs font-black active:scale-95">
+                <Edit3 size={12} /> Edit
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button onClick={() => { setEditing(false); setDraft(settings); }}
+                  className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold active:scale-95">
+                  <X size={11} /> Cancel
+                </button>
+                <button onClick={saveSettings} disabled={saving}
+                  className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500 text-white rounded-xl text-xs font-black active:scale-95 disabled:opacity-60">
+                  {saving ? <RefreshCw size={11} className="animate-spin" /> : <Save size={11} />}
+                  {saving ? "Saving" : "Save"}
+                </button>
               </div>
-            ))}
+            )}
+          </div>
+
+          {saveMsg && (
+            <div className="px-4 py-2 bg-emerald-50 text-emerald-700 text-xs font-bold border-b border-emerald-100">
+              {saveMsg}
+            </div>
+          )}
+
+          <div className="p-3 space-y-2">
+            {FIELDS.map(({ key, label, unit, Icon, min, max, step, hint }) => {
+              const val = editing ? draft[key] : settings[key];
+              const display = key === "call_interval_ms" ? `${(Number(val) / 1000).toFixed(1)}s` : `${val}${unit}`;
+              return (
+                <div key={key} className={`rounded-xl border p-3 flex items-center gap-3 ${editing ? "border-orange-200 bg-orange-50/40" : "border-slate-100 bg-slate-50"}`}>
+                  <div className="w-8 h-8 rounded-xl bg-orange-100 text-orange-500 flex items-center justify-center shrink-0">
+                    <Icon size={14} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+                    {editing ? (
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <input type="number" min={min} max={max} step={step}
+                          value={draft[key]}
+                          onChange={e => setDraft(prev => ({ ...prev, [key]: Number(e.target.value) }))}
+                          className="w-28 border border-orange-300 rounded-lg px-2 py-1 text-sm font-black text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
+                        />
+                        {unit && <span className="text-xs text-slate-500 font-bold">{unit}</span>}
+                        <span className="text-[9px] text-slate-400 ml-1">{hint}</span>
+                      </div>
+                    ) : (
+                      <p className="font-black text-slate-800 text-sm">{display}</p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {!editing && (
+              <div className="grid grid-cols-2 gap-2 mt-1">
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-blue-100 text-blue-500 flex items-center justify-center shrink-0">
+                    <Settings size={14} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase">Mode</p>
+                    <p className="font-black text-slate-800 text-xs">Auto</p>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-500 flex items-center justify-center shrink-0">
+                    <Trophy size={14} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-slate-400 uppercase">Winner</p>
+                    <p className="font-black text-slate-800 text-xs">Server-side</p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Live game */}
+        {/* Live Game */}
         {liveGame ? (
           <div className="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden">
             <div className="p-4">
@@ -123,7 +229,7 @@ export default function AdminBingoGames() {
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Live Game</span>
                   <span className={`text-[10px] font-black px-2 py-0.5 rounded-full capitalize ${STATUS_COLOR[liveGame.status]}`}>
-                    {liveGame.status === 'calling' ? '🔴 Calling' : '⏳ Waiting'}
+                    {liveGame.status === "calling" ? "Calling" : "Waiting"}
                   </span>
                 </div>
                 <button onClick={() => setExpanded(expanded === liveGame.id ? null : liveGame.id)}
@@ -131,7 +237,6 @@ export default function AdminBingoGames() {
                   {expanded === liveGame.id ? <ChevronUp size={14}/> : <ChevronDown size={14}/>}
                 </button>
               </div>
-
               <div className="grid grid-cols-3 gap-2 text-center mb-3">
                 <div>
                   <p className="text-[9px] text-slate-400 font-bold uppercase">Game ID</p>
@@ -140,8 +245,7 @@ export default function AdminBingoGames() {
                 <div>
                   <p className="text-[9px] text-slate-400 font-bold uppercase">Players</p>
                   <p className="text-2xl font-black text-slate-700">
-                    <Users size={14} className="inline mr-0.5 mb-0.5" />
-                    {counts[liveGame.id] ?? '…'}
+                    <Users size={14} className="inline mr-0.5 mb-0.5" />{counts[liveGame.id] ?? "..."}
                   </p>
                 </div>
                 <div>
@@ -149,25 +253,18 @@ export default function AdminBingoGames() {
                   <p className="text-2xl font-black text-emerald-600">{liveGame.prize_pool} <span className="text-sm">ETB</span></p>
                 </div>
               </div>
-
               <div className="flex gap-2">
-                <Link to="/bingo/live"
-                  className="flex-1 py-2 bg-orange-100 text-orange-700 font-black rounded-xl text-xs flex items-center justify-center gap-1 active:scale-95">
+                <Link to="/bingo/live" className="flex-1 py-2 bg-orange-100 text-orange-700 font-black rounded-xl text-xs flex items-center justify-center gap-1 active:scale-95">
                   <Eye size={12}/> Watch Live
                 </Link>
-                <button onClick={() => forceFinish(liveGame.id)}
-                  className="flex-1 py-2 bg-red-100 text-red-600 font-black rounded-xl text-xs active:scale-95">
+                <button onClick={() => forceFinish(liveGame.id)} className="flex-1 py-2 bg-red-100 text-red-600 font-black rounded-xl text-xs active:scale-95">
                   Force Stop
                 </button>
               </div>
             </div>
-
-            {/* Expanded: called numbers */}
-            {expanded === liveGame.id && liveGame.status === 'calling' && (
+            {expanded === liveGame.id && liveGame.status === "calling" && (
               <div className="border-t border-slate-100 p-4 bg-slate-50/50">
-                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">
-                  Called Numbers ({liveGame.called_numbers?.length ?? 0}/75)
-                </p>
+                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Called Numbers ({liveGame.called_numbers?.length ?? 0}/75)</p>
                 <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
                   {(liveGame.called_numbers ?? []).map(n => (
                     <span key={n} className="text-[10px] font-black bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">{n}</span>
@@ -179,36 +276,38 @@ export default function AdminBingoGames() {
         ) : (
           <div className="bg-white rounded-2xl p-6 shadow-sm text-center text-slate-400">
             <p className="text-4xl mb-2">🎱</p>
-            <p className="font-bold">Engine is preparing the next game…</p>
-            <p className="text-xs mt-1">Auto-creates a new game every 60 seconds</p>
+            <p className="font-bold">Engine is preparing the next game...</p>
+            <p className="text-xs mt-1">Auto-creates a new game every {settings.waiting_period_s}s</p>
           </div>
         )}
 
-        {/* Game history */}
+        {/* Game History */}
         <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
           <h3 className="font-black text-slate-700 mb-3">Recent Games</h3>
           {loading ? (
             <div className="flex justify-center py-6"><RefreshCw size={20} className="text-orange-400 animate-spin"/></div>
           ) : (
             <div className="space-y-2">
-              {games.filter(g => g.status === 'finished').slice(0, 15).map(g => (
+              {games.filter(g => g.status === "finished").slice(0, 15).map(g => (
                 <div key={g.id} className="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
                   <div>
                     <p className="font-black text-slate-700 text-sm">Game #{g.game_id}</p>
                     <p className="text-xs text-slate-400">
-                      {g.winner_cartela
-                        ? `?? ${g.winner_first_name || 'Cartela'} #${g.winner_cartela} � ${g.winner_prize} ETB`
-                        : '— No winner'}
+                      {g.winner_first_name === "REMATCH"
+                        ? "REMATCH - stakes refunded"
+                        : g.winner_cartela
+                          ? `${g.winner_first_name || "Player"} #${g.winner_cartela} - ${g.winner_prize} ETB`
+                          : `${g.stake} ETB`}
                     </p>
                   </div>
-                  <p className="text-xs text-slate-400 text-right">
-                    {new Date(g.created_at).toLocaleDateString()}<br/>
-                    <span className="text-[10px]">{new Date(g.created_at).toLocaleTimeString()}</span>
-                  </p>
+                  <div className="text-right">
+                    <p className="text-[10px] text-slate-400">{g.finished_at ? new Date(g.finished_at).toLocaleDateString() : ""}</p>
+                    <p className="text-[10px] text-slate-400">{g.finished_at ? new Date(g.finished_at).toLocaleTimeString() : ""}</p>
+                  </div>
                 </div>
               ))}
-              {games.filter(g => g.status === 'finished').length === 0 && (
-                <p className="text-sm text-slate-400 text-center py-6">No finished games yet</p>
+              {games.filter(g => g.status === "finished").length === 0 && (
+                <p className="text-center text-slate-400 text-sm py-4">No finished games yet</p>
               )}
             </div>
           )}

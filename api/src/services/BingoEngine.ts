@@ -1,8 +1,8 @@
 import { supabase } from './supabase';
+import { getSettings } from '../routes/adminSettings';
 
-const CALL_INTERVAL_MS = 5000;
-const TICK_MS          = 2000;
-const STAKES           = [10, 20, 50, 100];
+const TICK_MS = 2000;
+const STAKES  = [10, 20, 50, 100];
 
 export function generateBingoCard(): number[][] {
   const zones: [number, number][] = [[1,15],[16,30],[31,45],[46,60],[61,75]];
@@ -82,6 +82,7 @@ class BingoEngine {
   }
 
   private async handleWaiting(game: any) {
+    const cfg = await getSettings();
     const startTime = new Date(game.start_at).getTime();
     if (startTime > Date.now() + 86400000) return;
     if (Date.now() < startTime) return;
@@ -91,12 +92,12 @@ class BingoEngine {
       .select('*', { count: 'exact', head: true })
       .eq('game_id', game.id);
 
-    if ((count ?? 0) < 2) {
+    if ((count ?? 0) < cfg.min_players) {
       await supabase.from('bingo_games').update({
-        start_at: new Date(Date.now() + 30_000).toISOString(),
+        start_at: new Date(Date.now() + cfg.waiting_period_s * 1000 / 2).toISOString(),
         updated_at: new Date().toISOString(),
       }).eq('id', game.id);
-      console.log(`🎰 Game #${game.game_id} extended (only ${count} player)`);
+      console.log(`🎰 Game #${game.game_id} extended (only ${count} player, need ${cfg.min_players})`);
       return;
     }
 
@@ -109,8 +110,9 @@ class BingoEngine {
   }
 
   private async handleCalling(game: any) {
+    const cfg = await getSettings();
     const lastUpdate = new Date(game.updated_at).getTime();
-    if (Date.now() - lastUpdate < CALL_INTERVAL_MS) return;
+    if (Date.now() - lastUpdate < cfg.call_interval_ms) return;
 
     const called: number[] = game.called_numbers || [];
     const pool = Array.from({ length: 75 }, (_, i) => i + 1).filter(n => !called.includes(n));
