@@ -39,16 +39,24 @@ export async function getSettings(): Promise<typeof DEFAULT_SETTINGS> {
 
 export function invalidateSettingsCache() { _cached = null; }
 
+// Helper: check if requester is admin via DB
+async function isAdmin(telegramId: string): Promise<boolean> {
+  const { data } = await supabase.from('users').select('role').eq('telegram_id', telegramId).single();
+  return data?.role === 'admin';
+}
+
 // GET /api/admin/settings
 router.get('/', async (req: AuthRequest, res) => {
-  if (req.telegramUser?.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  const telegramId = req.telegramUser!.id.toString();
+  if (!(await isAdmin(telegramId))) return res.status(403).json({ error: 'Forbidden' });
   const s = await getSettings();
   res.json(s);
 });
 
 // PUT /api/admin/settings
 router.put('/', async (req: AuthRequest, res) => {
-  if (req.telegramUser?.role !== 'admin') return res.status(403).json({ error: 'Forbidden' });
+  const telegramId = req.telegramUser!.id.toString();
+  if (!(await isAdmin(telegramId))) return res.status(403).json({ error: 'Forbidden' });
 
   const { call_interval_ms, waiting_period_s, min_players, max_players, prize_percent } = req.body;
 
