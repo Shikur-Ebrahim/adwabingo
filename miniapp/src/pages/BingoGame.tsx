@@ -110,7 +110,7 @@ export default function BingoGame() {
 
   const urlStake = searchParams.get("stake");
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
-  const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string }>>({});
+  const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string; players: number }>>({});
   const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [volume, setVolume] = useState(1.0);
@@ -121,11 +121,24 @@ export default function BingoGame() {
     let isMounted = true;
     
     const fetchPools = async () => {
-      // Fetch from real table, active games only
-      const { data } = await supabase.from('bingo_games').select('stake, prize_pool, start_at, status').in('status', ['waiting', 'calling']);
+      const { data } = await supabase.from('bingo_games').select('id, stake, prize_pool, start_at, status').in('status', ['waiting', 'calling']);
       if (data && isMounted) {
         const p: Record<number, any> = {};
-        data.forEach(g => { p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status }; });
+        data.forEach(g => { p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status, players: 0, _id: g.id }; });
+
+        // Fetch player counts
+        const ids = data.map(g => g.id);
+        if (ids.length > 0) {
+          const { data: playerRows } = await supabase
+            .from('bingo_players')
+            .select('game_id')
+            .in('game_id', ids);
+          if (playerRows) {
+            const countMap: Record<string, number> = {};
+            playerRows.forEach((r: any) => { countMap[r.game_id] = (countMap[r.game_id] || 0) + 1; });
+            data.forEach(g => { if (p[g.stake]) p[g.stake].players = countMap[g.id] || 0; });
+          }
+        }
         setHomeGames(p);
       }
     };
@@ -448,6 +461,7 @@ export default function BingoGame() {
             {STAKE_OPTIONS.map(opt => {
               const hg = homeGames[opt.value];
               const pool = hg?.pool || 0;
+              const players = hg?.players || 0;
               const hasGame = pool > 0;
               const isWaiting = hg?.status === 'waiting';
               const isCalling = hg?.status === 'calling';
@@ -474,11 +488,15 @@ export default function BingoGame() {
                     <span className="text-slate-500 font-bold text-[8px] uppercase tracking-widest mt-1">ETB</span>
                   </div>
 
-                  {/* Middle: Derash & Status split */}
+                  {/* Middle: Derash | Players | Status — 3 columns */}
                   <div className="w-full bg-slate-50 border-t border-b border-slate-100 flex h-[35px] shrink-0 relative z-10">
                     <div className="flex-1 flex flex-col items-center justify-center border-r border-slate-100">
                       <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">Derash</span>
                       <span className={`text-[10px] font-black text-yellow-600 ${hasGame ? 'animate-pulse' : ''}`}>{pool} ETB</span>
+                    </div>
+                    <div className="flex-1 flex flex-col items-center justify-center border-r border-slate-100">
+                      <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">Players</span>
+                      <span className="text-[10px] font-black text-emerald-500">{players}</span>
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center">
                       <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">Status</span>
