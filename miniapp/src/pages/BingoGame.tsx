@@ -45,6 +45,28 @@ const getAmharicLetter = (l: string) => {
   switch(l) { case 'B': return 'ቢ'; case 'I': return 'አይ'; case 'N': return 'ኤን'; case 'G': return 'ጂ'; case 'O': return 'ኦ'; default: return ''; }
 };
 
+const getWinningCells = (matrix: number[][], called: number[]) => {
+  const winCells = new Set<string>();
+  for (let r = 0; r < 5; r++) {
+    if (matrix[r].every(n => n === 0 || called.includes(n))) {
+      for (let c = 0; c < 5; c++) winCells.add(`${r}-${c}`);
+    }
+  }
+  for (let c = 0; c < 5; c++) {
+    let win = true;
+    for (let r = 0; r < 5; r++) { if (matrix[r][c] !== 0 && !called.includes(matrix[r][c])) win = false; }
+    if (win) { for (let r = 0; r < 5; r++) winCells.add(`${r}-${c}`); }
+  }
+  let d1 = true;
+  for (let i = 0; i < 5; i++) { if (matrix[i][i] !== 0 && !called.includes(matrix[i][i])) d1 = false; }
+  if (d1) for (let i = 0; i < 5; i++) winCells.add(`${i}-${i}`);
+  
+  let d2 = true;
+  for (let i = 0; i < 5; i++) { if (matrix[i][4-i] !== 0 && !called.includes(matrix[i][4-i])) d2 = false; }
+  if (d2) for (let i = 0; i < 5; i++) winCells.add(`${i}-${4-i}`);
+  return winCells;
+};
+
 export default function BingoGame() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -53,18 +75,50 @@ export default function BingoGame() {
   const urlStake = searchParams.get("stake");
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
 
-  const initAudio = () => { /* No-op since we use SpeechSynthesis */ };
+  const unlockAudio = () => {
+    try {
+      if (window.speechSynthesis) {
+        const u = new SpeechSynthesisUtterance("");
+        u.volume = 0;
+        window.speechSynthesis.speak(u);
+      }
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContext) {
+        const ctx = new AudioContext();
+        ctx.resume();
+      }
+    } catch (e) {}
+  };
 
   const speakNumber = useCallback((num: number) => {
-    if (!window.speechSynthesis) return;
-    const letter = BINGO_LETTERS[Math.floor((num - 1) / 15)];
-    const amLetter = getAmharicLetter(letter);
-    
-    window.speechSynthesis.cancel();
-    const msg = new SpeechSynthesisUtterance(`${amLetter} ${num}`);
-    msg.lang = 'am-ET';
-    msg.rate = 0.9;
-    window.speechSynthesis.speak(msg);
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContext) {
+        const ctx = new AudioContext();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(800, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.1);
+      }
+    } catch (e) {}
+
+    if (window.speechSynthesis) {
+      const letter = BINGO_LETTERS[Math.floor((num - 1) / 15)];
+      const amLetter = getAmharicLetter(letter);
+      window.speechSynthesis.cancel();
+      const msg = new SpeechSynthesisUtterance(`${amLetter} ${num}`);
+      msg.lang = 'am-ET';
+      msg.rate = 0.9;
+      msg.volume = 1;
+      window.speechSynthesis.speak(msg);
+    }
   }, []);
 
   useEffect(() => {
@@ -159,12 +213,11 @@ export default function BingoGame() {
           });
           setTimeout(() => {
             if (isMounted) { setCelebration(null); fetchState(); refreshUser(); }
-          }, 6000); // Show for 6 seconds
+          }, 3000); // Show for 3 seconds
         }).catch(() => {
-          // Fallback if fetch fails
           if (isMounted) {
             setCelebration({ winner_name: game.winner_first_name || 'Player', winner_cartela: game.winner_cartela!, winner_prize: game.winner_prize!, winner_matrix: null, iWon, called: [...game.called_numbers] });
-            setTimeout(() => { if (isMounted) { setCelebration(null); fetchState(); refreshUser(); } }, 6000);
+            setTimeout(() => { if (isMounted) { setCelebration(null); fetchState(); refreshUser(); } }, 3000);
           }
         });
       return () => { isMounted = false; };
@@ -172,6 +225,7 @@ export default function BingoGame() {
   }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name, game?.winner_prize, game?.winner_telegram_id, game?.called_numbers, user?.telegram_id, fetchState, refreshUser]);
 
   const joinGame = async (seat: number) => {
+    unlockAudio();
     if (!game || game.status !== "waiting") return;
     if (myCard) { setErrMsg("You already have a cartela!"); return; }
     if (taken.includes(seat)) { setErrMsg("Taken! Pick another."); return; }
@@ -222,7 +276,7 @@ export default function BingoGame() {
 
   if (!selectedStake) {
     return (
-      <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-y-auto">
+      <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-y-auto" onClick={unlockAudio}>
         <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg">{initial}</div>
@@ -241,7 +295,7 @@ export default function BingoGame() {
 
           <div className="grid grid-cols-2 gap-3 w-full max-w-[300px]">
             {STAKE_OPTIONS.map(opt => (
-              <button key={opt.value} onClick={() => setSelectedStake(opt.value)}
+              <button key={opt.value} onClick={() => { unlockAudio(); setSelectedStake(opt.value); }}
                 className={`bg-gradient-to-br ${opt.color} rounded-2xl p-5 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all shadow-lg`}>
                 <span className="text-white font-black text-3xl">{opt.value}</span>
                 <span className="text-white/80 font-bold text-xs uppercase tracking-wider">ETB</span>
@@ -392,7 +446,7 @@ export default function BingoGame() {
   );
 
   return (
-    <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-hidden">
+    <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-hidden" onClick={unlockAudio}>
       {/* Header Bar */}
       <div className="sticky top-0 z-40 bg-[#05081a] flex flex-col shrink-0">
         <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
@@ -453,29 +507,34 @@ export default function BingoGame() {
             </div>
 
             {/* Winner's Cartela Matrix */}
-            {celebration.winner_matrix && (
-              <div className="w-full bg-[#131b31] p-2 rounded-xl border border-indigo-500/30 shadow-inner mb-4 scale-95">
-                <div className="grid grid-cols-5 gap-1 mb-1">
-                  {BINGO_LETTERS.map(l => <div key={l} className="text-center font-black text-xs" style={{ color: getLetterColor(l) }}>{l}</div>)}
+            {celebration.winner_matrix && (() => {
+              const winCells = getWinningCells(celebration.winner_matrix, celebration.called);
+              return (
+                <div className="w-full bg-[#131b31] p-2 rounded-xl border border-indigo-500/30 shadow-inner mb-4 scale-95">
+                  <div className="grid grid-cols-5 gap-1 mb-1">
+                    {BINGO_LETTERS.map(l => <div key={l} className="text-center font-black text-xs" style={{ color: getLetterColor(l) }}>{l}</div>)}
+                  </div>
+                  <div className="grid grid-cols-5 gap-1">
+                    {Array.from({ length: 5 }).flatMap((_, r) => Array.from({ length: 5 }).map((_, c) => {
+                      const num = celebration.winner_matrix![r][c];
+                      const isFree = num === 0;
+                      const isWinCell = winCells.has(`${r}-${c}`);
+                      const isCalled = celebration.called.includes(num);
+                      return (
+                        <div key={`${r}-${c}`} className={`aspect-square rounded flex items-center justify-center font-black text-xs transition-colors ${
+                          isFree ? 'bg-yellow-400 text-yellow-900' :
+                          isWinCell ? 'bg-emerald-500 text-white shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                          isCalled ? 'bg-slate-700 text-slate-300' :
+                          'bg-slate-800 text-slate-500'
+                        }`}>{isFree ? "★" : num}</div>
+                      );
+                    }))}
+                  </div>
                 </div>
-                <div className="grid grid-cols-5 gap-1">
-                  {Array.from({ length: 5 }).flatMap((_, r) => Array.from({ length: 5 }).map((_, c) => {
-                    const num = celebration.winner_matrix![r][c];
-                    const isFree = num === 0;
-                    const marked = isFree || celebration.called.includes(num);
-                    return (
-                      <div key={`${r}-${c}`} className={`aspect-square rounded flex items-center justify-center font-black text-xs transition-colors ${
-                        isFree ? 'bg-yellow-400 text-yellow-900' :
-                        marked ? 'bg-emerald-500 text-white shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                        'bg-slate-800 text-slate-400'
-                      }`}>{isFree ? "★" : num}</div>
-                    );
-                  }))}
-                </div>
-              </div>
-            )}
+              );
+            })()}
             
-            <p className="text-slate-500 text-xs font-bold animate-pulse">Starting next round in 5 seconds...</p>
+            <p className="text-slate-500 text-xs font-bold animate-pulse">Starting next round in 3 seconds...</p>
           </div>
         </div>
       )}
