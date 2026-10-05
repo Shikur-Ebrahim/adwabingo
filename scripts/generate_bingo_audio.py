@@ -1,10 +1,19 @@
+"""
+ADWA Bingo Audio Generator
+- Letter: English male voice (en-US-GuyNeural) saying "B", "I", "N", "G", "O"
+- Number: Amharic male voice (am-ET-AmehaNeural) saying the Amharic number
+- Combined into one MP3 per number using raw byte concatenation
+"""
+
 import asyncio
 import edge_tts
 import os
 import sys
 
-VOICE = "am-ET-AmehaNeural"
+VOICE_EN  = "en-US-GuyNeural"     # English male voice for letters
+VOICE_AM  = "am-ET-AmehaNeural"   # Amharic male voice for numbers
 OUTPUT_DIR = os.path.join("miniapp", "public", "audio", "bingo")
+TMP_DIR    = os.path.join(OUTPUT_DIR, "_tmp")
 
 AMHARIC_NUMS = {
     1:'አንድ', 2:'ሁለት', 3:'ሶስት', 4:'አራት', 5:'አምስት',
@@ -24,54 +33,80 @@ AMHARIC_NUMS = {
     71:'ሰባ አንድ', 72:'ሰባ ሁለት', 73:'ሰባ ሶስት', 74:'ሰባ አራት', 75:'ሰባ አምስት',
 }
 
-SPECIAL = {
-    'bingo_win':  'ቢንጎ! ቢንጎ! እንኳን ደስ አለዎ!',
-    'game_start': 'ጨዋታ ጀምሯል! ቁጥሮቹን ተዘጋጁ!',
-    'good_luck':  'መልካም ዕድል!',
-}
-
 RANGES = {
-    'B': (range(1,16),  'ቢ'),    # B sounds like "Bi" in Amharic
-    'I': (range(16,31), 'አይ'),   # I sounds like "Ai"
-    'N': (range(31,46), 'ኤን'),   # N sounds like "En"
-    'G': (range(46,61), 'ጂ'),    # G sounds like "Ji"
-    'O': (range(61,76), 'ኦ'),    # O sounds like "O"
+    'B': range(1, 16),
+    'I': range(16, 31),
+    'N': range(31, 46),
+    'G': range(46, 61),
+    'O': range(61, 76),
 }
 
-async def generate_file(text, filename, force=False):
-    file_path = os.path.join(OUTPUT_DIR, filename)
-    if os.path.exists(file_path) and not force:
-        print(f"Skipping {filename}, already exists.")
-        return
-    
-    print(f"Generating {filename}...")
+SPECIAL = {
+    'bingo_win':  ('ቢንጎ! ቢንጎ! እንኳን ደስ አለዎ!', VOICE_AM),
+    'game_start': ('ጨዋታ ጀምሯል! ቁጥሮቹን ተዘጋጁ!',   VOICE_AM),
+    'good_luck':  ('መልካም ዕድል!',                    VOICE_AM),
+}
+
+async def tts_bytes(text, voice):
+    """Generate TTS and return raw MP3 bytes."""
+    tmp_path = os.path.join(TMP_DIR, f"_tts_{hash(text + voice) & 0xFFFFFF}.mp3")
+    communicate = edge_tts.Communicate(text, voice)
+    await communicate.save(tmp_path)
+    with open(tmp_path, 'rb') as f:
+        return f.read()
+
+async def generate_call(letter, num):
+    """Generate letter (English) + number (Amharic) combined MP3."""
+    out_path = os.path.join(OUTPUT_DIR, f"bingo_{num:02d}.mp3")
+    print(f"Generating bingo_{num:02d}.mp3  [{letter} #{num}]")
     try:
-        communicate = edge_tts.Communicate(text, VOICE)
-        await communicate.save(file_path)
+        # English letter with short dramatic pause built in
+        letter_bytes  = await tts_bytes(f"{letter}!", VOICE_EN)
+        # Small silence gap (800 bytes of null = ~50ms silence at MP3 layer)
+        silence = b'\x00' * 800
+        # Amharic number
+        number_bytes  = await tts_bytes(AMHARIC_NUMS[num], VOICE_AM)
+        # Concatenate: letter MP3 + silence + amharic MP3
+        combined = letter_bytes + silence + number_bytes
+        with open(out_path, 'wb') as f:
+            f.write(combined)
     except Exception as e:
-        print(f"Error generating {filename}: {e}")
+        print(f"  ERROR bingo_{num:02d}: {e}")
+
+async def generate_special(name, text, voice):
+    out_path = os.path.join(OUTPUT_DIR, f"{name}.mp3")
+    if os.path.exists(out_path):
+        print(f"Skipping {name}.mp3")
+        return
+    print(f"Generating {name}.mp3...")
+    try:
+        communicate = edge_tts.Communicate(text, voice)
+        await communicate.save(out_path)
+    except Exception as e:
+        print(f"  ERROR {name}: {e}")
 
 async def main():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    
-    print(f"Using Voice: {VOICE}")
-    print(f"Output Directory: {OUTPUT_DIR}\n")
-    
-    # Format: "ቢ, አንድ" — Amharic letter name + Amharic number
-    # This ensures the Amharic neural voice pronounces both parts perfectly
-    for letter, (nums, amharic_letter) in RANGES.items():
-        for num in nums:
-            amharic_num = AMHARIC_NUMS[num]
-            text = f"{amharic_letter}! {amharic_num}"
-            filename = f"bingo_{num:02d}.mp3"
-            await generate_file(text, filename, force=True)
-        
-    # Generate special sounds
-    for name, text in SPECIAL.items():
-        filename = f"{name}.mp3"
-        await generate_file(text, filename)
+    os.makedirs(TMP_DIR, exist_ok=True)
 
-    print("\nGeneration complete!")
+    print(f"Letter voice : {VOICE_EN}")
+    print(f"Number voice : {VOICE_AM}")
+    print(f"Output dir   : {OUTPUT_DIR}\n")
+
+    # Generate all 75 bingo calls
+    for letter, nums in RANGES.items():
+        for num in nums:
+            await generate_call(letter, num)
+
+    # Special sounds
+    for name, (text, voice) in SPECIAL.items():
+        await generate_special(name, text, voice)
+
+    # Cleanup tmp files
+    import shutil
+    shutil.rmtree(TMP_DIR, ignore_errors=True)
+
+    print("\nDone! All files generated.")
 
 if __name__ == "__main__":
     if sys.platform == "win32":
