@@ -14,6 +14,7 @@ import BingoGame from './pages/BingoGame';
 import AdminBingoGames from './pages/AdminBingoGames';
 import Leaderboard from './pages/Leaderboard';
 import GamesReport from './pages/GamesReport';
+import Rules from './pages/Rules';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Show/hide Telegram's native Back button based on route depth
@@ -220,6 +221,7 @@ function App() {
           <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/games-report" element={<GamesReport />} />
+          <Route path="/rules" element={<Rules />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/bingo-games" element={<AdminBingoGames />} />
           <Route path="/admin/deposit-methods" element={<AdminDepositMethods />} />
