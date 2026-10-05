@@ -42,7 +42,7 @@ RANGES = {
 }
 
 SPECIAL = {
-    'bingo_win':  ('ቢንጎ! ቢንጎ! እንኳን ደስ አለዎ!', VOICE_AM),
+    'bingo_win':  ('ቢንጎ! እንኳን ደስ አለዎ!', VOICE_AM),
     'game_start': ('ጨዋታ ጀምሯል! ቁጥሮቹን ተዘጋጁ!',   VOICE_AM),
     'good_luck':  ('መልካም ዕድል!',                    VOICE_AM),
 }
@@ -75,9 +75,6 @@ async def generate_call(letter, num):
 
 async def generate_special(name, text, voice):
     out_path = os.path.join(OUTPUT_DIR, f"{name}.mp3")
-    if os.path.exists(out_path):
-        print(f"Skipping {name}.mp3")
-        return
     print(f"Generating {name}.mp3...")
     try:
         communicate = edge_tts.Communicate(text, voice)

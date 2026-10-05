@@ -271,11 +271,18 @@ export default function BingoGame() {
     prevCalledLenRef.current = called.length;
   }, [called.length, game?.status, lastNum, playCallAudio]);
 
+  const hasCelebratedRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (game?.status === 'finished' && game.winner_cartela) {
       const iWon = game.winner_telegram_id === String(user?.telegram_id);
       let isMounted = true;
-      playSpecial('bingo_win');
+      
+      if (hasCelebratedRef.current !== game.id) {
+        hasCelebratedRef.current = game.id;
+        playSpecial('bingo_win');
+      }
+
       fetch(`${API}/bingo/card?game_id=${game.id}&cartela=${game.winner_cartela}`, { headers: hdrs() })
         .then(r => r.json())
         .then(data => {
@@ -290,7 +297,17 @@ export default function BingoGame() {
         }).catch(() => {
           if (isMounted) setCelebration({ winner_name: game.winner_first_name || 'Player', winner_cartela: game.winner_cartela!, winner_prize: game.winner_prize!, winner_matrix: null, iWon, called: [...game.called_numbers] });
         });
-      return () => { isMounted = false; };
+
+      // Automatically dismiss the celebration screen after 8 seconds
+      const timer = setTimeout(() => {
+        if (isMounted) {
+          setCelebration(null);
+          fetchState();
+          refreshUser();
+        }
+      }, 8000);
+
+      return () => { isMounted = false; clearTimeout(timer); };
     }
   }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name, game?.winner_prize, game?.winner_telegram_id, game?.called_numbers, user?.telegram_id, playSpecial]);
 
@@ -418,83 +435,85 @@ export default function BingoGame() {
           </div>
         </div>
 
-        {/* Caller Row */}
-        <div className="shrink-0 bg-[#0a0f1e] rounded-xl border border-white/5 px-2 py-1.5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {recent.length === 0 ? (
-                <span className="text-slate-500 text-[10px] font-bold animate-pulse">Waiting...</span>
-              ) : recent.map((num, idx) => {
-                const l = getLetter(num);
-                const isFirst = idx === 0;
-                if (isFirst) {
-                  return (
-                    <div key={`${num}-${idx}`} className="flex items-center gap-2">
-                      <div className="w-11 h-11 flex flex-col items-center justify-center rounded-full font-black border-2 border-yellow-400 bg-yellow-400/20 shadow-[0_0_12px_rgba(250,204,21,0.3)]">
-                        <span style={{ color: LETTER_COLOR[l] }} className="text-[10px] leading-none font-black">{l}</span>
-                        <span className="text-white text-lg leading-none font-black">{num}</span>
+        <div className="flex-1 min-h-0 w-full max-w-[340px] mx-auto flex flex-col gap-1">
+          {/* Caller Row */}
+          <div className="shrink-0 bg-[#0a0f1e] rounded-xl border border-white/5 px-2 py-1.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {recent.length === 0 ? (
+                  <span className="text-slate-500 text-[10px] font-bold animate-pulse">Waiting...</span>
+                ) : recent.map((num, idx) => {
+                  const l = getLetter(num);
+                  const isFirst = idx === 0;
+                  if (isFirst) {
+                    return (
+                      <div key={`${num}-${idx}`} className="flex items-center gap-2">
+                        <div className="w-11 h-11 flex flex-col items-center justify-center rounded-full font-black border-2 border-yellow-400 bg-yellow-400/20 shadow-[0_0_12px_rgba(250,204,21,0.3)]">
+                          <span style={{ color: LETTER_COLOR[l] }} className="text-[10px] leading-none font-black">{l}</span>
+                          <span className="text-white text-lg leading-none font-black">{num}</span>
+                        </div>
+                        <span className="text-yellow-400 font-black text-sm">{AMHARIC_NUM[num]}</span>
                       </div>
-                      <span className="text-yellow-400 font-black text-sm">{AMHARIC_NUM[num]}</span>
+                    );
+                  }
+                  return (
+                    <div key={`${num}-${idx}`} className="w-7 h-7 flex flex-col items-center justify-center rounded-full border border-slate-700 bg-slate-800/60 opacity-50">
+                      <span style={{ color: LETTER_COLOR[l] }} className="text-[7px] leading-none font-black">{l}</span>
+                      <span className="text-white text-[10px] leading-none font-black">{num}</span>
                     </div>
                   );
-                }
-                return (
-                  <div key={`${num}-${idx}`} className="w-7 h-7 flex flex-col items-center justify-center rounded-full border border-slate-700 bg-slate-800/60 opacity-50">
-                    <span style={{ color: LETTER_COLOR[l] }} className="text-[7px] leading-none font-black">{l}</span>
-                    <span className="text-white text-[10px] leading-none font-black">{num}</span>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="flex items-center gap-1.5">
-              <button onClick={replayLastCall} disabled={!lastCallNum} className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center active:scale-90 disabled:opacity-30">
-                <RotateCcw size={13} className="text-blue-400" />
-              </button>
-              <button onClick={() => { setSoundEnabled(s => !s); initWebAudio(); }}
-                className={`w-8 h-8 rounded-lg border flex items-center justify-center active:scale-90 ${soundEnabled ? 'bg-blue-500/20 border-blue-500/50' : 'bg-slate-800 border-slate-700'}`}>
-                {soundEnabled ? <Volume2 size={13} className="text-blue-400" /> : <VolumeX size={13} className="text-red-400" />}
-              </button>
+                })}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button onClick={replayLastCall} disabled={!lastCallNum} className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center active:scale-90 disabled:opacity-30">
+                  <RotateCcw size={13} className="text-blue-400" />
+                </button>
+                <button onClick={() => { setSoundEnabled(s => !s); initWebAudio(); }}
+                  className={`w-8 h-8 rounded-lg border flex items-center justify-center active:scale-90 ${soundEnabled ? 'bg-blue-500/20 border-blue-500/50' : 'bg-slate-800 border-slate-700'}`}>
+                  {soundEnabled ? <Volume2 size={13} className="text-blue-400" /> : <VolumeX size={13} className="text-red-400" />}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* My Card — flex-1, fills remaining space, NO scroll */}
-        {myCard ? (
-          <div className="flex-1 min-h-0 rounded-2xl overflow-hidden border border-white/10 flex flex-col" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
-            {/* BINGO Header */}
-            <div className="grid grid-cols-5 shrink-0">
-              {BINGO_LETTERS.map(l => (
-                <div key={l} className="flex items-center justify-center py-2 font-black text-white text-base" style={{ background: LETTER_BG[l] }}>{l}</div>
-              ))}
+          {/* My Card — flex-1, fills remaining space, NO scroll */}
+          {myCard ? (
+            <div className="flex-1 min-h-0 rounded-2xl overflow-hidden border border-white/10 flex flex-col" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
+              {/* BINGO Header */}
+              <div className="grid grid-cols-5 shrink-0">
+                {BINGO_LETTERS.map(l => (
+                  <div key={l} className="flex items-center justify-center py-2 font-black text-white text-base" style={{ background: LETTER_BG[l] }}>{l}</div>
+                ))}
+              </div>
+              {/* Card Grid — flex rows fill remaining height */}
+              <div className="flex-1 min-h-0 flex flex-col gap-[3px] p-[3px] bg-[#0a0f1e]">
+                {Array.from({ length: 5 }, (_, r) => (
+                  <div key={r} className="flex-1 flex gap-[3px]">
+                    {Array.from({ length: 5 }, (_, c) => {
+                      const num = myCard.card_matrix[r][c];
+                      const isFree = num === 0, marked = isFree || called.includes(num), isLast = num === lastNum;
+                      return (
+                        <div key={c} className={`flex-1 flex items-center justify-center font-black text-base rounded-lg transition-all duration-300 ${
+                          isFree ? 'bg-yellow-400 text-yellow-900' :
+                          isLast ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
+                          marked ? 'bg-emerald-500 text-white' : 'bg-white text-[#1a2540]'
+                        }`}>{isFree ? '★' : num}</div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+              {/* Cartela Label */}
+              <div className="py-1.5 text-center bg-[#0a0f1e] border-t border-white/10 shrink-0">
+                <p className="text-white/70 font-black text-[10px] tracking-widest uppercase">CARTELA # {myCard.cartela_number}</p>
+              </div>
             </div>
-            {/* Card Grid — flex rows fill remaining height */}
-            <div className="flex-1 min-h-0 flex flex-col gap-[3px] p-[3px] bg-[#0a0f1e]">
-              {Array.from({ length: 5 }, (_, r) => (
-                <div key={r} className="flex-1 flex gap-[3px]">
-                  {Array.from({ length: 5 }, (_, c) => {
-                    const num = myCard.card_matrix[r][c];
-                    const isFree = num === 0, marked = isFree || called.includes(num), isLast = num === lastNum;
-                    return (
-                      <div key={c} className={`flex-1 flex items-center justify-center font-black text-base rounded-lg transition-all duration-300 ${
-                        isFree ? 'bg-yellow-400 text-yellow-900' :
-                        isLast ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
-                        marked ? 'bg-emerald-500 text-white' : 'bg-white text-[#1a2540]'
-                      }`}>{isFree ? '★' : num}</div>
-                    );
-                  })}
-                </div>
-              ))}
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-slate-800/20 rounded-xl border border-slate-800">
+              <p className="text-slate-400 text-sm font-bold">You are spectating</p>
             </div>
-            {/* Cartela Label */}
-            <div className="py-1.5 text-center bg-[#0a0f1e] border-t border-white/10 shrink-0">
-              <p className="text-white/70 font-black text-[10px] tracking-widest uppercase">CARTELA # {myCard.cartela_number}</p>
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center bg-slate-800/20 rounded-xl border border-slate-800">
-            <p className="text-slate-400 text-sm font-bold">You are spectating</p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   };
