@@ -1,6 +1,6 @@
-﻿import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ChevronDown, Gift, RefreshCw, Users, Clock, Trophy } from "lucide-react";
+import { ArrowLeft, ChevronDown, Gift, RefreshCw, Users, Clock, Trophy, Mic, MicOff } from "lucide-react";
 import WebApp from "@twa-dev/sdk";
 import { supabase } from "../lib/supabase";
 import { useGameStore } from "../store/gameStore";
@@ -74,6 +74,7 @@ export default function BingoGame() {
 
   const urlStake = searchParams.get("stake");
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
+  const [soundEnabled, setSoundEnabled] = useState(false); // Default silent
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -81,46 +82,16 @@ export default function BingoGame() {
     audioRef.current = new Audio();
   }, []);
 
-  const unlockAudio = () => {
-    try {
-      if (audioRef.current) {
-        audioRef.current.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-        audioRef.current.play().catch(() => {});
-      }
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContext) {
-        const ctx = new AudioContext();
-        ctx.resume();
-      }
-    } catch (e) {}
-  };
-
   const speakNumber = useCallback((num: number) => {
-    try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioContext) {
-        const ctx = new AudioContext();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(800, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-        osc.start(ctx.currentTime);
-        osc.stop(ctx.currentTime + 0.1);
-      }
-    } catch (e) {}
-
+    if (!soundEnabled) return;
     if (audioRef.current) {
       const letter = BINGO_LETTERS[Math.floor((num - 1) / 15)];
       const amLetter = getAmharicLetter(letter);
       audioRef.current.src = 'https://translate.google.com/translate_tts?ie=UTF-8&tl=am&client=tw-ob&q=' + encodeURIComponent(amLetter + ' ' + num);
       audioRef.current.play().catch(() => {});
     }
-  }, []);
+  }, [soundEnabled]);
+
   useEffect(() => {
     if (!user?.telegram_id) return;
     const unsub = subscribeToBalance();
@@ -225,7 +196,6 @@ export default function BingoGame() {
   }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name, game?.winner_prize, game?.winner_telegram_id, game?.called_numbers, user?.telegram_id, fetchState, refreshUser]);
 
   const joinGame = async (seat: number) => {
-    unlockAudio();
     if (!game || game.status !== "waiting") return;
     if (myCard) { setErrMsg("You already have a cartela!"); return; }
     if (taken.includes(seat)) { setErrMsg("Taken! Pick another."); return; }
@@ -276,7 +246,7 @@ export default function BingoGame() {
 
   if (!selectedStake) {
     return (
-      <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-y-auto" onClick={unlockAudio}>
+      <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-y-auto">
         <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white font-bold text-lg">{initial}</div>
@@ -295,7 +265,7 @@ export default function BingoGame() {
 
           <div className="grid grid-cols-2 gap-3 w-full max-w-[300px]">
             {STAKE_OPTIONS.map(opt => (
-              <button key={opt.value} onClick={() => { unlockAudio(); setSelectedStake(opt.value); }}
+              <button key={opt.value} onClick={() => { setSelectedStake(opt.value); }}
                 className={`bg-gradient-to-br ${opt.color} rounded-2xl p-5 flex flex-col items-center justify-center gap-2 active:scale-95 transition-all shadow-lg`}>
                 <span className="text-white font-black text-3xl">{opt.value}</span>
                 <span className="text-white/80 font-bold text-xs uppercase tracking-wider">ETB</span>
@@ -356,21 +326,41 @@ export default function BingoGame() {
           </div>
         </div>
 
-        {/* Recent Balls */}
-        <div className="flex items-center justify-center gap-1.5 h-12 shrink-0 mb-1">
-          {recent.length === 0 ? <span className="text-slate-500 text-[10px] font-bold animate-pulse">Waiting for first draw...</span> : recent.map((num, idx) => {
-            const isLatest = idx === 0;
-            const letter = BINGO_LETTERS[Math.floor((num - 1) / 15)];
-            const color = getLetterColor(letter);
-            return (
-              <div key={`${num}-${idx}`} className={`flex flex-col items-center justify-center rounded-full font-black shadow-lg border-2 transition-all duration-300 ${
-                isLatest ? 'w-12 h-12 border-yellow-400 bg-yellow-400/20 scale-110 z-10' : 'w-8 h-8 border-slate-700 bg-slate-800 opacity-60'
-              }`}>
-                <span style={{ color }} className={isLatest ? 'text-[9px] leading-none mb-[1px]' : 'text-[6px] leading-none'}>{letter}</span>
-                <span className={isLatest ? 'text-yellow-400 text-lg leading-none' : 'text-slate-300 text-[10px] leading-none'}>{num}</span>
-              </div>
-            );
-          })}
+        {/* Recent Balls & Sound Toggle */}
+        <div className="flex items-center justify-between h-12 shrink-0 mb-1 w-full px-2">
+          <div className="w-8"></div> {/* Spacer for symmetry */}
+          
+          <div className="flex items-center justify-center gap-1.5">
+            {recent.length === 0 ? <span className="text-slate-500 text-[10px] font-bold animate-pulse">Waiting for first draw...</span> : recent.map((num, idx) => {
+              const isLatest = idx === 0;
+              const letter = BINGO_LETTERS[Math.floor((num - 1) / 15)];
+              const color = getLetterColor(letter);
+              return (
+                <div key={`${num}-${idx}`} className={`flex flex-col items-center justify-center rounded-full font-black shadow-lg border-2 transition-all duration-300 ${
+                  isLatest ? 'w-12 h-12 border-yellow-400 bg-yellow-400/20 scale-110 z-10' : 'w-8 h-8 border-slate-700 bg-slate-800 opacity-60'
+                }`}>
+                  <span style={{ color }} className={isLatest ? 'text-[9px] leading-none mb-[1px]' : 'text-[6px] leading-none'}>{letter}</span>
+                  <span className={isLatest ? 'text-yellow-400 text-lg leading-none' : 'text-slate-300 text-[10px] leading-none'}>{num}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <button 
+            onClick={() => {
+              const next = !soundEnabled;
+              setSoundEnabled(next);
+              if (next && audioRef.current) {
+                audioRef.current.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+                audioRef.current.play().catch(() => {});
+              }
+            }}
+            className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-colors active:scale-95 shrink-0 ${
+              soundEnabled ? 'bg-blue-500/20 border-blue-500/50' : 'bg-slate-800/80 border-slate-700'
+            }`}
+          >
+            {soundEnabled ? <Mic size={16} className="text-blue-400" /> : <MicOff size={16} className="text-red-400" />}
+          </button>
         </div>
 
         {/* My Card (if joined) */}
@@ -446,7 +436,7 @@ export default function BingoGame() {
   );
 
   return (
-    <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-hidden" onClick={unlockAudio}>
+    <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-hidden">
       {/* Header Bar */}
       <div className="sticky top-0 z-40 bg-[#05081a] flex flex-col shrink-0">
         <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between">
