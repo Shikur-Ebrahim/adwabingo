@@ -510,28 +510,36 @@ export default function BingoGame() {
               </div>
             </div>
           ) : (
-            <div className="relative rounded-2xl overflow-hidden border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.15)] mt-1" style={{ background: 'linear-gradient(145deg,#3f0f18,#1a050a)' }}>
-              {/* BINGO Header (Deactivated) */}
-              <div className="grid grid-cols-5 opacity-30">
+            <div className="relative rounded-2xl overflow-hidden border border-white/10 mt-1 pointer-events-none" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
+              {/* BINGO Header */}
+              <div className="grid grid-cols-5">
                 {BINGO_LETTERS.map(l => (
-                  <div key={l} className="flex items-center justify-center py-1.5 font-black text-white/50 text-sm bg-slate-900">{l}</div>
+                  <div key={l} className="flex items-center justify-center py-1.5 font-black text-white text-sm" style={{ background: LETTER_BG[l] }}>{l}</div>
                 ))}
               </div>
               
               {/* Dummy Grid */}
-              <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0507] opacity-20">
-                {Array.from({ length: 25 }).map((_, i) => (
-                  <div key={i} className="aspect-square flex items-center justify-center bg-slate-800 rounded-lg"></div>
-                ))}
+              <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0f1e]">
+                {Array.from({ length: 5 }).flatMap((_, r) => 
+                  Array.from({ length: 5 }, (_, c) => {
+                    const isFree = r === 2 && c === 2;
+                    const num = isFree ? '★' : (c * 15) + r + (c % 2 === 0 ? 3 : 8);
+                    return (
+                      <div key={`${r}-${c}`} className={`aspect-square flex items-center justify-center font-black text-base rounded-lg ${
+                        isFree ? 'bg-yellow-400 text-yellow-900' : 'bg-white text-[#1a2540]'
+                      }`}>{num}</div>
+                    );
+                  })
+                )}
               </div>
 
               {/* Overlay Text */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-[2px]">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm z-10">
                 <div className="w-12 h-12 bg-red-500/20 rounded-full flex items-center justify-center mb-3 border border-red-500/30">
                   <span className="text-xl animate-pulse">⏳</span>
                 </div>
-                <h3 className="text-red-400 font-black text-lg uppercase tracking-widest mb-1 shadow-red-500/50">Match is active</h3>
-                <p className="text-white/60 text-[10px] font-bold text-center px-4 leading-relaxed uppercase tracking-wider">
+                <h3 className="text-red-400 font-black text-lg uppercase tracking-widest mb-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">Match is active</h3>
+                <p className="text-white/80 text-[10px] font-bold text-center px-4 leading-relaxed uppercase tracking-wider">
                   Please wait for<br/>the next match
                 </p>
               </div>
