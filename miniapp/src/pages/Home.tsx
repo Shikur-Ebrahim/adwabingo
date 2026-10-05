@@ -9,17 +9,31 @@ export default function Home() {
   const { user } = useGameStore();
   const navigate = useNavigate();
 
-  const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string }>>({});
+  const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string; players: number }>>({});
   const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
 
   useEffect(() => {
     let isMounted = true;
     
     const fetchPools = async () => {
-      const { data } = await supabase.from('bingo_games').select('stake, prize_pool, start_at, status').in('status', ['waiting', 'calling']);
+      const { data } = await supabase.from('bingo_games').select('id, stake, prize_pool, start_at, status').in('status', ['waiting', 'calling']);
       if (data && isMounted) {
         const p: Record<number, any> = {};
-        data.forEach(g => { p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status }; });
+        data.forEach(g => { p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status, players: 0, _id: g.id }; });
+
+        // Fetch player counts for each active game
+        const ids = data.map(g => g.id);
+        if (ids.length > 0) {
+          const { data: playerRows } = await supabase
+            .from('bingo_players')
+            .select('game_id')
+            .in('game_id', ids);
+          if (playerRows) {
+            const countMap: Record<string, number> = {};
+            playerRows.forEach((r: any) => { countMap[r.game_id] = (countMap[r.game_id] || 0) + 1; });
+            data.forEach(g => { if (p[g.stake]) p[g.stake].players = countMap[g.id] || 0; });
+          }
+        }
         setHomeGames(p);
       }
     };
@@ -176,6 +190,7 @@ export default function Home() {
           ].map((stake) => {
             const hg = homeGames[stake.amount];
             const pool = hg?.pool || 0;
+            const players = hg?.players || 0;
             const hasGame = pool > 0;
             const isWaiting = hg?.status === 'waiting';
             const isCalling = hg?.status === 'calling';
@@ -197,11 +212,15 @@ export default function Home() {
                 <span className="absolute top-1.5 right-1.5 bg-white/20 px-1.5 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-wider">ETB</span>
               </div>
               
-              {/* Derash and Status section */}
+              {/* Derash / Players / Status — 3 columns */}
               <div className="w-full bg-slate-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 flex h-[35px] shrink-0">
                 <div className="flex-1 flex flex-col items-center justify-center border-r border-gray-100 dark:border-slate-800">
                   <span className="text-slate-400 dark:text-slate-500 text-[7px] font-bold uppercase tracking-wider">Derash</span>
                   <span className={`text-[10px] font-black text-yellow-600 dark:text-yellow-400 ${hasGame ? 'animate-pulse' : ''}`}>{pool} ETB</span>
+                </div>
+                <div className="flex-1 flex flex-col items-center justify-center border-r border-gray-100 dark:border-slate-800">
+                  <span className="text-slate-400 dark:text-slate-500 text-[7px] font-bold uppercase tracking-wider">Players</span>
+                  <span className="text-[10px] font-black text-emerald-500">{players}</span>
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center">
                   <span className="text-slate-400 dark:text-slate-500 text-[7px] font-bold uppercase tracking-wider">Status</span>
