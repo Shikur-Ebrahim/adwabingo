@@ -383,9 +383,9 @@ export default function BingoGame() {
     const currentAmharic = lastNum ? AMHARIC_NUM[lastNum] : null;
 
     return (
-      <div className="flex flex-col px-1.5 max-w-[380px] mx-auto w-full h-full overflow-hidden pt-1 pb-14">
+      <div className="flex flex-col px-2 w-full overflow-y-auto pb-20" onClick={initWebAudio}>
         {/* Top Info Bar */}
-        <div className="flex items-center justify-between bg-[#0f172a] px-2 py-1.5 rounded-xl border border-slate-800 shrink-0 mb-1">
+        <div className="flex items-center justify-between bg-[#0f172a] px-2 py-1.5 rounded-xl border border-slate-800 shrink-0 mb-1.5 mt-1">
           <div className="text-slate-400 text-[10px] font-bold">ID: {game.game_id}</div>
           <div className="flex items-center gap-1 text-yellow-400 text-[10px] font-bold"><Trophy size={11}/> {game.prize_pool} ETB</div>
           <div className="flex items-center gap-1 text-blue-400 text-[10px] font-bold"><Users size={11}/> {taken.length}</div>
@@ -394,7 +394,7 @@ export default function BingoGame() {
         </div>
 
         {/* 1-75 Tracker Board */}
-        <div className="bg-[#0b1120] rounded-xl p-1.5 border border-slate-800 shrink-0 mb-1 w-full overflow-hidden">
+        <div className="bg-[#0b1120] rounded-xl p-1.5 border border-slate-800 shrink-0 mb-1.5 w-full">
           <div className="flex flex-col gap-[2px]">
             {BINGO_LETTERS.map((letter, rowIndex) => (
               <div key={letter} className="flex items-center gap-1">
@@ -405,7 +405,7 @@ export default function BingoGame() {
                     const isCalled = called.includes(num);
                     const isLatest = num === lastNum;
                     return (
-                      <div key={num} className={`aspect-[4/5] rounded-[2px] flex items-center justify-center text-[8px] font-bold transition-all ${
+                      <div key={num} className={`aspect-[3/4] rounded-[2px] flex items-center justify-center text-[7px] font-bold transition-all ${
                         isLatest ? 'bg-white text-black shadow-[0_0_6px_rgba(255,255,255,0.8)] scale-110 z-10' :
                         isCalled ? 'bg-yellow-500 text-yellow-950' : 'bg-slate-800/60 text-slate-500'
                       }`}>{num}</div>
@@ -418,8 +418,8 @@ export default function BingoGame() {
         </div>
 
         {/* ── COMPACT CALLER SECTION ── */}
-        <div className="shrink-0 mb-2 w-full">
-          <div className="flex items-center justify-between px-1">
+        <div className="shrink-0 mb-2 w-full bg-[#0a0f1e] rounded-xl border border-white/5 px-2 py-1.5">
+          <div className="flex items-center justify-between">
             {/* Recent Balls */}
             <div className="flex items-center gap-1.5">
               {recent.length === 0 ? (
@@ -427,16 +427,16 @@ export default function BingoGame() {
               ) : recent.map((num, idx) => {
                 const l = getLetter(num);
                 const isFirst = idx === 0;
-                
+
                 if (isFirst) {
                   return (
                     <div key={`${num}-${idx}`} className="flex items-center gap-2">
-                      <div className="w-12 h-12 flex flex-col items-center justify-center rounded-full font-black border-2 border-yellow-400 bg-yellow-400/20 shadow-[0_0_15px_rgba(250,204,21,0.3)] scale-110 z-10">
-                        <span style={{ color: LETTER_COLOR[l] }} className="text-[10px] leading-none drop-shadow-md">{l}</span>
-                        <span className="text-white text-xl leading-none font-black drop-shadow-md">{num}</span>
+                      <div className="w-12 h-12 flex flex-col items-center justify-center rounded-full font-black border-2 border-yellow-400 bg-yellow-400/20 shadow-[0_0_15px_rgba(250,204,21,0.3)]">
+                        <span style={{ color: LETTER_COLOR[l] }} className="text-[10px] leading-none">{l}</span>
+                        <span className="text-white text-xl leading-none font-black">{num}</span>
                       </div>
                       <div className="flex flex-col justify-center">
-                        <span className="text-yellow-400 font-black text-[11px] tracking-wider animate-pulse">{AMHARIC_NUM[num]}</span>
+                        <span className="text-yellow-400 font-black text-[13px] tracking-wider">{AMHARIC_NUM[num]}</span>
                         <span className="text-white/40 text-[8px] font-bold uppercase tracking-widest flex items-center gap-1">
                           <div className={`w-1 h-1 rounded-full ${audioAvailable ? 'bg-emerald-400' : 'bg-yellow-400'}`} />
                           {audioAvailable ? 'Pro Audio' : 'TTS Audio'}
@@ -456,7 +456,7 @@ export default function BingoGame() {
             </div>
 
             {/* Sound controls */}
-            <div className="flex items-center gap-1.5 bg-[#0a0f1e] p-1.5 rounded-xl border border-white/5">
+            <div className="flex items-center gap-2">
               <button onClick={replayLastCall} disabled={!lastCallNum} className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center active:scale-90 disabled:opacity-30">
                 <RotateCcw size={14} className="text-blue-400" />
               </button>
@@ -468,38 +468,39 @@ export default function BingoGame() {
           </div>
         </div>
 
-        {/* My Card */}
-        <div className="flex-1 flex flex-col justify-center min-h-0">
-          {myCard ? (
-            <div className="w-full max-w-[268px] mx-auto rounded-2xl overflow-hidden shadow-2xl border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
-              <div className="grid grid-cols-5">
-                {BINGO_LETTERS.map(l => (
-                  <div key={l} className="flex items-center justify-center py-2 font-black text-white text-base" style={{ background: LETTER_BG[l] }}>{l}</div>
-                ))}
-              </div>
-              <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0f1e]">
-                {Array.from({ length: 5 }).flatMap((_, r) => Array.from({ length: 5 }).map((_, c) => {
-                  const num = myCard.card_matrix[r][c];
-                  const isFree = num === 0, marked = isFree || called.includes(num), isLast = num === lastNum;
-                  return (
-                    <div key={`${r}-${c}`} className={`aspect-square rounded flex items-center justify-center font-black text-sm transition-all duration-300 ${
-                      isFree ? 'bg-yellow-400 text-yellow-900' :
-                      isLast ? 'bg-orange-500 text-white scale-105 z-10 shadow-[0_0_12px_rgba(249,115,22,0.7)]' :
-                      marked ? 'bg-emerald-500 text-white' : 'bg-white text-[#1a2540]'
-                    }`}>{isFree ? "★" : num}</div>
-                  );
-                }))}
-              </div>
-              <div className="py-1.5 text-center bg-[#0a0f1e] border-t border-white/5">
-                <p className="text-white/60 font-black text-[10px] tracking-widest uppercase">CARTELA # {myCard.cartela_number}</p>
-              </div>
+        {/* My Card — fully visible, no clipping */}
+        {myCard ? (
+          <div className="w-full rounded-2xl overflow-hidden shadow-2xl border border-white/10 mb-2" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
+            {/* BINGO Header */}
+            <div className="grid grid-cols-5">
+              {BINGO_LETTERS.map(l => (
+                <div key={l} className="flex items-center justify-center py-2.5 font-black text-white text-lg" style={{ background: LETTER_BG[l] }}>{l}</div>
+              ))}
             </div>
-          ) : (
-            <div className="text-center py-4 bg-slate-800/30 rounded-xl border border-slate-800">
-              <p className="text-slate-400 text-xs font-bold">You are spectating</p>
+            {/* Card Grid */}
+            <div className="grid grid-cols-5 gap-[4px] p-[4px] bg-[#0a0f1e]">
+              {Array.from({ length: 5 }).flatMap((_, r) => Array.from({ length: 5 }).map((_, c) => {
+                const num = myCard.card_matrix[r][c];
+                const isFree = num === 0, marked = isFree || called.includes(num), isLast = num === lastNum;
+                return (
+                  <div key={`${r}-${c}`} className={`aspect-square rounded-lg flex items-center justify-center font-black text-base transition-all duration-300 ${
+                    isFree ? 'bg-yellow-400 text-yellow-900' :
+                    isLast ? 'bg-orange-500 text-white scale-105 z-10 shadow-[0_0_12px_rgba(249,115,22,0.7)]' :
+                    marked ? 'bg-emerald-500 text-white' : 'bg-white text-[#1a2540]'
+                  }`}>{isFree ? '★' : num}</div>
+                );
+              }))}
             </div>
-          )}
-        </div>
+            {/* Cartela Label */}
+            <div className="py-2 text-center bg-[#0a0f1e] border-t border-white/10">
+              <p className="text-white/70 font-black text-[11px] tracking-widest uppercase">CARTELA # {myCard.cartela_number}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="text-center py-4 bg-slate-800/30 rounded-xl border border-slate-800">
+            <p className="text-slate-400 text-xs font-bold">You are spectating</p>
+          </div>
+        )}
       </div>
     );
   };

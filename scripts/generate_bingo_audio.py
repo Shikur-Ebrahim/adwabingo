@@ -24,15 +24,17 @@ AMHARIC_NUMS = {
     71:'ሰባ አንድ', 72:'ሰባ ሁለት', 73:'ሰባ ሶስት', 74:'ሰባ አራት', 75:'ሰባ አምስት',
 }
 
-SPECIAL = {
-    'bingo_win':  'ቢንጎ! ቢንጎ! እንኳን ደስ አለዎ!',
-    'game_start': 'ጨዋታ ጀምሯል! ቁጥሮቹን ተዘጋጁ!',
-    'good_luck':  'መልካም ዕድል!',
+RANGES = {
+    'B': range(1,16), 
+    'I': range(16,31), 
+    'N': range(31,46), 
+    'G': range(46,61), 
+    'O': range(61,76)
 }
 
-async def generate_file(text, filename):
+async def generate_file(text, filename, force=False):
     file_path = os.path.join(OUTPUT_DIR, filename)
-    if os.path.exists(file_path):
+    if os.path.exists(file_path) and not force:
         print(f"Skipping {filename}, already exists.")
         return
     
@@ -50,12 +52,13 @@ async def main():
     print(f"Output Directory: {OUTPUT_DIR}\n")
     
     # Generate numbers 1 to 75
-    for num in range(1, 76):
-        amharic = AMHARIC_NUMS[num]
-        # "የቢንጎ ቁጥር [NUMBER]" -> "Bingo number [NUMBER]"
-        text = f"የቢንጎ ቁጥር {amharic}"
-        filename = f"bingo_{num:02d}.mp3"
-        await generate_file(text, filename)
+    # Format: "B, አንድ" — just the BINGO letter + Amharic number
+    for letter, nums in RANGES.items():
+        for num in nums:
+            amharic = AMHARIC_NUMS[num]
+            text = f"{letter}, {amharic}"
+            filename = f"bingo_{num:02d}.mp3"
+            await generate_file(text, filename, force=True)
         
     # Generate special sounds
     for name, text in SPECIAL.items():
