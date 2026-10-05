@@ -400,7 +400,7 @@ export default function BingoGame() {
     const currentAmharic = lastNum ? AMHARIC_NUM[lastNum] : null;
 
     return (
-      <div className="h-full flex flex-col px-2 pt-1 pb-2 gap-1">
+      <div className="h-full flex flex-col px-1 pt-1 pb-2 gap-1">
 
         {/* Top Info Bar */}
         <div className="flex items-center justify-between bg-[#0f172a] px-2 py-1 rounded-xl border border-slate-800 shrink-0">
@@ -411,7 +411,7 @@ export default function BingoGame() {
           <div className="text-[8px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-black animate-pulse">LIVE</div>
         </div>
 
-        {/* 1-75 Tracker Board */}
+        {/* 1-75 Tracker Board — slightly larger */}
         <div className="bg-[#0b1120] rounded-xl px-1.5 py-1.5 border border-slate-800 shrink-0">
           <div className="flex flex-col gap-[3px]">
             {BINGO_LETTERS.map((letter, rowIndex) => (
@@ -423,7 +423,7 @@ export default function BingoGame() {
                     const isCalled = called.includes(num);
                     const isLatest = num === lastNum;
                     return (
-                      <div key={num} className={`h-[18px] rounded-[3px] flex items-center justify-center text-[8px] font-bold transition-all ${
+                      <div key={num} className={`h-[20px] rounded-[3px] flex items-center justify-center text-[8px] font-bold transition-all ${
                         isLatest ? 'bg-white text-black shadow-[0_0_4px_rgba(255,255,255,0.8)]' :
                         isCalled ? 'bg-yellow-500 text-yellow-950' : 'bg-slate-800/60 text-slate-500'
                       }`}>{num}</div>
@@ -435,7 +435,8 @@ export default function BingoGame() {
           </div>
         </div>
 
-        <div className="w-full max-w-[340px] mx-auto flex flex-col gap-1">
+        {/* Caller Row + Card — narrow, centred */}
+        <div className="w-full max-w-[290px] mx-auto flex flex-col gap-1">
           {/* Caller Row */}
           <div className="shrink-0 bg-[#0a0f1e] rounded-xl border border-white/5 px-2 py-1.5">
             <div className="flex items-center justify-between">
@@ -476,35 +477,33 @@ export default function BingoGame() {
             </div>
           </div>
 
-          {/* My Card — flex-1, fills remaining space, NO scroll */}
+          {/* My Card — SQUARE cells using grid + aspect-square */}
           {myCard ? (
-            <div className="rounded-2xl overflow-hidden border border-white/10 flex flex-col" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
+            <div className="rounded-2xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
               {/* BINGO Header */}
-              <div className="grid grid-cols-5 shrink-0">
+              <div className="grid grid-cols-5">
                 {BINGO_LETTERS.map(l => (
                   <div key={l} className="flex items-center justify-center py-1.5 font-black text-white text-sm" style={{ background: LETTER_BG[l] }}>{l}</div>
                 ))}
               </div>
-              {/* Card Grid — fixed h-11 rows */}
-              <div className="flex flex-col gap-[3px] p-[3px] bg-[#0a0f1e]">
-                {Array.from({ length: 5 }, (_, r) => (
-                  <div key={r} className="flex gap-[3px]">
-                    {Array.from({ length: 5 }, (_, c) => {
-                      const num = myCard.card_matrix[r][c];
-                      const isFree = num === 0, marked = isFree || called.includes(num), isLast = num === lastNum;
-                      return (
-                        <div key={c} className={`flex-1 h-11 flex items-center justify-center font-black text-base rounded-lg transition-all duration-300 ${
-                          isFree ? 'bg-yellow-400 text-yellow-900' :
-                          isLast ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
-                          marked ? 'bg-emerald-500 text-white' : 'bg-white text-[#1a2540]'
-                        }`}>{isFree ? '★' : num}</div>
-                      );
-                    })}
-                  </div>
-                ))}
+              {/* Card Grid — aspect-square cells = always perfect squares */}
+              <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0f1e]">
+                {Array.from({ length: 5 }).flatMap((_, r) =>
+                  Array.from({ length: 5 }, (_, c) => {
+                    const num = myCard.card_matrix[r][c];
+                    const isFree = num === 0, marked = isFree || called.includes(num), isLast = num === lastNum;
+                    return (
+                      <div key={`${r}-${c}`} className={`aspect-square flex items-center justify-center font-black text-base rounded-lg transition-all duration-300 ${
+                        isFree ? 'bg-yellow-400 text-yellow-900' :
+                        isLast ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
+                        marked ? 'bg-emerald-500 text-white' : 'bg-white text-[#1a2540]'
+                      }`}>{isFree ? '★' : num}</div>
+                    );
+                  })
+                )}
               </div>
               {/* Cartela Label */}
-              <div className="py-1 text-center bg-[#0a0f1e] border-t border-white/10 shrink-0">
+              <div className="py-1 text-center bg-[#0a0f1e] border-t border-white/10">
                 <p className="text-white/70 font-black text-[10px] tracking-widest uppercase">CARTELA # {myCard.cartela_number}</p>
               </div>
             </div>
