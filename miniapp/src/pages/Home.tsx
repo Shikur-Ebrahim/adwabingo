@@ -189,7 +189,7 @@ export default function Home() {
             }
 
             return (
-            <div key={stake.amount} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col">
+            <div key={stake.amount} onClick={() => navigate(`/bingo/live?stake=${stake.amount}`)} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden flex flex-col cursor-pointer active:scale-95 transition-all">
               <div className={`h-16 bg-gradient-to-br ${stake.color} flex items-center justify-center relative`}>
                 <span className="text-white font-black text-3xl drop-shadow-sm">{stake.amount}</span>
                 <span className="absolute top-1.5 right-1.5 bg-white/20 px-1.5 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-wider">ETB</span>
@@ -208,9 +208,9 @@ export default function Home() {
               </div>
 
               <div className="p-2 text-center">
-                <button onClick={() => navigate(`/bingo/live?stake=${stake.amount}`)} className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-2 rounded-lg text-xs transition-colors">
+                <div className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-2 rounded-lg text-xs transition-colors flex items-center justify-center">
                   {isWaiting ? 'Join Match 🔥' : 'Join Room'}
-                </button>
+                </div>
               </div>
             </div>
           )})}
