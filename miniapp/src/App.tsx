@@ -35,7 +35,7 @@ function TelegramBackButton() {
       WebApp.BackButton.show();
       const handler = () => navigate(-1);
       WebApp.BackButton.onClick(handler);
-      return () => WebApp.BackButton.offClick(handler);
+      return () => { WebApp.BackButton.offClick(handler); };
     }
   }, [isRoot, navigate]);
 
