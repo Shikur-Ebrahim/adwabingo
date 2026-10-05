@@ -145,6 +145,7 @@ export default function BingoGame() {
   useEffect(() => {
     if (selectedStake) return;
     const update = () => {
+      if (document.visibilityState === 'hidden') return;
       setHomeTimeLeft(prev => {
         const next: Record<number, number> = {};
         for (const [stake, g] of Object.entries(homeGames)) {
@@ -156,7 +157,7 @@ export default function BingoGame() {
       });
     };
     update();
-    const id = setInterval(update, 500);
+    const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, [selectedStake, homeGames]);
   const [audioAvailable, setAudioAvailable] = useState(false);
@@ -301,9 +302,12 @@ export default function BingoGame() {
 
   useEffect(() => {
     if (!game || game.status !== "waiting") return;
-    const update = () => setTimeLeft(Math.max(0, Math.ceil((new Date(game.start_at).getTime() - Date.now()) / 1000)));
+    const update = () => {
+      if (document.visibilityState === 'hidden') return;
+      setTimeLeft(Math.max(0, Math.ceil((new Date(game.start_at).getTime() - Date.now()) / 1000)));
+    };
     update();
-    const id = setInterval(update, 500);
+    const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, [game?.status, game?.start_at]);
 

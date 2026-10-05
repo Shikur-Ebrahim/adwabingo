@@ -36,6 +36,8 @@ export default function Home() {
 
   useEffect(() => {
     const update = () => {
+      // Skip updates when the page is hidden — prevents callback flood on resume
+      if (document.visibilityState === 'hidden') return;
       setHomeTimeLeft(prev => {
         const next: Record<number, number> = {};
         for (const [stake, g] of Object.entries(homeGames)) {
@@ -47,7 +49,7 @@ export default function Home() {
       });
     };
     update();
-    const id = setInterval(update, 500);
+    const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, [homeGames]);
 
