@@ -393,23 +393,21 @@ export default function BingoGame() {
     return (
       <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-hidden relative" onClick={initWebAudio}>
         
-        {/* Background: real 150-cartela grid rendered very faintly */}
-        <div className="absolute inset-0 z-0 pointer-events-none flex flex-col justify-center opacity-[0.03]">
+        {/* Background: 150-cartela grid — more visible */}
+        <div className="absolute inset-0 z-0 pointer-events-none flex flex-col justify-center opacity-[0.08]">
           <div className="grid gap-[2px] p-[2px]" style={{ gridTemplateColumns: 'repeat(15, minmax(0, 1fr))' }}>
             {Array.from({ length: 150 }, (_, i) => (
               <div key={i} className="aspect-square flex items-center justify-center rounded-sm bg-white text-[#05081a] font-black text-[7px]">{i + 1}</div>
             ))}
           </div>
         </div>
-        {/* top + bottom fade overlay */}
-        <div className="absolute inset-0 z-0 pointer-events-none bg-gradient-to-b from-[#05081a] via-transparent to-[#05081a]"></div>
 
         <div className="relative z-10 flex flex-col h-full overflow-y-auto">
           <Header />
           <div className="flex-1 flex flex-col items-center justify-center p-4 pb-12 gap-4">
-            {/* Hero Banner — horizontal logo */}
+            {/* Hero Banner — fully visible, no crop */}
             <div className="w-full max-w-[340px] rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(99,102,241,0.25)] border border-white/10">
-              <img src="/hero.png" alt="ADWA Bingo" className="w-full object-cover" style={{ maxHeight: '160px', objectPosition: 'center' }} />
+              <img src="/hero.png" alt="ADWA Bingo" className="w-full h-auto" />
             </div>
 
             <p className="text-white/50 text-xs uppercase tracking-widest font-bold">Select Stake & Win Big</p>
