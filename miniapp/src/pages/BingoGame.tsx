@@ -383,7 +383,7 @@ export default function BingoGame() {
     const currentAmharic = lastNum ? AMHARIC_NUM[lastNum] : null;
 
     return (
-      <div className="flex flex-col px-2 w-full overflow-y-auto pb-20" onClick={initWebAudio}>
+      <div className="flex flex-col px-2 w-full pb-20">
         {/* Top Info Bar */}
         <div className="flex items-center justify-between bg-[#0f172a] px-2 py-1.5 rounded-xl border border-slate-800 shrink-0 mb-1.5 mt-1">
           <div className="text-slate-400 text-[10px] font-bold">ID: {game.game_id}</div>
@@ -533,7 +533,7 @@ export default function BingoGame() {
   );
 
   return (
-    <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none overflow-hidden" onClick={initWebAudio}>
+    <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none" onClick={initWebAudio}>
       <div className="sticky top-0 z-40 bg-[#05081a] flex flex-col shrink-0">
         <Header />
         {game.status === 'waiting' && (
@@ -568,7 +568,7 @@ export default function BingoGame() {
         </div>
       )}
 
-      <div className="flex-1 flex flex-col relative overflow-y-auto">
+      <div className="flex-1 overflow-y-auto overscroll-contain">
         {game.status === 'waiting' ? renderCartelaPicker() : renderCallingBoard()}
       </div>
 
