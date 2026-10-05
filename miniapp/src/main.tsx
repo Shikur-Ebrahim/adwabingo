@@ -1,114 +1,89 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-/* ─── Config ──────────────────────────────────────────────────────────────── */
-const THRESHOLD_MS = 15_000; // 15 s in background → show resume overlay
-let appKey       = 0;
-let hiddenAt: number | null = null;
-let root: ReturnType<typeof ReactDOM.createRoot>;
+const BACKGROUND_THRESHOLD_MS = 15_000; // 15 seconds away = force fresh remount
 
-/* ─── React mount ─────────────────────────────────────────────────────────── */
-function render() {
-  root.render(
-    <React.StrictMode>
-      <App key={appKey} />
-    </React.StrictMode>
-  );
+function Root() {
+  const [appKey, setAppKey] = useState(0);
+  const hiddenAtRef = useRef<number | null>(null);
+
+  const forceRemount = useCallback(() => {
+    // Re-expand WebView first (fixes collapsed WebView on return)
+    try { (window as any).Telegram?.WebApp?.expand(); } catch (_) {}
+    setAppKey(k => k + 1);
+  }, []);
+
+  const handleReturn = useCallback(() => {
+    // Always re-expand WebView when returning from background
+    // (Telegram may have collapsed it, causing click targets to be misaligned)
+    try { (window as any).Telegram?.WebApp?.expand(); } catch (_) {}
+
+    const hidden = hiddenAtRef.current;
+    hiddenAtRef.current = null;
+    if (hidden !== null && Date.now() - hidden > BACKGROUND_THRESHOLD_MS) {
+      forceRemount();
+    }
+  }, [forceRemount]);
+
+  const handleHide = useCallback(() => {
+    hiddenAtRef.current = Date.now();
+  }, []);
+
+  useEffect(() => {
+    // ── Event-based detection ──────────────────────────────────────────────
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') handleHide();
+      else handleReturn();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', handleReturn);
+    window.addEventListener('pageshow', handleReturn);
+
+    // Telegram-specific activated/deactivated events
+    try {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.onEvent) {
+        tg.onEvent('activated', handleReturn);
+        tg.onEvent('deactivated', handleHide);
+      }
+    } catch (_) {}
+
+    // ── Heartbeat suspension detector ─────────────────────────────────────
+    // The ONLY reliable way to detect Android JS engine suspension.
+    // While JS is suspended, this interval doesn't fire.
+    // When JS resumes, if the gap is > threshold → force remount.
+    let lastBeat = Date.now();
+    const beatId = setInterval(() => {
+      const now = Date.now();
+      const gap = now - lastBeat;
+      lastBeat = now;
+      if (gap > BACKGROUND_THRESHOLD_MS) {
+        // JS engine was suspended for too long — force fresh remount
+        try { (window as any).Telegram?.WebApp?.expand(); } catch (_) {}
+        setAppKey(k => k + 1);
+      }
+    }, 3000); // check every 3 seconds
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', handleReturn);
+      window.removeEventListener('pageshow', handleReturn);
+      clearInterval(beatId);
+      try {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg?.offEvent) {
+          tg.offEvent('activated', handleReturn);
+          tg.offEvent('deactivated', handleHide);
+        }
+      } catch (_) {}
+    };
+  }, [handleReturn, handleHide]);
+
+  return <App key={appKey} />;
 }
 
-/* ─── Force fresh remount ─────────────────────────────────────────────────── */
-function forceRemount() {
-  document.getElementById('freeze-overlay')?.remove();
-  try { (window as any).Telegram?.WebApp?.expand(); } catch (_) {}
-  appKey++;
-  render();
-}
-
-/* ─── Native DOM overlay (works even when React events are dead) ──────────── */
-function showOverlay() {
-  if (document.getElementById('freeze-overlay')) return;
-
-  // Always try to re-expand the WebView first
-  try { (window as any).Telegram?.WebApp?.expand(); } catch (_) {}
-
-  const overlay = document.createElement('div');
-  overlay.id = 'freeze-overlay';
-  overlay.style.cssText = [
-    'position:fixed', 'inset:0', 'z-index:2147483647',
-    'background:#0f172a', 'display:flex', 'flex-direction:column',
-    'align-items:center', 'justify-content:center', 'gap:20px',
-    'font-family:sans-serif',
-  ].join(';');
-
-  const icon = document.createElement('div');
-  icon.textContent = '⏸️';
-  icon.style.fontSize = '48px';
-
-  const msg = document.createElement('p');
-  msg.textContent = 'App paused in background';
-  msg.style.cssText = 'color:#94a3b8;font-size:14px;margin:0;text-align:center;padding:0 24px;';
-
-  const btn = document.createElement('button');
-  btn.textContent = '🔄  Tap to Resume';
-  // native onclick — not affected by React synthetic event system
-  btn.onclick = forceRemount;
-  btn.style.cssText = [
-    'background:#eab308', 'color:#000', 'border:none',
-    'border-radius:16px', 'padding:18px 40px',
-    'font-size:17px', 'font-weight:900', 'cursor:pointer',
-    'letter-spacing:0.3px',
-  ].join(';');
-
-  overlay.appendChild(icon);
-  overlay.appendChild(msg);
-  overlay.appendChild(btn);
-  document.body.appendChild(overlay);
-}
-
-/* ─── Resume logic ────────────────────────────────────────────────────────── */
-function tryResume() {
-  try { (window as any).Telegram?.WebApp?.expand(); } catch (_) {}
-  if (hiddenAt !== null && Date.now() - hiddenAt > THRESHOLD_MS) {
-    hiddenAt = null;
-    showOverlay();
-  } else {
-    hiddenAt = null;
-  }
-}
-
-function markHidden() {
-  hiddenAt = Date.now();
-}
-
-/* ─── Event listeners (outside React) ────────────────────────────────────── */
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') markHidden();
-  else tryResume();
-});
-window.addEventListener('focus',    tryResume);
-window.addEventListener('pageshow', tryResume);
-
-try {
-  const tg = (window as any).Telegram?.WebApp;
-  if (tg?.onEvent) {
-    tg.onEvent('activated',   tryResume);
-    tg.onEvent('deactivated', markHidden);
-  }
-} catch (_) {}
-
-/* ─── Heartbeat detector (most reliable for JS suspension) ───────────────── */
-// While JS is suspended this interval doesn't fire.
-// On resume: gap > THRESHOLD → show overlay.
-let lastBeat = Date.now();
-setInterval(() => {
-  const now = Date.now();
-  const gap = now - lastBeat;
-  lastBeat = now;
-  if (gap > THRESHOLD_MS) showOverlay();
-}, 3000);
-
-/* ─── Initial mount ───────────────────────────────────────────────────────── */
-root = ReactDOM.createRoot(document.getElementById('root')!);
-render();
+ReactDOM.createRoot(document.getElementById('root')!).render(
+  <React.StrictMode><Root /></React.StrictMode>
+);
