@@ -409,7 +409,7 @@ export default function BingoGame() {
           <div className="flex-1 flex flex-col items-center justify-center p-4 pb-12 gap-4">
             {/* Hero Banner — horizontal logo */}
             <div className="w-full max-w-[340px] rounded-2xl overflow-hidden shadow-[0_0_30px_rgba(99,102,241,0.25)] border border-white/10">
-              <img src="/banner.jpg" alt="ADWA Bingo" className="w-full object-cover" style={{ maxHeight: '160px', objectPosition: 'center' }} />
+              <img src="/hero.png" alt="ADWA Bingo" className="w-full object-cover" style={{ maxHeight: '160px', objectPosition: 'center' }} />
             </div>
 
             <p className="text-white/50 text-xs uppercase tracking-widest font-bold">Select Stake & Win Big</p>
