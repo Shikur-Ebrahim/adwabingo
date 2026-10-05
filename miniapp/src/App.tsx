@@ -1,5 +1,5 @@
-﻿import { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { HashRouter, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { Gamepad2, Wallet, Trophy, User } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 import { useGameStore } from './store/gameStore';
@@ -13,6 +13,34 @@ import Worker from './pages/Worker';
 import BingoGame from './pages/BingoGame';
 import AdminBingoGames from './pages/AdminBingoGames';
 import { ErrorBoundary } from './components/ErrorBoundary';
+
+// Scroll to top on every route change
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+}
+
+// Show/hide Telegram's native Back button based on route depth
+function TelegramBackButton() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isRoot = location.pathname === '/' || location.pathname === '/admin' || location.pathname === '/worker';
+
+  useEffect(() => {
+    if (!WebApp?.BackButton) return;
+    if (isRoot) {
+      WebApp.BackButton.hide();
+    } else {
+      WebApp.BackButton.show();
+      const handler = () => navigate(-1);
+      WebApp.BackButton.onClick(handler);
+      return () => WebApp.BackButton.offClick(handler);
+    }
+  }, [isRoot, navigate]);
+
+  return null;
+}
 
 function Navigation() {
   const location = useLocation();
@@ -160,7 +188,9 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    <HashRouter>
+      <TelegramBackButton />
+      <ScrollToTop />
       <div className="min-h-screen bg-slate-50 pb-20 font-sans text-slate-800">
         <ErrorBoundary><Routes>
           <Route path="/" element={<RoleRouter />} />
@@ -188,7 +218,7 @@ function App() {
         <Profile />
         <Navigation />
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
