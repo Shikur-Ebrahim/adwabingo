@@ -681,6 +681,106 @@ router.get('/bingo-games/:id/players', validateTelegramAuth, requireAdmin, async
   res.json({ count: (data || []).length, players: data });
 });
 
+// GET /admin/bingo-report — advanced report with time filters
+router.get('/bingo-report', validateTelegramAuth, requireAdmin, async (req, res) => {
+  const period = req.query.period as string || 'today';
+  
+  let startDate = new Date();
+  startDate.setHours(0,0,0,0); // Start of today
+
+  let endDate = new Date();
+  endDate.setHours(23,59,59,999); // End of today
+
+  const now = new Date();
+
+  switch(period) {
+    case 'yesterday':
+      startDate.setDate(startDate.getDate() - 1);
+      endDate.setDate(endDate.getDate() - 1);
+      break;
+    case 'week':
+      startDate.setDate(now.getDate() - 7);
+      endDate = now;
+      break;
+    case 'month':
+      startDate.setMonth(now.getMonth() - 1);
+      endDate = now;
+      break;
+    case '3month':
+      startDate.setMonth(now.getMonth() - 3);
+      endDate = now;
+      break;
+    case '6month':
+      startDate.setMonth(now.getMonth() - 6);
+      endDate = now;
+      break;
+    case 'year':
+      startDate.setFullYear(now.getFullYear() - 1);
+      endDate = now;
+      break;
+    case 'all':
+      startDate = new Date(0); // 1970
+      endDate = now;
+      break;
+    case 'today':
+    default:
+      // already set
+      break;
+  }
+
+  // Fetch games
+  const { data: games, error } = await supabase
+    .from('bingo_games')
+    .select('id, game_id, stake, status, winner_prize, winner_first_name, winner_cartela, created_at, finished_at')
+    .gte('created_at', startDate.toISOString())
+    .lte('created_at', endDate.toISOString())
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    return res.status(500).json({ error: error.message });
+  }
+
+  // Fetch all players in date range to calculate collected stakes accurately
+  const { data: players } = await supabase
+    .from('bingo_players')
+    .select('game_id')
+    .gte('created_at', startDate.toISOString())
+    .lte('created_at', endDate.toISOString());
+
+  const playerCounts: Record<string, number> = {};
+  (players || []).forEach(p => {
+    playerCounts[p.game_id] = (playerCounts[p.game_id] || 0) + 1;
+  });
+
+  let total_games = 0;
+  let total_stakes_collected = 0;
+  let total_prizes_paid = 0;
+
+  const enrichedGames = (games || []).map(g => {
+    const pc = playerCounts[g.id] || 0;
+    const collected = pc * Number(g.stake);
+    const paid = Number(g.winner_prize || 0);
+    
+    if (g.status === 'finished') {
+      total_games++;
+      total_stakes_collected += collected;
+      total_prizes_paid += paid;
+    }
+
+    return { ...g, players_count: pc, collected, paid };
+  });
+
+  res.json({
+    stats: {
+      total_games,
+      total_stakes_collected,
+      total_prizes_paid,
+      profit: total_stakes_collected - total_prizes_paid
+    },
+    games: enrichedGames
+  });
+});
+
 // POST /admin/bingo-games/:id/finish — force-finish a stuck game
 router.post('/bingo-games/:id/finish', validateTelegramAuth, requireAdmin, async (req, res) => {
   const { error } = await supabase

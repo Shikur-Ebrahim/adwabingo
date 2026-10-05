@@ -50,6 +50,11 @@ export default function AdminBingoGames() {
   const [games, setGames]       = useState<BGame[]>([]);
   const [counts, setCounts]     = useState<Record<string, number>>({});
   const [loading, setLoading]   = useState(true);
+  const [tab, setTab]           = useState<'monitor' | 'report'>('monitor');
+  const [reportPeriod, setReportPeriod] = useState('today');
+  const [reportStats, setReportStats]   = useState<any>(null);
+  const [reportGames, setReportGames]   = useState<any[]>([]);
+  const [reportLoading, setReportLoading] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [settings, setSettings] = useState<GameSettings>(DEFAULT);
   const [editing, setEditing]   = useState(false);
@@ -79,6 +84,18 @@ export default function AdminBingoGames() {
     } finally { setLoading(false); }
   }, []);
 
+  const fetchReport = useCallback(async () => {
+    setReportLoading(true);
+    try {
+      const r = await fetch(`${API}/admin/bingo-report?period=${reportPeriod}`, { headers: hdrs() });
+      if (r.ok) {
+        const data = await r.json();
+        setReportStats(data.stats);
+        setReportGames(data.games);
+      }
+    } finally { setReportLoading(false); }
+  }, [reportPeriod]);
+
   const fetchSettings = useCallback(async () => {
     try {
       const r = await fetch(`${API}/admin/game-settings`, { headers: hdrs() });
@@ -103,6 +120,7 @@ export default function AdminBingoGames() {
   }, []);
 
   useEffect(() => { fetchGames(); fetchSettings(); }, [fetchGames, fetchSettings]);
+  useEffect(() => { if (tab === 'report') fetchReport(); }, [tab, reportPeriod, fetchReport]);
 
   const saveSettings = async () => {
     setSaving(true); setSaveMsg("");
@@ -173,14 +191,86 @@ export default function AdminBingoGames() {
             <h1 className="text-xl font-black">Bingo Monitor</h1>
             <p className="text-orange-100 text-xs">Fully automated engine</p>
           </div>
-          <button onClick={fetchGames} className="p-2 bg-white/20 rounded-full active:scale-90">
-            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+          <button onClick={tab === 'monitor' ? fetchGames : fetchReport} className="p-2 bg-white/20 rounded-full active:scale-90">
+            <RefreshCw size={16} className={(tab === 'monitor' ? loading : reportLoading) ? "animate-spin" : ""} />
           </button>
+        </div>
+        <div className="flex gap-2 mt-4 bg-black/10 p-1 rounded-xl">
+          <button onClick={() => setTab('monitor')} className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-colors ${tab === 'monitor' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-50 hover:bg-white/10'}`}>Monitor</button>
+          <button onClick={() => setTab('report')} className={`flex-1 py-1.5 rounded-lg text-xs font-black transition-colors ${tab === 'report' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-50 hover:bg-white/10'}`}>Advanced Report</button>
         </div>
       </div>
 
       <div className="p-4 space-y-4">
 
+        {tab === 'report' ? (
+          <div className="space-y-4">
+            <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+              {['today', 'yesterday', 'week', 'month', '3month', '6month', 'year', 'all'].map(p => (
+                <button key={p} onClick={() => setReportPeriod(p)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-colors ${reportPeriod === p ? 'bg-orange-600 text-white' : 'bg-white border border-slate-200 text-slate-500'}`}>
+                  {p === 'today' ? 'Today' : p === 'yesterday' ? 'Yesterday' : p === 'week' ? '7 Days' : p === 'month' ? '30 Days' : p === '3month' ? '3 Months' : p === '6month' ? '6 Months' : p === 'year' ? '1 Year' : 'All Time'}
+                </button>
+              ))}
+            </div>
+
+            {reportLoading ? (
+              <div className="flex justify-center py-10"><RefreshCw size={24} className="text-orange-400 animate-spin"/></div>
+            ) : reportStats ? (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Total Games</p>
+                    <p className="text-2xl font-black text-slate-800 mt-1">{reportStats.total_games}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Profit</p>
+                    <p className={`text-2xl font-black mt-1 ${reportStats.profit >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+                      {reportStats.profit >= 0 ? '+' : ''}{reportStats.profit}
+                    </p>
+                  </div>
+                  <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Stakes Collected</p>
+                    <p className="text-lg font-black text-blue-600 mt-1">{reportStats.total_stakes_collected}</p>
+                  </div>
+                  <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">Prizes Paid</p>
+                    <p className="text-lg font-black text-amber-600 mt-1">{reportStats.total_prizes_paid}</p>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                  <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
+                    <h3 className="font-black text-slate-700 text-sm">Games List ({reportGames.length})</h3>
+                  </div>
+                  <div className="divide-y divide-slate-50 max-h-96 overflow-y-auto">
+                    {reportGames.length === 0 ? (
+                      <p className="p-4 text-center text-slate-400 text-sm">No games found for this period</p>
+                    ) : (
+                      reportGames.map((g: any) => (
+                        <div key={g.id} className="p-3 hover:bg-slate-50 transition-colors">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-black text-sm text-slate-700">#{g.game_id}</span>
+                            <span className="text-[10px] font-bold text-slate-400">{new Date(g.created_at).toLocaleString()}</span>
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-500 font-bold">{g.stake} ETB • <Users size={10} className="inline"/> {g.players_count}</span>
+                            <span className="font-black text-emerald-600 text-right">{g.paid} ETB Paid</span>
+                          </div>
+                          <div className="flex justify-between items-center text-[10px] mt-1">
+                            <span className="text-slate-400 uppercase">{g.status}</span>
+                            <span className={`font-black ${g.collected - g.paid >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>Profit: {g.collected - g.paid}</span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : null}
+          </div>
+        ) : (
+          <>
         {/* Engine Settings */}
         <div className="bg-white rounded-2xl shadow-sm border border-orange-100 overflow-hidden">
           <div className="px-4 pt-4 pb-3 flex items-center justify-between border-b border-slate-50">
@@ -442,6 +532,8 @@ export default function AdminBingoGames() {
             </div>
           )}
         </div>
+        </>
+        )}
 
       </div>
     </div>
