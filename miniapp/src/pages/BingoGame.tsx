@@ -385,27 +385,40 @@ export default function BingoGame() {
         </div>
 
         {/* My Card (if joined) */}
-        <div className="flex-1 flex flex-col justify-center min-h-0">
+        <div className="flex-1 flex flex-col justify-center min-h-0 pb-1">
           {myCard ? (
-            <div className="w-full max-w-[260px] mx-auto bg-[#131b31] p-2 rounded-xl border border-indigo-500/30 shadow-[0_0_20px_rgba(99,102,241,0.1)] shrink-0">
-              <div className="grid grid-cols-5 gap-1 mb-1">
-                {BINGO_LETTERS.map(l => <div key={l} className="text-center font-black text-sm" style={{ color: getLetterColor(l) }}>{l}</div>)}
+            <div className="w-full max-w-[268px] mx-auto rounded-2xl overflow-hidden shadow-2xl border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
+              {/* BINGO column headers */}
+              <div className="grid grid-cols-5">
+                {BINGO_LETTERS.map(l => {
+                  const bg = { B:'#3b82f6', I:'#8b5cf6', N:'#ec4899', G:'#22c55e', O:'#3b82f6' }[l] || '#fff';
+                  return (
+                    <div key={l} className="flex items-center justify-center py-2 font-black text-white text-base" style={{ background: bg }}>
+                      {l}
+                    </div>
+                  );
+                })}
               </div>
-              <div className="grid grid-cols-5 gap-1">
+              {/* Card grid */}
+              <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0f1e]">
                 {Array.from({ length: 5 }).flatMap((_, r) => Array.from({ length: 5 }).map((_, c) => {
                   const num = myCard.card_matrix[r][c];
                   const isFree = num === 0;
                   const marked = isFree || called.includes(num);
                   const isLast = num === lastNum;
                   return (
-                    <div key={`${r}-${c}`} className={`aspect-square rounded-lg flex items-center justify-center font-black text-sm transition-all duration-300 ${
-                      isFree ? 'bg-yellow-400 text-yellow-900 shadow-[0_0_10px_rgba(250,204,21,0.5)]' :
-                      isLast ? 'bg-orange-500 text-white scale-105 shadow-[0_0_10px_rgba(249,115,22,0.6)] z-10' :
-                      marked ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.4)]' :
-                      'bg-slate-800/80 text-slate-300 border border-slate-700'
+                    <div key={`${r}-${c}`} className={`aspect-square rounded flex items-center justify-center font-black text-sm transition-all duration-300 ${
+                      isFree ? 'bg-yellow-400 text-yellow-900' :
+                      isLast ? 'bg-orange-500 text-white scale-105 z-10 shadow-[0_0_12px_rgba(249,115,22,0.7)]' :
+                      marked ? 'bg-emerald-500 text-white shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                      'bg-white text-[#1a2540]'
                     }`}>{isFree ? "★" : num}</div>
                   );
                 }))}
+              </div>
+              {/* Cartela label */}
+              <div className="py-2 text-center bg-[#0a0f1e] border-t border-white/5">
+                <p className="text-white/70 font-black text-xs tracking-widest uppercase">CARTELA # {myCard.cartela_number}</p>
               </div>
             </div>
           ) : (
