@@ -76,19 +76,42 @@ export default function BingoGame() {
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
   const [soundEnabled, setSoundEnabled] = useState(false); // Default silent
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
-  useEffect(() => {
-    audioRef.current = new Audio();
-  }, []);
+  const initWebAudio = () => {
+    if (!audioCtxRef.current) {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (AudioContextClass) {
+        audioCtxRef.current = new AudioContextClass();
+      }
+    }
+    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+  };
 
-  const speakNumber = useCallback((num: number) => {
-    if (!soundEnabled) return;
-    if (audioRef.current) {
+  const toggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    if (next) initWebAudio();
+  };
+
+  const speakNumber = useCallback(async (num: number) => {
+    if (!soundEnabled || !audioCtxRef.current) return;
+    try {
       const letter = BINGO_LETTERS[Math.floor((num - 1) / 15)];
       const amLetter = getAmharicLetter(letter);
-      audioRef.current.src = 'https://translate.google.com/translate_tts?ie=UTF-8&tl=am&client=tw-ob&q=' + encodeURIComponent(amLetter + ' ' + num);
-      audioRef.current.play().catch(() => {});
+      const text = `${amLetter} ${num}`;
+      const res = await fetch(`${API}/bingo/tts?text=` + encodeURIComponent(text));
+      if (!res.ok) return;
+      const arrayBuffer = await res.arrayBuffer();
+      const audioBuffer = await audioCtxRef.current.decodeAudioData(arrayBuffer);
+      const source = audioCtxRef.current.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(audioCtxRef.current.destination);
+      source.start(0);
+    } catch (e) {
+      console.error('Audio error', e);
     }
   }, [soundEnabled]);
 
@@ -347,14 +370,7 @@ export default function BingoGame() {
           </div>
 
           <button 
-            onClick={() => {
-              const next = !soundEnabled;
-              setSoundEnabled(next);
-              if (next && audioRef.current) {
-                audioRef.current.src = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
-                audioRef.current.play().catch(() => {});
-              }
-            }}
+            onClick={toggleSound}
             className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-colors active:scale-95 shrink-0 ${
               soundEnabled ? 'bg-blue-500/20 border-blue-500/50' : 'bg-slate-800/80 border-slate-700'
             }`}

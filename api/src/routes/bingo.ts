@@ -151,4 +151,20 @@ router.get('/card', validateTelegramAuth, async (req, res) => {
   const { data } = await supabase.from('bingo_players').select('card_matrix').eq('game_id', game_id).eq('cartela_number', cartela).maybeSingle();
   res.json({ matrix: data?.card_matrix || null });
 });
+router.get('/tts', async (req, res) => {
+  try {
+    const text = req.query.text;
+    if (!text) { res.status(400).send('No text'); return; }
+    const url = 'https://translate.google.com/translate_tts?ie=UTF-8&tl=am&client=tw-ob&q=' + encodeURIComponent(String(text));
+    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' } });
+    if (!r.ok) throw new Error('TTS failed');
+    const buffer = await r.arrayBuffer();
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('Cache-Control', 'public, max-age=864000');
+    res.send(Buffer.from(buffer));
+  } catch (e) {
+    console.error('[TTS Proxy Error]', e);
+    res.status(500).send('Error');
+  }
+});
 export default router;
