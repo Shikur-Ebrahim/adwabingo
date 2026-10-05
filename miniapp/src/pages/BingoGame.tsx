@@ -558,16 +558,24 @@ export default function BingoGame() {
       <div className="rounded-2xl border-[3px] border-cyan-400 overflow-hidden bg-[#05081a] shadow-[0_0_25px_rgba(34,211,238,0.4)]">
         <div className="grid gap-[2px] p-[2px]" style={{ gridTemplateColumns: "repeat(10, 1fr)" }}>
           {Array.from({ length: 150 }, (_, i) => {
-            const n = i + 1, row = Math.floor(i / 10);
+            const n = i + 1;
             const isTaken = taken.includes(n), isMine = myCard?.cartela_number === n, isBuying = buying === n;
-            const grad = ROW_COLORS[row % ROW_COLORS.length];
-            let ring = "", badge: React.ReactNode = n;
-            if (isMine) { ring = "ring-[2.5px] ring-yellow-300 z-10"; badge = <span className="text-yellow-200 font-black text-xs">✓</span>; }
-            else if (isTaken) { ring = "opacity-40"; badge = <span className="text-white/60 text-[9px] font-black">✓</span>; }
-            else if (!isTaken) { ring = isBuying ? "opacity-40 scale-90" : "active:scale-90 cursor-pointer"; }
+            let ring = "", badge: React.ReactNode = n, bgClass = "bg-white text-black";
+            
+            if (isMine) { 
+              ring = "ring-[2.5px] ring-emerald-400 z-10"; 
+              badge = <span className="text-emerald-600 font-black text-xs">✓</span>; 
+            } else if (isTaken) { 
+              bgClass = "bg-slate-300 text-slate-500";
+              ring = "opacity-50"; 
+              badge = <span className="text-slate-600 text-[9px] font-black">✓</span>; 
+            } else { 
+              ring = isBuying ? "opacity-40 scale-90" : "active:scale-90 cursor-pointer shadow-sm shadow-black/50 hover:bg-slate-100"; 
+            }
+            
             return (
               <button key={n} disabled={isTaken || buying !== null || !!myCard} onClick={() => joinGame(n)}
-                className={`aspect-square flex items-center justify-center rounded-[7px] text-[11px] font-black text-white bg-gradient-to-b transition-all duration-150 ${grad} ${ring}`}>
+                className={`aspect-square flex items-center justify-center rounded-[7px] text-[11px] font-black transition-all duration-150 ${bgClass} ${ring}`}>
                 {badge}
               </button>
             );
