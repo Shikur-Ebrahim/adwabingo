@@ -171,15 +171,38 @@ class BingoEngine {
       } catch { /* ignore */ }
     };
 
-    // ── CASE 1: Single winner ─────────────────────────────────────────────────
+    // ── CASE 1: Single winner ──────────────────────────────────────────────────
     if (winners.length === 1) {
       const w = winners[0];
+      const cfg = await getSettings();
+      let finalPrize = prize;
+      let isEarlyCall = false;
+
+      // Check 8-call
+      if (cfg.early_call_8_enabled && called.length <= 8) {
+        const rew = cfg.early_call_8_rewards[String(stake)] || cfg.early_call_8_rewards[stake];
+        if (rew) {
+          finalPrize = Number(rew);
+          isEarlyCall = true;
+          console.log(`🎰 8-CALL BINGO! Reward: ${finalPrize}`);
+        }
+      }
+      // Check 10-call (only if not already an 8-call win)
+      else if (cfg.early_call_10_enabled && called.length <= 10) {
+        const rew = cfg.early_call_10_rewards[String(stake)] || cfg.early_call_10_rewards[stake];
+        if (rew) {
+          finalPrize = Number(rew);
+          isEarlyCall = true;
+          console.log(`🎰 10-CALL BINGO! Reward: ${finalPrize}`);
+        }
+      }
+
       await supabase.from('bingo_games').update({
         status:             'finished',
         winner_telegram_id: w.telegram_id,
-        winner_first_name:  w.first_name,
+        winner_first_name:  isEarlyCall ? `🚀 EARLY BINGO: ${w.first_name}` : w.first_name,
         winner_cartela:     w.cartela_number,
-        winner_prize:       prize,
+        winner_prize:       finalPrize,
         finished_at:        new Date().toISOString(),
         updated_at:         new Date().toISOString(),
       }).eq('id', gameId);
@@ -190,13 +213,17 @@ class BingoEngine {
         .single();
       if (u) {
         await supabase.from('users').update({
-          main_balance: Number(u.main_balance) + prize,
+          main_balance: Number(u.main_balance) + finalPrize,
           total_wins:   Number(u.total_wins) + 1,
         }).eq('telegram_id', w.telegram_id);
       }
 
-      await notify(w.telegram_id, `🎉 BINGO! You won ${prize} ETB on Cartela #${w.cartela_number}!`);
-      console.log(`🏆 Game #${gameLabel}: Single winner ${w.first_name} — ${prize} ETB`);
+      const msg = isEarlyCall 
+        ? `🚀 EARLY CALL BINGO (${called.length} calls)! You won ${finalPrize} ETB on Cartela #${w.cartela_number}!`
+        : `🎉 BINGO! You won ${finalPrize} ETB on Cartela #${w.cartela_number}!`;
+        
+      await notify(w.telegram_id, msg);
+      console.log(`🏆 Game #${gameLabel}: Single winner ${w.first_name} — ${finalPrize} ETB`);
       return;
     }
 

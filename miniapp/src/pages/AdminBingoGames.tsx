@@ -23,8 +23,22 @@ interface GameSettings {
   min_players: number;
   max_players: number;
   prize_percent: number;
+  early_call_8_enabled?: boolean;
+  early_call_8_rewards?: Record<number, number>;
+  early_call_10_enabled?: boolean;
+  early_call_10_rewards?: Record<number, number>;
 }
-const DEFAULT: GameSettings = { call_interval_ms: 5000, waiting_period_s: 60, min_players: 2, max_players: 150, prize_percent: 80 };
+const DEFAULT: GameSettings = { 
+  call_interval_ms: 5000, 
+  waiting_period_s: 60, 
+  min_players: 2, 
+  max_players: 150, 
+  prize_percent: 80,
+  early_call_8_enabled: false,
+  early_call_8_rewards: { 10: 100, 20: 200, 50: 500, 100: 1000 },
+  early_call_10_enabled: false,
+  early_call_10_rewards: { 10: 70, 20: 210, 50: 350, 100: 700 }
+};
 const STATUS_COLOR: Record<string, string> = {
   waiting:  "bg-amber-100 text-amber-700",
   calling:  "bg-emerald-100 text-emerald-700",
@@ -77,6 +91,10 @@ export default function AdminBingoGames() {
           min_players:      Number(raw.min_players)      || DEFAULT.min_players,
           max_players:      Number(raw.max_players)      || DEFAULT.max_players,
           prize_percent:    Number(raw.prize_percent)    || DEFAULT.prize_percent,
+          early_call_8_enabled:  raw.early_call_8_enabled  ?? DEFAULT.early_call_8_enabled,
+          early_call_8_rewards:  raw.early_call_8_rewards  ?? DEFAULT.early_call_8_rewards,
+          early_call_10_enabled: raw.early_call_10_enabled ?? DEFAULT.early_call_10_enabled,
+          early_call_10_rewards: raw.early_call_10_rewards ?? DEFAULT.early_call_10_rewards,
         };
         setSettings(s); setDraft(s);
       }
@@ -100,6 +118,10 @@ export default function AdminBingoGames() {
           min_players:      Number(body.settings?.min_players)      || draft.min_players,
           max_players:      Number(body.settings?.max_players)      || draft.max_players,
           prize_percent:    Number(body.settings?.prize_percent)    || draft.prize_percent,
+          early_call_8_enabled:  body.settings?.early_call_8_enabled  ?? draft.early_call_8_enabled,
+          early_call_8_rewards:  body.settings?.early_call_8_rewards  ?? draft.early_call_8_rewards,
+          early_call_10_enabled: body.settings?.early_call_10_enabled ?? draft.early_call_10_enabled,
+          early_call_10_rewards: body.settings?.early_call_10_rewards ?? draft.early_call_10_rewards,
         };
         setSettings(saved); setDraft(saved); setEditing(false);
         setSaveMsg("Settings saved and applied!");
@@ -206,7 +228,7 @@ export default function AdminBingoGames() {
                     {editing ? (
                       <div className="flex items-center gap-2 mt-0.5">
                         <input type="number" min={min} max={max} step={step}
-                          value={draft[key]}
+                          value={draft[key] as number}
                           onChange={e => setDraft(prev => ({ ...prev, [key]: Number(e.target.value) }))}
                           className="w-28 border border-orange-300 rounded-lg px-2 py-1 text-sm font-black text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-orange-300"
                         />
@@ -220,6 +242,89 @@ export default function AdminBingoGames() {
                 </div>
               );
             })}
+
+            {/* Early Call Bonuses section */}
+            <div className={`mt-4 rounded-xl border p-3 ${editing ? "border-orange-200 bg-orange-50/20" : "border-slate-100 bg-slate-50"}`}>
+              <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+                <Trophy size={14} className="text-amber-500" /> Early Call Bonuses
+              </h4>
+              
+              {/* 8 Call */}
+              <div className="mb-4 border-b border-slate-100 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold text-slate-700">8-Call Jackpot</span>
+                  {editing ? (
+                    <button onClick={() => setDraft(p => ({ ...p, early_call_8_enabled: !p.early_call_8_enabled }))}
+                      className={`w-10 h-5 rounded-full relative transition-colors ${draft.early_call_8_enabled ? "bg-emerald-500" : "bg-slate-300"}`}>
+                      <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${draft.early_call_8_enabled ? "translate-x-5" : "translate-x-0"}`} />
+                    </button>
+                  ) : (
+                    <span className={`text-xs font-black px-2 py-0.5 rounded-md ${settings.early_call_8_enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+                      {settings.early_call_8_enabled ? "ON" : "OFF"}
+                    </span>
+                  )}
+                </div>
+                {(editing ? draft.early_call_8_enabled : settings.early_call_8_enabled) && (
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {[10, 20, 50, 100].map(stake => (
+                      <div key={`8c-${stake}`} className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-slate-400 w-12 text-right">{stake} ETB:</span>
+                        {editing ? (
+                          <input type="number" 
+                            value={draft.early_call_8_rewards?.[stake] || 0}
+                            onChange={e => setDraft(p => ({
+                              ...p, 
+                              early_call_8_rewards: { ...p.early_call_8_rewards, [stake]: Number(e.target.value) }
+                            }))}
+                            className="w-20 border border-orange-300 rounded md px-2 py-1 text-xs font-black text-slate-800"
+                          />
+                        ) : (
+                          <span className="text-xs font-black text-amber-600">{settings.early_call_8_rewards?.[stake]} ETB</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 10 Call */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-bold text-slate-700">10-Call Jackpot</span>
+                  {editing ? (
+                    <button onClick={() => setDraft(p => ({ ...p, early_call_10_enabled: !p.early_call_10_enabled }))}
+                      className={`w-10 h-5 rounded-full relative transition-colors ${draft.early_call_10_enabled ? "bg-emerald-500" : "bg-slate-300"}`}>
+                      <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${draft.early_call_10_enabled ? "translate-x-5" : "translate-x-0"}`} />
+                    </button>
+                  ) : (
+                    <span className={`text-xs font-black px-2 py-0.5 rounded-md ${settings.early_call_10_enabled ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-500"}`}>
+                      {settings.early_call_10_enabled ? "ON" : "OFF"}
+                    </span>
+                  )}
+                </div>
+                {(editing ? draft.early_call_10_enabled : settings.early_call_10_enabled) && (
+                  <div className="grid grid-cols-2 gap-2 mt-2">
+                    {[10, 20, 50, 100].map(stake => (
+                      <div key={`10c-${stake}`} className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-slate-400 w-12 text-right">{stake} ETB:</span>
+                        {editing ? (
+                          <input type="number" 
+                            value={draft.early_call_10_rewards?.[stake] || 0}
+                            onChange={e => setDraft(p => ({
+                              ...p, 
+                              early_call_10_rewards: { ...p.early_call_10_rewards, [stake]: Number(e.target.value) }
+                            }))}
+                            className="w-20 border border-orange-300 rounded md px-2 py-1 text-xs font-black text-slate-800"
+                          />
+                        ) : (
+                          <span className="text-xs font-black text-amber-600">{settings.early_call_10_rewards?.[stake]} ETB</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
 
             {!editing && (
               <div className="grid grid-cols-2 gap-2 mt-1">

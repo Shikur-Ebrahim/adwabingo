@@ -12,6 +12,10 @@ export const DEFAULT_SETTINGS = {
   min_players:       2,
   max_players:       150,
   prize_percent:     80,   // % of total stakes (for 3+ players)
+  early_call_8_enabled: false,
+  early_call_8_rewards: { 10: 100, 20: 200, 50: 500, 100: 1000 },
+  early_call_10_enabled: false,
+  early_call_10_rewards: { 10: 70, 20: 210, 50: 350, 100: 700 },
 };
 
 // Cache so BingoEngine doesn't hammer DB every tick
@@ -29,6 +33,10 @@ export async function getSettings(): Promise<typeof DEFAULT_SETTINGS> {
       min_players:      data.min_players      ?? DEFAULT_SETTINGS.min_players,
       max_players:      data.max_players      ?? DEFAULT_SETTINGS.max_players,
       prize_percent:    data.prize_percent     ?? DEFAULT_SETTINGS.prize_percent,
+      early_call_8_enabled:  data.early_call_8_enabled ?? DEFAULT_SETTINGS.early_call_8_enabled,
+      early_call_8_rewards:  data.early_call_8_rewards ?? DEFAULT_SETTINGS.early_call_8_rewards,
+      early_call_10_enabled: data.early_call_10_enabled ?? DEFAULT_SETTINGS.early_call_10_enabled,
+      early_call_10_rewards: data.early_call_10_rewards ?? DEFAULT_SETTINGS.early_call_10_rewards,
     };
   } else {
     _cached = { ...DEFAULT_SETTINGS };
@@ -58,7 +66,11 @@ router.put('/', async (req: AuthRequest, res) => {
   const telegramId = req.telegramUser!.id.toString();
   if (!(await isAdmin(telegramId))) return res.status(403).json({ error: 'Forbidden' });
 
-  const { call_interval_ms, waiting_period_s, min_players, max_players, prize_percent } = req.body;
+  const { 
+    call_interval_ms, waiting_period_s, min_players, max_players, prize_percent,
+    early_call_8_enabled, early_call_8_rewards,
+    early_call_10_enabled, early_call_10_rewards
+  } = req.body;
 
   // Validate ranges
   const ci  = Math.max(1000,  Math.min(30000, Number(call_interval_ms)  || DEFAULT_SETTINGS.call_interval_ms));
@@ -73,6 +85,10 @@ router.put('/', async (req: AuthRequest, res) => {
     min_players:      mnp,
     max_players:      mxp,
     prize_percent:    pp,
+    early_call_8_enabled:  !!early_call_8_enabled,
+    early_call_8_rewards:  early_call_8_rewards || DEFAULT_SETTINGS.early_call_8_rewards,
+    early_call_10_enabled: !!early_call_10_enabled,
+    early_call_10_rewards: early_call_10_rewards || DEFAULT_SETTINGS.early_call_10_rewards,
     updated_at:       new Date().toISOString(),
   };
 
