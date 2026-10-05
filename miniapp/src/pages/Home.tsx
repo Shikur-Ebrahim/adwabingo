@@ -179,11 +179,10 @@ export default function Home() {
             const isCalling = hg?.status === 'calling';
             const tl = homeTimeLeft[stake.amount] || 0;
             
-            let statusTxt = "-";
-            let statusCls = "text-slate-400 dark:text-slate-500";
-            if (isWaiting) {
-              statusTxt = tl > 86400 ? "Waiting..." : `${tl}s`;
-              statusCls = "text-orange-500";
+            let statusTxt = "Waiting...";
+            let statusCls = "text-orange-500";
+            if (isWaiting && tl <= 86400 && tl > 0) {
+              statusTxt = `${tl}s`;
             } else if (isCalling) {
               statusTxt = "Active";
               statusCls = "text-emerald-500";
@@ -200,7 +199,7 @@ export default function Home() {
               <div className="w-full bg-slate-50 dark:bg-slate-800/50 border-b border-gray-100 dark:border-slate-800 flex h-[35px] shrink-0">
                 <div className="flex-1 flex flex-col items-center justify-center border-r border-gray-100 dark:border-slate-800">
                   <span className="text-slate-400 dark:text-slate-500 text-[7px] font-bold uppercase tracking-wider">Derash</span>
-                  <span className={`text-[10px] font-black ${hasGame ? 'text-yellow-600 dark:text-yellow-400 animate-pulse' : 'text-slate-400 dark:text-slate-500'}`}>{pool > 0 ? `${pool} ETB` : '-'}</span>
+                  <span className={`text-[10px] font-black text-yellow-600 dark:text-yellow-400 ${hasGame ? 'animate-pulse' : ''}`}>{pool} ETB</span>
                 </div>
                 <div className="flex-1 flex flex-col items-center justify-center">
                   <span className="text-slate-400 dark:text-slate-500 text-[7px] font-bold uppercase tracking-wider">Status</span>

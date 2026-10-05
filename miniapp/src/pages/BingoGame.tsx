@@ -449,11 +449,10 @@ export default function BingoGame() {
               const isCalling = hg?.status === 'calling';
               const tl = homeTimeLeft[opt.value] || 0;
               
-              let statusTxt = "-";
-              let statusCls = "text-slate-400";
-              if (isWaiting) {
-                statusTxt = tl > 86400 ? "Waiting..." : `${tl}s`;
-                statusCls = "text-orange-500";
+              let statusTxt = "Waiting...";
+              let statusCls = "text-orange-500";
+              if (isWaiting && tl <= 86400 && tl > 0) {
+                statusTxt = `${tl}s`;
               } else if (isCalling) {
                 statusTxt = "Active";
                 statusCls = "text-emerald-500";
@@ -475,7 +474,7 @@ export default function BingoGame() {
                   <div className="w-full bg-slate-50 border-t border-b border-slate-100 flex h-[35px] shrink-0 relative z-10">
                     <div className="flex-1 flex flex-col items-center justify-center border-r border-slate-100">
                       <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">Derash</span>
-                      <span className={`text-[10px] font-black ${hasGame ? 'text-yellow-600 animate-pulse' : 'text-slate-400'}`}>{pool > 0 ? `${pool} ETB` : '-'}</span>
+                      <span className={`text-[10px] font-black text-yellow-600 ${hasGame ? 'animate-pulse' : ''}`}>{pool} ETB</span>
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center">
                       <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">Status</span>
