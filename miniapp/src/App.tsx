@@ -18,6 +18,7 @@ import GamesReport from './pages/GamesReport';
 import Audit from './pages/Audit';
 import Rules from './pages/Rules';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import SupportChat from './components/SupportChat';
 
 // Show/hide Telegram's native Back button based on route depth
 // Uses a stable ref so we NEVER register multiple onClick handlers
@@ -68,36 +69,42 @@ function Navigation() {
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 pb-safe z-40 transition-colors">
-      <div className="flex justify-around items-center h-16">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isProfileTab = item.label === 'Profile';
-          const isActive = isProfileTab ? isProfileOpen : (!isProfileOpen && location.pathname === item.path);
-          
-          return (
-            <Link
-              key={item.label}
-              to={isProfileTab ? location.pathname : item.path}
-              onClick={(e) => {
-                if (isProfileTab) {
-                  e.preventDefault();
-                  setProfileOpen(true);
-                } else {
-                  setProfileOpen(false);
-                }
-              }}
-              className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
-                isActive ? 'text-yellow-600 dark:text-yellow-500' : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300'
-              }`}
-            >
-              <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-[10px] font-medium">{item.label}</span>
-            </Link>
-          );
-        })}
+    <>
+      {/* Floating AI Support Button — above the tab bar */}
+      <SupportChat />
+
+      {/* Bottom Tab Bar */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 pb-safe z-40 transition-colors">
+        <div className="flex justify-around items-center h-16">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isProfileTab = item.label === 'Profile';
+            const isActive = isProfileTab ? isProfileOpen : (!isProfileOpen && location.pathname === item.path);
+            
+            return (
+              <Link
+                key={item.label}
+                to={isProfileTab ? location.pathname : item.path}
+                onClick={(e) => {
+                  if (isProfileTab) {
+                    e.preventDefault();
+                    setProfileOpen(true);
+                  } else {
+                    setProfileOpen(false);
+                  }
+                }}
+                className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
+                  isActive ? 'text-yellow-600 dark:text-yellow-500' : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300'
+                }`}
+              >
+                <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

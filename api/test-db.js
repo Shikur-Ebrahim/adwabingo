@@ -4,8 +4,8 @@ dotenv.config();
 
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 
-async function clean() {
-  const { error } = await supabase.from('bingo_games').delete().like('game_id', 'test_claim%');
-  console.log('Deleted test games. Error:', error);
+async function checkSettings() {
+  const { data, error } = await supabase.from('settings').select('*');
+  console.log('Settings:', data, error);
 }
-clean();
+checkSettings();
