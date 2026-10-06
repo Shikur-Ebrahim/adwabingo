@@ -113,6 +113,7 @@ export default function BingoGame() {
   const [maxPlayers, setMaxPlayers] = useState<number>(150);
   const [maxCartelasPerUser, setMaxCartelasPerUser] = useState<number>(2);
   const [myCartelas, setMyCartelas] = useState<Array<{ cartela_number: number; card_matrix: number[][] }>>([]);
+  const [activeCartelaIdx, setActiveCartelaIdx] = useState(0);
   const [uniquePlayers, setUniquePlayers] = useState<number>(0);
   const [previewCartela, setPreviewCartela] = useState<{ seat: number; matrix: number[][] } | null>(null);
   const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string; players: number }>>({});
@@ -398,6 +399,7 @@ export default function BingoGame() {
       setCelebration(null);
       setMyCard(null);
       setMyCartelas([]);
+      setActiveCartelaIdx(0);
       setTaken([]);
       fetchState();
       refreshUser();
@@ -673,39 +675,62 @@ export default function BingoGame() {
             </div>
           </div>
 
-          {/* My Cards — show all cartelas */}
+          {/* My Cards — tabbed view */}
           {myCartelas.length > 0 ? (
-            <div className="space-y-3">
-              {myCartelas.map((card) => (
-            <div key={card.cartela_number} className="rounded-2xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
-              {/* BINGO Header */}
-              <div className="grid grid-cols-5">
-                {BINGO_LETTERS.map(l => (
-                  <div key={l} className="flex items-center justify-center py-1.5 font-black text-white text-sm" style={{ background: LETTER_BG[l] }}>{l}</div>
-                ))}
-              </div>
-              {/* Card Grid */}
-              <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0f1e]">
-                {Array.from({ length: 5 }).flatMap((_, r) =>
-                  Array.from({ length: 5 }, (_, c) => {
-                    const num = card.card_matrix[r][c];
-                    const isFree = num === 0, marked = isFree || called.includes(num), isLast = num === lastNum;
-                    return (
-                      <div key={`${r}-${c}`} className={`aspect-square flex items-center justify-center font-black text-base rounded-lg transition-all duration-300 ${
-                        isFree ? 'bg-yellow-400 text-yellow-900' :
-                        isLast ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
-                        marked ? 'bg-emerald-500 text-white' : 'bg-white text-[#1a2540]'
-                      }`}>{isFree ? '★' : num}</div>
-                    );
-                  })
-                )}
-              </div>
-              {/* Cartela Label */}
-              <div className="py-1 text-center bg-[#0a0f1e] border-t border-white/10">
-                <p className="text-white/70 font-black text-[10px] tracking-widest uppercase">CARTELA # {card.cartela_number}</p>
-              </div>
-            </div>
-              ))}
+            <div className="flex flex-col gap-2">
+              {/* Tab Switcher */}
+              {myCartelas.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  {myCartelas.map((card, idx) => (
+                    <button
+                      key={card.cartela_number}
+                      onClick={() => setActiveCartelaIdx(idx)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-all ${
+                        activeCartelaIdx === idx 
+                          ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.5)] ring-2 ring-yellow-300'
+                          : 'bg-white/10 text-white/50 border border-white/10 active:scale-95'
+                      }`}
+                    >
+                      CARTELA #{card.cartela_number}
+                    </button>
+                  ))}
+                </div>
+              )}
+              
+              {/* Active Card */}
+              {(() => {
+                const card = myCartelas[Math.min(activeCartelaIdx, myCartelas.length - 1)];
+                return (
+                  <div key={card.cartela_number} className="rounded-2xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
+                    {/* BINGO Header */}
+                    <div className="grid grid-cols-5">
+                      {BINGO_LETTERS.map(l => (
+                        <div key={l} className="flex items-center justify-center py-1.5 font-black text-white text-sm" style={{ background: LETTER_BG[l] }}>{l}</div>
+                      ))}
+                    </div>
+                    {/* Card Grid */}
+                    <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0f1e]">
+                      {Array.from({ length: 5 }).flatMap((_, r) =>
+                        Array.from({ length: 5 }, (_, c) => {
+                          const num = card.card_matrix[r][c];
+                          const isFree = num === 0, marked = isFree || called.includes(num), isLast = num === lastNum;
+                          return (
+                            <div key={`${r}-${c}`} className={`aspect-square flex items-center justify-center font-black text-base rounded-lg transition-all duration-300 ${
+                              isFree ? 'bg-yellow-400 text-yellow-900' :
+                              isLast ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
+                              marked ? 'bg-emerald-500 text-white' : 'bg-white text-[#1a2540]'
+                            }`}>{isFree ? '★' : num}</div>
+                          );
+                        })
+                      )}
+                    </div>
+                    {/* Cartela Label */}
+                    <div className="py-1 text-center bg-[#0a0f1e] border-t border-white/10">
+                      <p className="text-white/70 font-black text-[10px] tracking-widest uppercase">CARTELA # {card.cartela_number}</p>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           ) : (
             <div className="relative rounded-2xl overflow-hidden border border-white/10 mt-1 pointer-events-none" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
@@ -810,7 +835,7 @@ export default function BingoGame() {
             <div className="flex items-center gap-2 mb-2">
               <button onClick={() => setSelectedStake(null)} className="h-9 w-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl"><ArrowLeft size={18} className="text-white" /></button>
               <div className="relative">
-                <select value={selectedStake} onChange={e => { setSelectedStake(Number(e.target.value)); setGame(null); setMyCard(null); setMyCartelas([]); setTaken([]); }} disabled={myCartelas.length > 0}
+                <select value={selectedStake} onChange={e => { setSelectedStake(Number(e.target.value)); setGame(null); setMyCard(null); setMyCartelas([]); setActiveCartelaIdx(0); setTaken([]); }} disabled={myCartelas.length > 0}
                   className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-3 pr-7 h-9 text-white font-black text-sm outline-none cursor-pointer" style={{ colorScheme: "dark" }}>
                   <option value={10}>10 ETB</option><option value={20}>20 ETB</option><option value={50}>50 ETB</option><option value={100}>100 ETB</option>
                 </select>
