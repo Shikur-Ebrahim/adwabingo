@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ChevronDown, Gift, RefreshCw, Users, Clock, Trophy, Volume2, VolumeX, RotateCcw } from "lucide-react";
+import { ArrowLeft, ChevronDown, Gift, RefreshCw, Users, Clock, Trophy, Volume2, VolumeX, RotateCcw, LayoutGrid } from "lucide-react";
 import WebApp from "@twa-dev/sdk";
 import { supabase } from "../lib/supabase";
 import { useGameStore } from "../store/gameStore";
@@ -9,7 +9,7 @@ const API = import.meta.env.VITE_API_URL || "/api";
 
 interface BGame {
   id: string; game_id: string; stake: number; prize_pool: number;
-  status: "waiting" | "calling" | "finished";
+  status: "waiting" | "calling" | "resolving" | "finished";
   called_numbers: number[];
   winner_cartela: number | null; winner_telegram_id: string | null;
   winner_first_name: string | null; winner_prize: number | null;
@@ -349,8 +349,10 @@ export default function BingoGame() {
 
   // Fire celebration when game finishes — play sound + fetch winner card
   useEffect(() => {
-    if (game?.status !== 'finished') return;
+    if (game?.status !== 'finished' && game?.status !== 'resolving') return;
     if (hasCelebratedRef.current === game.id) return;
+    // Only celebrate when winner info is available (resolving may not have it yet)
+    if (game.status === 'resolving' && !game.winner_cartela && game.winner_first_name !== 'REMATCH') return;
     hasCelebratedRef.current = game.id;
 
     // ── REMATCH: 3+ way tie ───────────────────────────────────────────────────
@@ -387,9 +389,9 @@ export default function BingoGame() {
         if (isMounted) setCelebration({ winner_name: game.winner_first_name || 'Player', winner_cartela: game.winner_cartela!, winner_prize: game.winner_prize!, winner_matrix: null, iWon, called: [...game.called_numbers] });
       });
     return () => { isMounted = false; };
-  }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name]);
+  }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name, game?.winner_telegram_id]);
 
-  // Auto-dismiss celebration after 2 seconds — separate effect so it's never reset by other deps
+  // Auto-dismiss celebration after 15 seconds — gives users time to see the winner card
   useEffect(() => {
     if (!celebration) return;
     const timer = setTimeout(() => {
@@ -400,7 +402,7 @@ export default function BingoGame() {
       setTaken([]);
       fetchState();
       refreshUser();
-    }, 2000);
+    }, 15000);
     return () => clearTimeout(timer);
   }, [celebration]);
 
@@ -468,7 +470,7 @@ export default function BingoGame() {
   const initial = user?.first_name ? user.first_name.charAt(0).toUpperCase() : "U";
   let statusTxt = "Finished", statusCls = "text-slate-400";
   if (game?.status === "waiting") { statusTxt = timeLeft > 86400 ? "Waiting..." : `${timeLeft}s`; statusCls = "text-orange-400"; }
-  else if (game?.status === "calling") { statusTxt = "Active"; statusCls = "text-emerald-400"; }
+  else if (game?.status === "calling" || game?.status === "resolving") { statusTxt = "Active"; statusCls = "text-emerald-400"; }
 
   const Header = () => (
     <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between shrink-0">
@@ -605,7 +607,7 @@ export default function BingoGame() {
         <div className="flex items-center justify-between bg-[#0f172a] px-2 py-1 rounded-xl border border-slate-800 shrink-0">
           <div className="text-slate-400 text-[9px] font-bold">ID: {game.game_id}</div>
           <div className="flex items-center gap-1 text-yellow-400 text-[9px] font-bold"><Trophy size={10}/> {game.prize_pool} ETB</div>
-          <div className="flex items-center gap-1 text-blue-400 text-[9px] font-bold"><Users size={10}/> {taken.length}</div>
+          <div className="flex items-center gap-1 text-blue-400 text-[9px] font-bold"><LayoutGrid size={10}/> {taken.length}</div>
           <div className="flex items-center gap-1 text-emerald-400 text-[9px] font-bold"><Clock size={10}/> {called.length}/75</div>
           <div className="text-[8px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full font-black animate-pulse">LIVE</div>
         </div>
@@ -874,7 +876,12 @@ export default function BingoGame() {
       {/* Winner Celebration */}
       {celebration && (
         <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md overflow-y-auto pt-8 pb-20">
-          <div className="bg-[#111] border border-white/10 rounded-3xl p-5 text-center max-w-sm w-full shadow-2xl flex flex-col items-center">
+          <div className="bg-[#111] border border-white/10 rounded-3xl p-5 text-center max-w-sm w-full shadow-2xl flex flex-col items-center relative">
+            {/* Close button */}
+            <button
+              onClick={() => { setCelebration(null); setMyCard(null); setMyCartelas([]); setActiveCartelaIdx(0); setTaken([]); fetchState(); refreshUser(); }}
+              className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/50 hover:bg-white/20 active:scale-90 transition-all text-sm font-black"
+            >✕</button>
 
             {/* ── REMATCH: 3+ way tie ────────────────────────────────────── */}
             {celebration.winner_name === 'REMATCH' ? (<>
