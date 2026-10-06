@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { MemoryRouter, Routes, Route, Link, useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { Gamepad2, Wallet, Trophy, User } from 'lucide-react';
+import { Gamepad2, Wallet, Trophy, User, Headphones } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 import { useGameStore } from './store/gameStore';
 
@@ -17,8 +17,8 @@ import Leaderboard from './pages/Leaderboard';
 import GamesReport from './pages/GamesReport';
 import Audit from './pages/Audit';
 import Rules from './pages/Rules';
+import Support from './pages/Support';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import SupportChat from './components/SupportChat';
 
 // Show/hide Telegram's native Back button based on route depth
 // Uses a stable ref so we NEVER register multiple onClick handlers
@@ -65,46 +65,44 @@ function Navigation() {
     { path: '/', label: 'Games', icon: Gamepad2 },
     { path: '/deposit', label: 'Deposit', icon: Wallet },
     { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
+    { path: '/support', label: 'Support', icon: Headphones },
     { path: '#', label: 'Profile', icon: User },
   ];
 
   return (
-    <>
-      {/* Floating AI Support Button — above the tab bar */}
-      <SupportChat />
-
-      {/* Bottom Tab Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 pb-safe z-40 transition-colors">
-        <div className="flex justify-around items-center h-16">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isProfileTab = item.label === 'Profile';
-            const isActive = isProfileTab ? isProfileOpen : (!isProfileOpen && location.pathname === item.path);
-            
-            return (
-              <Link
-                key={item.label}
-                to={isProfileTab ? location.pathname : item.path}
-                onClick={(e) => {
-                  if (isProfileTab) {
-                    e.preventDefault();
-                    setProfileOpen(true);
-                  } else {
-                    setProfileOpen(false);
-                  }
-                }}
-                className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
-                  isActive ? 'text-yellow-600 dark:text-yellow-500' : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300'
-                }`}
-              >
-                <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
-                <span className="text-[10px] font-medium">{item.label}</span>
-              </Link>
-            );
-          })}
-        </div>
+    <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-slate-900 border-t border-gray-200 dark:border-slate-800 pb-safe z-40 transition-colors">
+      <div className="flex justify-around items-center h-16">
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isProfileTab = item.label === 'Profile';
+          const isActive = isProfileTab ? isProfileOpen : (!isProfileOpen && location.pathname === item.path);
+          
+          return (
+            <Link
+              key={item.label}
+              to={isProfileTab ? location.pathname : item.path}
+              onClick={(e) => {
+                if (isProfileTab) {
+                  e.preventDefault();
+                  setProfileOpen(true);
+                } else {
+                  setProfileOpen(false);
+                }
+              }}
+              className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
+                isActive ? 'text-violet-600 dark:text-violet-400' : 'text-gray-400 dark:text-slate-500'
+              } ${item.label === 'Games' && isActive ? '!text-yellow-600 dark:!text-yellow-500' : ''}
+              ${item.label === 'Deposit' && isActive ? '!text-yellow-600 dark:!text-yellow-500' : ''}
+              ${item.label === 'Leaderboard' && isActive ? '!text-yellow-600 dark:!text-yellow-500' : ''}
+              ${item.label === 'Profile' && isActive ? '!text-yellow-600 dark:!text-yellow-500' : ''}`}
+            >
+              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
+              <span className="text-[9px] font-medium">{item.label}</span>
+            </Link>
+          );
+        })}
       </div>
-    </>
+    </div>
   );
 }
 
@@ -232,6 +230,7 @@ function App() {
           <Route path="/games-report" element={<GamesReport />} />
           <Route path="/audit" element={<Audit />} />
           <Route path="/rules" element={<Rules />} />
+          <Route path="/support" element={<Support />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/bingo-games" element={<AdminBingoGames />} />
           <Route path="/admin/user-audit" element={<AdminUserAudit />} />
