@@ -114,6 +114,7 @@ export default function BingoGame() {
   const [maxCartelasPerUser, setMaxCartelasPerUser] = useState<number>(2);
   const [myCartelas, setMyCartelas] = useState<Array<{ cartela_number: number; card_matrix: number[][] }>>([]);
   const [uniquePlayers, setUniquePlayers] = useState<number>(0);
+  const [previewCartela, setPreviewCartela] = useState<{ seat: number; matrix: number[][] } | null>(null);
   const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string; players: number }>>({});
   const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
   const [soundEnabled, setSoundEnabled] = useState(false);
@@ -404,7 +405,30 @@ export default function BingoGame() {
     return () => clearTimeout(timer);
   }, [celebration]);
 
-  const joinGame = async (seat: number) => {
+  // Generate matrix client-side for preview
+  const generateBingoCard = () => {
+    const zones: [number, number][] = [[1, 15], [16, 30], [31, 45], [46, 60], [61, 75]];
+    const card: number[][] = Array.from({ length: 5 }, () => Array(5).fill(0));
+    for (let col = 0; col < 5; col++) {
+      const [lo, hi] = zones[col];
+      const chosen = new Set<number>();
+      while (chosen.size < 5) chosen.add(Math.floor(Math.random() * (hi - lo + 1)) + lo);
+      const nums = Array.from(chosen);
+      for (let row = 0; row < 5; row++) card[row][col] = nums[row];
+    }
+    card[2][2] = 0;
+    return card;
+  };
+
+  const openPreview = (seat: number) => {
+    if (myCartelas.length >= maxCartelasPerUser) { setErrMsg(`Max ${maxCartelasPerUser} cartela${maxCartelasPerUser > 1 ? 's' : ''} per game`); return; }
+    if (taken.includes(seat)) { setErrMsg("Taken! Pick another."); return; }
+    const matrix = generateBingoCard();
+    setPreviewCartela({ seat, matrix });
+  };
+
+  const joinGame = async (seat: number, matrix: number[][]) => {
+    setPreviewCartela(null);
     initWebAudio();
     if (!game || game.status !== "waiting") return;
     if (myCartelas.length >= maxCartelasPerUser) { setErrMsg(`Max ${maxCartelasPerUser} cartela${maxCartelasPerUser > 1 ? 's' : ''} per game`); return; }
@@ -420,7 +444,7 @@ export default function BingoGame() {
     const nc = taken.length + 1;
     setGame(prev => prev ? { ...prev, prize_pool: nc < 3 ? nc * stakeAmt : Math.floor(nc * stakeAmt * 0.8) } : prev);
     try {
-      const r = await fetch(`${API}/bingo/join`, { method: "POST", headers: hdrs(), body: JSON.stringify({ cartela_number: seat, stake: selectedStake }) });
+      const r = await fetch(`${API}/bingo/join`, { method: "POST", headers: hdrs(), body: JSON.stringify({ cartela_number: seat, stake: selectedStake, card_matrix: matrix }) });
       const d = await r.json();
       if (r.ok) {
         if (WebApp?.HapticFeedback) WebApp.HapticFeedback.notificationOccurred("success");
@@ -765,7 +789,7 @@ export default function BingoGame() {
               );
             }
             return (
-              <button key={n} disabled={buying !== null || !canPickMore} onClick={() => joinGame(n)}
+              <button key={n} disabled={buying !== null || !canPickMore} onClick={() => openPreview(n)}
                 className={`aspect-square flex items-center justify-center rounded-[7px] text-[11px] font-black transition-all duration-150 ${!canPickMore ? 'bg-white/20 text-white/30 cursor-not-allowed' : isBuying ? 'bg-white opacity-40 scale-90' : 'bg-white text-black active:scale-90 cursor-pointer'}`}>
                 {n}
               </button>
@@ -890,6 +914,46 @@ export default function BingoGame() {
               <p className="text-white/40 text-xs font-bold animate-pulse mt-1">Returning to game...</p>
             </>)}
 
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewCartela && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewCartela(null)}>
+          <div className="bg-[#0f1829] border border-cyan-400/30 rounded-3xl p-5 w-full max-w-[320px] shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="text-xl font-black text-white text-center mb-1">CARTELA #{previewCartela.seat}</h3>
+            <p className="text-cyan-300 text-[10px] uppercase font-bold text-center tracking-widest mb-4">Preview Your Numbers</p>
+            
+            <div className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_15px_rgba(34,211,238,0.2)] mb-5">
+              <div className="grid grid-cols-5">
+                {BINGO_LETTERS.map(l => (
+                  <div key={l} className="flex items-center justify-center py-1.5 font-black text-white text-sm" style={{ background: LETTER_BG[l] }}>{l}</div>
+                ))}
+              </div>
+              <div className="grid grid-cols-5 gap-[2px] p-[2px] bg-[#0a0f1e]">
+                {Array.from({ length: 5 }).flatMap((_, r) =>
+                  Array.from({ length: 5 }, (_, c) => {
+                    const num = previewCartela.matrix[r][c];
+                    const isFree = num === 0;
+                    return (
+                      <div key={`${r}-${c}`} className={`aspect-square flex items-center justify-center font-black text-sm rounded-md transition-all duration-300 ${
+                        isFree ? 'bg-yellow-400 text-yellow-900' : 'bg-white text-[#1a2540]'
+                      }`}>{isFree ? '★' : num}</div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={() => setPreviewCartela(null)} className="flex-1 py-3 rounded-xl bg-white/10 text-white font-black active:scale-95 transition-transform border border-white/20">
+                CANCEL
+              </button>
+              <button onClick={() => joinGame(previewCartela.seat, previewCartela.matrix)} className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-black active:scale-95 transition-transform shadow-[0_0_15px_rgba(16,185,129,0.5)] border border-emerald-400">
+                BUY ({game?.stake} ETB)
+              </button>
+            </div>
           </div>
         </div>
       )}
