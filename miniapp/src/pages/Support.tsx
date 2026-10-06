@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import ReactMarkdown from 'react-markdown';
 
-const API = import.meta.env.VITE_API_URL || '';
+const API = import.meta.env.VITE_API_URL || '/api';
 
 interface Message {
   role: 'user' | 'assistant';
