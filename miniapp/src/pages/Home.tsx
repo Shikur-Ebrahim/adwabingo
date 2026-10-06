@@ -228,36 +228,33 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ACTION BUTTONS */}
-      {/* SUPPORT BANNER */}
+      {/* SUPPORT BANNER — fixed floating above bottom nav */}
       {showSupportBanner && (
-        <div className="px-4">
+        <div className="fixed bottom-[72px] left-0 right-0 z-50 px-3 pointer-events-none">
           <div
-            className="flex items-center gap-2.5 bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-2xl px-4 py-2.5 shadow-sm animate-[slideDown_0.35s_ease-out]"
-            style={{ animation: 'slideDown 0.35s ease-out' }}
+            className="flex items-center gap-2.5 bg-white border border-violet-300 rounded-2xl px-4 py-3 shadow-[0_4px_24px_rgba(109,40,217,0.25)] pointer-events-auto"
+            style={{ animation: 'slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}
           >
             {/* Pulsing dot */}
-            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse flex-shrink-0" />
-            {/* Clickable text */}
+            <div className="w-2.5 h-2.5 rounded-full bg-violet-500 animate-pulse flex-shrink-0" />
+            {/* Clickable message */}
             <button
-              onClick={() => navigate('/support')}
+              onClick={() => { setShowSupportBanner(false); navigate('/support'); }}
               className="flex-1 text-left flex items-center gap-2 active:opacity-70 transition-opacity"
             >
-              <MessageCircle size={15} className="text-violet-600 flex-shrink-0" />
-              <span className="text-violet-700 font-bold text-sm">Hello, do you need help? 👋</span>
+              <MessageCircle size={16} className="text-violet-600 flex-shrink-0" />
+              <span className="text-violet-800 font-bold text-sm">Hello, do you need help? 👋</span>
             </button>
             {/* Dismiss X */}
             <button
               onClick={() => setShowSupportBanner(false)}
-              className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center text-violet-400 active:bg-violet-200 transition-colors flex-shrink-0 font-black text-xs"
+              className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center text-violet-500 active:bg-violet-200 transition-colors flex-shrink-0 font-black text-xs"
             >
               ✕
             </button>
           </div>
         </div>
       )}
-
-      {/* ACTION BUTTONS */}
       <div className="px-4 grid grid-cols-3 gap-3">
         <Link to="/deposit" className="flex items-center justify-center space-x-1.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-950 py-2 rounded-xl font-bold text-xs shadow-sm transition-colors">
           <PlusCircle size={16} />

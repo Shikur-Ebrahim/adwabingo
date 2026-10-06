@@ -50,7 +50,7 @@ export default function SupportPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `tma ${(window as any).Telegram?.WebApp?.initData || ''}`,
+          'x-telegram-init-data': (window as any).Telegram?.WebApp?.initData || '',
         },
         body: JSON.stringify({ message: text.trim(), history }),
       });

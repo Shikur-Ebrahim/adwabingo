@@ -27,8 +27,7 @@ async function callGroq(messages: object[], modelIndex = 0): Promise<string> {
 
   if (!response.ok) {
     const errText = await response.text();
-    console.error(`Groq model ${model} failed:`, errText);
-    // Try next model automatically
+    console.error(`Groq model ${model} failed (${response.status}):`, errText);
     return callGroq(messages, modelIndex + 1);
   }
 
