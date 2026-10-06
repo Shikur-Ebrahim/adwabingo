@@ -165,20 +165,7 @@ class BingoEngine {
     const winners = players.filter(p => checkBingo(p.card_matrix as number[][], called));
     if (winners.length === 0) return;
 
-    // ── ATOMIC CLAIM: Only process if game is still 'calling' ─────────────────
-    // This prevents duplicate notifications on rapid ticks (race condition fix)
-    const { data: claimResult, error: claimError } = await supabase
-      .from('bingo_games')
-      .update({ status: 'finished', updated_at: new Date().toISOString() })
-      .eq('id', gameId)
-      .eq('status', 'calling')
-      .select('id');
-    
-    // If 0 rows updated, another tick already claimed this game → skip entirely
-    if (claimError || !claimResult || claimResult.length === 0) {
-      console.log(`[BingoEngine] Game #${gameLabel} already claimed by another tick — skipping`);
-      return;
-    }
+
 
     const prize = Number(prizePool);
     const token = process.env.BOT_TOKEN;
@@ -234,16 +221,17 @@ class BingoEngine {
         if (rewards10[String(stake)]) winType = 'jackpot_10';
       }
 
-      await supabase.from('bingo_games').update({
+      const { data: claim, error: claimErr } = await supabase.from('bingo_games').update({
         status:             'finished',
         winner_telegram_id: w.telegram_id,
-        winner_first_name:  isEarlyCall ? `🚀 EARLY BINGO: ${w.first_name}` : w.first_name,
+        winner_first_name:  isEarlyCall ? `?? EARLY BINGO: ${w.first_name}` : w.first_name,
         winner_cartela:     w.cartela_number,
         winner_prize:       finalPrize,
         win_type:           winType,
         finished_at:        new Date().toISOString(),
         updated_at:         new Date().toISOString(),
-      }).eq('id', gameId);
+      }).eq('id', gameId).eq('status', 'calling').select('id');
+      if (claimErr || !claim || claim.length === 0) return;
 
       const { data: u } = await supabase.from('users')
         .select('main_balance, total_wins')
@@ -271,16 +259,17 @@ class BingoEngine {
       const w1 = winners[0];
       const w2 = winners[1];
 
-      await supabase.from('bingo_games').update({
+      const { data: claim, error: claimErr } = await supabase.from('bingo_games').update({
         status:             'finished',
         winner_telegram_id: w1.telegram_id,
         winner_first_name:  `${w1.first_name} & ${w2.first_name}`,
         winner_cartela:     w1.cartela_number,
-        winner_prize:       splitPrize,         // prize shown per winner
-        tie_count:          2,                  // optional metadata
+        winner_prize:       splitPrize,
+        tie_count:          2,
         finished_at:        new Date().toISOString(),
         updated_at:         new Date().toISOString(),
-      }).eq('id', gameId);
+      }).eq('id', gameId).eq('status', 'calling').select('id');
+      if (claimErr || !claim || claim.length === 0) return;
 
       for (const w of winners) {
         const { data: u } = await supabase.from('users')
@@ -306,14 +295,15 @@ class BingoEngine {
     // Refund stake to every player, mark game finished as REMATCH
     console.log(`🔄 Game #${gameLabel}: ${winners.length}-way tie — triggering REMATCH & stake refund`);
 
-    await supabase.from('bingo_games').update({
-      status:            'finished',
-      winner_first_name: 'REMATCH',
-      winner_prize:      0,
-      winner_cartela:    null,
-      finished_at:       new Date().toISOString(),
-      updated_at:        new Date().toISOString(),
-    }).eq('id', gameId);
+    const { data: claim, error: claimErr } = await supabase.from('bingo_games').update({
+        status:            'finished',
+        winner_first_name: 'REMATCH',
+        winner_prize:      0,
+        winner_cartela:    null,
+        finished_at:       new Date().toISOString(),
+        updated_at:        new Date().toISOString(),
+      }).eq('id', gameId).eq('status', 'calling').select('id');
+      if (claimErr || !claim || claim.length === 0) return;
 
     // Refund ALL players their stake
     for (const p of players) {
@@ -336,3 +326,4 @@ class BingoEngine {
 }
 
 export const engine = new BingoEngine();
+
