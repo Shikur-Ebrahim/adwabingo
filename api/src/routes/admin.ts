@@ -183,6 +183,7 @@ router.post('/deposits/:id/approve', async (req, res) => {
     .eq('status', 'approved');
 
   const isFirstDeposit = approvedCount === 0;
+  const isSecondDeposit = approvedCount === 1;
 
   // Atomic balance increment for the depositor
   const { error: balErr } = await supabase.rpc('increment_user_balance', {
@@ -191,45 +192,48 @@ router.post('/deposits/:id/approve', async (req, res) => {
   });
   if (balErr) { res.status(500).json({ error: balErr.message }); return; }
 
-  // Check if first deposit to apply bonuses
   let depositorBonus = 0;
   let inviterBonus = 0;
   let inviterId = null;
+  let bonusReason = '';
   
-  if (isFirstDeposit) {
-    // Load bonus settings from DB (fallback to defaults if not set)
-    const { data: settingsRow } = await supabase
-      .from('settings')
-      .select('value')
-      .eq('key', 'first_deposit_bonus_pct')
-      .single();
-    const { data: invSettingsRow } = await supabase
-      .from('settings')
-      .select('value')
-      .eq('key', 'invitation_reward_pct')
-      .single();
+  if (isFirstDeposit || isSecondDeposit) {
+    const { data: allSettings } = await supabase.from('settings').select('key, value');
+    const getSetting = (key: string, def: number | string) => {
+      const row = allSettings?.find(s => s.key === key);
+      return row ? row.value : def;
+    };
 
-    const firstDepositPct = settingsRow ? parseFloat(settingsRow.value) / 100 : 0.20;
-    const invitationPct   = invSettingsRow ? parseFloat(invSettingsRow.value) / 100 : 0.10;
+    const firstDepositPct = parseFloat(getSetting('first_deposit_bonus_pct', '20') as string) / 100;
+    const secondDepositEnabled = getSetting('second_deposit_bonus_enabled', 'false') === 'true';
+    const secondDepositPct = parseFloat(getSetting('second_deposit_bonus_pct', '10') as string) / 100;
+    const invitationPct = parseFloat(getSetting('invitation_reward_pct', '10') as string) / 100;
 
-    // 1. Give configurable% bonus to the DEPOSITOR
-    depositorBonus = deposit.amount * firstDepositPct;
     const { data: depRecord } = await supabase.from('users').select('bonus_balance, inviter_id').eq('telegram_id', deposit.telegram_id).single();
-    
-    if (depRecord) {
-      const currentDepBonus = Number(depRecord.bonus_balance || 0);
-      await supabase.from('users').update({ bonus_balance: currentDepBonus + depositorBonus }).eq('telegram_id', deposit.telegram_id);
+
+    if (isFirstDeposit) {
+      depositorBonus = deposit.amount * firstDepositPct;
+      bonusReason = 'First Deposit';
       
-      // 2. Give 10% bonus to the INVITER (if they exist)
-      if (depRecord.inviter_id) {
+      if (depRecord && depRecord.inviter_id) {
         inviterId = depRecord.inviter_id;
         inviterBonus = deposit.amount * invitationPct;
-        
-        const { data: invRecord } = await supabase.from('users').select('bonus_balance').eq('telegram_id', inviterId).single();
-        if (invRecord) {
-          const currentInvBonus = Number(invRecord.bonus_balance || 0);
-          await supabase.from('users').update({ bonus_balance: currentInvBonus + inviterBonus }).eq('telegram_id', inviterId);
-        }
+      }
+    } else if (isSecondDeposit && secondDepositEnabled) {
+      depositorBonus = deposit.amount * secondDepositPct;
+      bonusReason = 'Second Deposit';
+    }
+
+    if (depRecord && depositorBonus > 0) {
+      const currentDepBonus = Number(depRecord.bonus_balance || 0);
+      await supabase.from('users').update({ bonus_balance: currentDepBonus + depositorBonus }).eq('telegram_id', deposit.telegram_id);
+    }
+
+    if (inviterId && inviterBonus > 0) {
+      const { data: invRecord } = await supabase.from('users').select('bonus_balance').eq('telegram_id', inviterId).single();
+      if (invRecord) {
+        const currentInvBonus = Number(invRecord.bonus_balance || 0);
+        await supabase.from('users').update({ bonus_balance: currentInvBonus + inviterBonus }).eq('telegram_id', inviterId);
       }
     }
   }
@@ -240,8 +244,8 @@ router.post('/deposits/:id/approve', async (req, res) => {
   // Send Telegram Notification to the depositor
   try {
     let msgText = `✅ *Deposit Approved!*\n\n💰 Amount: *${Number(deposit.amount).toLocaleString('en-US')} ETB* has been added to your balance.`;
-    if (isFirstDeposit) {
-      msgText += `\n\n🎁 *First Deposit Bonus!* You received an extra *${Number(depositorBonus).toLocaleString('en-US')} ETB* in your bonus balance!`;
+    if (depositorBonus > 0) {
+      msgText += `\n\n🎁 *${bonusReason} Bonus!* You received an extra *${Number(depositorBonus).toLocaleString('en-US')} ETB* in your bonus balance!`;
     }
     msgText += `\n\n🎮 Open the Mini App to start playing!`;
 
@@ -276,7 +280,7 @@ router.post('/deposits/:id/approve', async (req, res) => {
     }
   }
 
-  res.json({ success: true, isFirstDeposit, depositorBonus, inviterBonus });
+  res.json({ success: true, isFirstDeposit, isSecondDeposit, depositorBonus, inviterBonus });
 });
 
 // Reject deposit → permanently delete from DB
@@ -447,20 +451,31 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
     .order('created_at', { ascending: true });
 
   const firstDepositIds = new Set();
-  const seenUsers = new Set();
+  const secondDepositIds = new Set();
+  const userDepCounts: Record<string, number> = {};
+
   if (allApproved) {
     for (const d of allApproved) {
-      if (!seenUsers.has(d.telegram_id)) {
-        seenUsers.add(d.telegram_id);
+      const currentCount = userDepCounts[d.telegram_id] || 0;
+      if (currentCount === 0) {
         firstDepositIds.add(d.id);
+      } else if (currentCount === 1) {
+        secondDepositIds.add(d.id);
       }
+      userDepCounts[d.telegram_id] = currentCount + 1;
     }
   }
 
-  const { data: setDep } = await supabase.from('settings').select('value').eq('key', 'first_deposit_bonus_pct').single();
-  const { data: setInv } = await supabase.from('settings').select('value').eq('key', 'invitation_reward_pct').single();
-  const depPct = setDep ? parseFloat(setDep.value) / 100 : 0.20;
-  const invPct = setInv ? parseFloat(setInv.value) / 100 : 0.10;
+  const { data: allSettings } = await supabase.from('settings').select('key, value');
+  const getSetting = (key: string, def: string) => {
+    const row = allSettings?.find(s => s.key === key);
+    return row ? row.value : def;
+  };
+
+  const depPct = parseFloat(getSetting('first_deposit_bonus_pct', '20')) / 100;
+  const secondDepEnabled = getSetting('second_deposit_bonus_enabled', 'false') === 'true';
+  const secondDepPct = parseFloat(getSetting('second_deposit_bonus_pct', '10')) / 100;
+  const invPct = parseFloat(getSetting('invitation_reward_pct', '10')) / 100;
 
   let totalDeposits = 0;
   let totalWithdrawals = 0;
@@ -474,12 +489,23 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
     const username = d.users?.username || 'Unknown';
     txList.push({ id: d.id, type: 'deposit', amount: Number(d.amount), status: d.status, created_at: d.created_at, username, telegram_id: d.telegram_id });
 
-    if (d.status === 'approved' && firstDepositIds.has(d.id)) {
-      const db = Number(d.amount) * depPct;
-      totalDepBonus += db;
-      txList.push({ id: d.id + '_db', type: 'deposit_bonus', amount: db, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
+    if (d.status === 'approved') {
+      let bonusAmount = 0;
+      let isFirst = firstDepositIds.has(d.id);
+      let isSecond = secondDepositIds.has(d.id);
 
-      if (d.users?.inviter_id) {
+      if (isFirst) {
+        bonusAmount = Number(d.amount) * depPct;
+      } else if (isSecond && secondDepEnabled) {
+        bonusAmount = Number(d.amount) * secondDepPct;
+      }
+
+      if (bonusAmount > 0) {
+        totalDepBonus += bonusAmount;
+        txList.push({ id: d.id + '_db', type: 'deposit_bonus', amount: bonusAmount, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
+      }
+
+      if (isFirst && d.users?.inviter_id) {
         const ib = Number(d.amount) * invPct;
         totalInvBonus += ib;
         txList.push({ id: d.id + '_ib', type: 'invitation_reward', amount: ib, status: 'approved', created_at: d.created_at, username: 'Inviter of ' + username, telegram_id: d.users.inviter_id });
