@@ -161,10 +161,21 @@ class BingoEngine {
 
     if (!players || players.length === 0) return;
 
-    // ── Find ALL simultaneous winners ─────────────────────────────────────────
-    const winners = players.filter(p => checkBingo(p.card_matrix as number[][], called));
-    if (winners.length === 0) return;
+    // ── Find ALL winning cartelas ──────────────────────────────────────────────
+    const winningRows = players.filter(p => checkBingo(p.card_matrix as number[][], called));
+    if (winningRows.length === 0) return;
 
+    // ── Deduplicate by telegram_id: if same user wins with 2 cartelas, pick ONE ─
+    // This means one user buying multiple cartelas is treated as a single winner,
+    // not a "tie" — they win the full prize.
+    const seenTelegramIds = new Set<string>();
+    const winners: typeof winningRows = [];
+    for (const row of winningRows) {
+      if (!seenTelegramIds.has(row.telegram_id)) {
+        seenTelegramIds.add(row.telegram_id);
+        winners.push(row);
+      }
+    }
 
 
     const prize = Number(prizePool);
@@ -211,23 +222,13 @@ class BingoEngine {
         }
       }
 
-      // Determine win_type for reporting
-      let winType = 'normal';
-      if (cfg.early_call_8_enabled && called.length <= 8) {
-        const rewards8 = cfg.early_call_8_rewards as Record<string, number>;
-        if (rewards8[String(stake)]) winType = 'jackpot_8';
-      } else if (cfg.early_call_10_enabled && called.length <= 10) {
-        const rewards10 = cfg.early_call_10_rewards as Record<string, number>;
-        if (rewards10[String(stake)]) winType = 'jackpot_10';
-      }
 
       const { data: claim, error: claimErr } = await supabase.from('bingo_games').update({
         status:             'finished',
         winner_telegram_id: w.telegram_id,
-        winner_first_name:  isEarlyCall ? `?? EARLY BINGO: ${w.first_name}` : w.first_name,
+        winner_first_name:  isEarlyCall ? `🚀 EARLY BINGO: ${w.first_name}` : w.first_name,
         winner_cartela:     w.cartela_number,
         winner_prize:       finalPrize,
-        
         finished_at:        new Date().toISOString(),
         updated_at:         new Date().toISOString(),
       }).eq('id', gameId).eq('status', 'calling').select('id');
@@ -265,7 +266,6 @@ class BingoEngine {
         winner_first_name:  `${w1.first_name} & ${w2.first_name}`,
         winner_cartela:     w1.cartela_number,
         winner_prize:       splitPrize,
-        tie_count:          2,
         finished_at:        new Date().toISOString(),
         updated_at:         new Date().toISOString(),
       }).eq('id', gameId).eq('status', 'calling').select('id');
