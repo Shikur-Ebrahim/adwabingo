@@ -227,7 +227,7 @@ class BingoEngine {
         winner_first_name:  isEarlyCall ? `?? EARLY BINGO: ${w.first_name}` : w.first_name,
         winner_cartela:     w.cartela_number,
         winner_prize:       finalPrize,
-        win_type:           winType,
+        
         finished_at:        new Date().toISOString(),
         updated_at:         new Date().toISOString(),
       }).eq('id', gameId).eq('status', 'calling').select('id');
