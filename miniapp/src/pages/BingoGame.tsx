@@ -158,6 +158,10 @@ export default function BingoGame() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_games' }, () => {
         if (isMounted) fetchPools();
       })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bingo_players' }, () => {
+        // Re-fetch so unique player count is always accurate (multi-cartela buyers must not inflate count)
+        if (isMounted) fetchPools();
+      })
       .subscribe();
 
     return () => { isMounted = false; supabase.removeChannel(ch); };
@@ -319,9 +323,12 @@ export default function BingoGame() {
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "bingo_games" }, () => { fetchState(); })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "bingo_players" }, ({ new: p }) => {
-        const np = p as { game_id: string; cartela_number: number };
-        if (np.game_id === gameIdRef.current)
+        const np = p as { game_id: string; cartela_number: number; telegram_id: string };
+        if (np.game_id === gameIdRef.current) {
           setTaken(prev => prev.includes(np.cartela_number) ? prev : [...prev, np.cartela_number]);
+          // Re-fetch to get accurate unique_players count (same user may buy multiple cartelas)
+          fetchState();
+        }
       }).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [selectedStake, fetchState]);
