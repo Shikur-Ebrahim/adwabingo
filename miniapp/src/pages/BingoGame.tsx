@@ -127,21 +127,29 @@ export default function BingoGame() {
     let isMounted = true;
 
     const fetchPools = async () => {
-      // Read directly from DB since unique_players is now updated on the backend
-      const { data } = await supabase.from('bingo_games').select('id, stake, prize_pool, start_at, status, unique_players').in('status', ['waiting', 'calling']);
-      if (data && isMounted) {
-        const p: Record<number, any> = {};
-        data.forEach(g => { 
-          p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status, players: g.unique_players || 0, _id: g.id }; 
-        });
-        setHomeGames(p);
-      }
+      // Use backend API — service key bypasses RLS so unique player count is always accurate
+      const r = await fetch(`${API}/bingo/pools`, { headers: hdrs() });
+      if (!r.ok || !isMounted) return;
+      const { pools } = await r.json();
+      const p: Record<number, any> = {};
+      (pools || []).forEach((g: any) => {
+        p[Number(g.stake)] = {
+          pool: g.prize_pool,
+          start_at: g.start_at,
+          status: g.status,
+          players: g.unique_players,
+        };
+      });
+      if (isMounted) setHomeGames(p);
     };
     fetchPools();
 
     // Listen to table changes so home page updates in real-time
     const ch = supabase.channel('home_pools')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_games' }, () => {
+        if (isMounted) fetchPools();
+      })
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bingo_players' }, () => {
         if (isMounted) fetchPools();
       })
       .subscribe();
