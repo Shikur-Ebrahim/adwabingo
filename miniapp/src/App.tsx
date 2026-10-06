@@ -65,7 +65,6 @@ function Navigation() {
     { path: '/', label: 'Games', icon: Gamepad2 },
     { path: '/deposit', label: 'Deposit', icon: Wallet },
     { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-    { path: '/support', label: 'Support', icon: Headphones },
     { path: '#', label: 'Profile', icon: User },
   ];
 
@@ -90,14 +89,11 @@ function Navigation() {
                 }
               }}
               className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${
-                isActive ? 'text-violet-600 dark:text-violet-400' : 'text-gray-400 dark:text-slate-500'
-              } ${item.label === 'Games' && isActive ? '!text-yellow-600 dark:!text-yellow-500' : ''}
-              ${item.label === 'Deposit' && isActive ? '!text-yellow-600 dark:!text-yellow-500' : ''}
-              ${item.label === 'Leaderboard' && isActive ? '!text-yellow-600 dark:!text-yellow-500' : ''}
-              ${item.label === 'Profile' && isActive ? '!text-yellow-600 dark:!text-yellow-500' : ''}`}
+                isActive ? 'text-yellow-600 dark:text-yellow-500' : 'text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300'
+              }`}
             >
-              <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
-              <span className="text-[9px] font-medium">{item.label}</span>
+              <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+              <span className="text-[10px] font-medium">{item.label}</span>
             </Link>
           );
         })}

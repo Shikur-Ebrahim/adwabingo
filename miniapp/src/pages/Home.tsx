@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { Gift, ArrowDownToLine, Share2, PlusCircle, Info } from 'lucide-react';
+import { Gift, ArrowDownToLine, Share2, PlusCircle, Info, MessageCircle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import { supabase } from '../lib/supabase';
@@ -14,6 +14,39 @@ export default function Home() {
   const [announcement, setAnnouncement] = useState<{ message: string; maxViews: number } | null>(null);
   const [showAnnouncement, setShowAnnouncement] = useState(false);
   const announcementShownRef = useRef(false);
+
+  // Support banner state
+  const [showSupportBanner, setShowSupportBanner] = useState(false);
+  const supportBannerShownRef = useRef(false);
+
+  // Play popup sound using Web Audio API
+  const playPopSound = () => {
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.type = 'sine';
+      o.frequency.setValueAtTime(600, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(900, ctx.currentTime + 0.08);
+      g.gain.setValueAtTime(0.3, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+      o.start(ctx.currentTime);
+      o.stop(ctx.currentTime + 0.3);
+    } catch { /* ignore if audio blocked */ }
+  };
+
+  // Show support banner 2 seconds after Home loads
+  useEffect(() => {
+    if (supportBannerShownRef.current) return;
+    const t = setTimeout(() => {
+      setShowSupportBanner(true);
+      supportBannerShownRef.current = true;
+      playPopSound();
+    }, 2000);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -194,6 +227,35 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* ACTION BUTTONS */}
+      {/* SUPPORT BANNER */}
+      {showSupportBanner && (
+        <div className="px-4">
+          <div
+            className="flex items-center gap-2.5 bg-gradient-to-r from-violet-50 to-indigo-50 border border-violet-200 rounded-2xl px-4 py-2.5 shadow-sm animate-[slideDown_0.35s_ease-out]"
+            style={{ animation: 'slideDown 0.35s ease-out' }}
+          >
+            {/* Pulsing dot */}
+            <div className="w-2 h-2 rounded-full bg-violet-500 animate-pulse flex-shrink-0" />
+            {/* Clickable text */}
+            <button
+              onClick={() => navigate('/support')}
+              className="flex-1 text-left flex items-center gap-2 active:opacity-70 transition-opacity"
+            >
+              <MessageCircle size={15} className="text-violet-600 flex-shrink-0" />
+              <span className="text-violet-700 font-bold text-sm">Hello, do you need help? 👋</span>
+            </button>
+            {/* Dismiss X */}
+            <button
+              onClick={() => setShowSupportBanner(false)}
+              className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center text-violet-400 active:bg-violet-200 transition-colors flex-shrink-0 font-black text-xs"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ACTION BUTTONS */}
       <div className="px-4 grid grid-cols-3 gap-3">
