@@ -143,11 +143,14 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
 
   const { data: pRows } = await supabase.from('bingo_players').select('telegram_id').eq('game_id', game.id);
   const unique_players = new Set((pRows || []).map((r: any) => r.telegram_id)).size;
+  const total_cartelas = pRows?.length ?? 1;
 
-  // Prize pool based on UNIQUE PLAYERS only — buying more cartelas does NOT inflate derash
+  // Derash = total cartelas × stake (pot grows per cartela bought)
+  // Commission only applies when unique players >= 3
+  const rawPool = total_cartelas * stakeAmt;
   const prizePool = unique_players < 3
-    ? unique_players * stakeAmt
-    : Math.floor(unique_players * stakeAmt * cfg.prize_percent / 100);
+    ? rawPool
+    : Math.floor(rawPool * cfg.prize_percent / 100);
 
   let newStartAt = game.start_at;
   // Trigger countdown from settings waiting_period_s when first player joins
