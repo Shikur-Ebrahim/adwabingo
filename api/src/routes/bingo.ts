@@ -141,16 +141,13 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
     res.status(400).json({ error: `Insert error: ${insertErr.message}` }); return;
   }
 
-  const { count } = await supabase.from('bingo_players').select('*', { count: 'exact', head: true }).eq('game_id', game.id);
-  const playersCount = count || 1;
-  
-  // Use dynamic prize_percent from settings (0% commission for <3 players, dynamic% for 3+)
-  const prizePool = playersCount < 3
-    ? playersCount * stakeAmt
-    : Math.floor(playersCount * stakeAmt * cfg.prize_percent / 100);
-
   const { data: pRows } = await supabase.from('bingo_players').select('telegram_id').eq('game_id', game.id);
-  const unique_players = new Set((pRows || []).map(r => r.telegram_id)).size;
+  const unique_players = new Set((pRows || []).map((r: any) => r.telegram_id)).size;
+
+  // Prize pool based on UNIQUE PLAYERS only — buying more cartelas does NOT inflate derash
+  const prizePool = unique_players < 3
+    ? unique_players * stakeAmt
+    : Math.floor(unique_players * stakeAmt * cfg.prize_percent / 100);
 
   let newStartAt = game.start_at;
   // Trigger countdown from settings waiting_period_s when first player joins

@@ -443,8 +443,10 @@ export default function BingoGame() {
     let nb = bonusBal, nm = mainBal;
     if (nb >= stakeAmt) { nb -= stakeAmt; } else { nm -= stakeAmt - nb; nb = 0; }
     useGameStore.setState(s => ({ user: s.user ? { ...s.user, main_balance: nm, bonus_balance: nb } : s.user }));
-    const nc = taken.length + 1;
-    setGame(prev => prev ? { ...prev, prize_pool: nc < 3 ? nc * stakeAmt : Math.floor(nc * stakeAmt * 0.8) } : prev);
+    // Optimistic: new unique player count (only +1 if this is user's FIRST cartela in this game)
+    const isFirstCartela = myCartelas.length === 0;
+    const newUniquePlayers = isFirstCartela ? uniquePlayers + 1 : uniquePlayers;
+    setGame(prev => prev ? { ...prev, prize_pool: newUniquePlayers < 3 ? newUniquePlayers * stakeAmt : Math.floor(newUniquePlayers * stakeAmt * 0.8) } : prev);
     try {
       const r = await fetch(`${API}/bingo/join`, { method: "POST", headers: hdrs(), body: JSON.stringify({ cartela_number: seat, stake: selectedStake, card_matrix: matrix }) });
       const d = await r.json();
