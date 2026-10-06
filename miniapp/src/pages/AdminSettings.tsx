@@ -10,7 +10,7 @@ interface SettingField {
   key: string;
   label: string;
   icon: React.ReactNode;
-  type: 'number' | 'text';
+  type: 'number' | 'text' | 'textarea';
   unit?: string;
   color: string;
   bg: string;
@@ -23,6 +23,8 @@ const SETTING_FIELDS: SettingField[] = [
   { key: 'invitation_reward_pct', label: 'Invite Reward', icon: <Users size={16} />, type: 'number', unit: '%', color: 'text-violet-600', bg: 'bg-violet-50', defaultValue: 10 },
   { key: 'support_username', label: 'Support Team User', icon: <Headphones size={16} />, type: 'text', color: 'text-orange-600', bg: 'bg-orange-50', defaultValue: 'adwabingo_admin' },
   { key: 'channel_link', label: 'Official Channel Link', icon: <Megaphone size={16} />, type: 'text', color: 'text-indigo-600', bg: 'bg-indigo-50', defaultValue: 'https://t.me/adwabingo' },
+  { key: 'announcement_message', label: 'Announcement Message', icon: <Megaphone size={16} />, type: 'textarea', color: 'text-fuchsia-600', bg: 'bg-fuchsia-50', defaultValue: '' },
+  { key: 'announcement_max_views', label: 'Popup Max Views', icon: <Users size={16} />, type: 'number', color: 'text-pink-600', bg: 'bg-pink-50', defaultValue: 2 },
 ];
 
 export default function AdminSettings() {
@@ -138,12 +140,21 @@ export default function AdminSettings() {
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="flex-1 relative">
-                    <input
-                      type={field.type}
-                      value={values[field.key] ?? field.defaultValue}
-                      onChange={(e) => setValues(prev => ({ ...prev, [field.key]: e.target.value }))}
-                      className={`w-full border border-slate-200 focus:border-violet-400 outline-none rounded-lg px-2 py-1.5 font-bold text-slate-800 bg-slate-50 ${field.type === 'number' ? 'text-sm text-center' : 'text-[11px]'}`}
-                    />
+                    {field.type === 'textarea' ? (
+                      <textarea
+                        value={values[field.key] ?? field.defaultValue}
+                        onChange={(e) => setValues(prev => ({ ...prev, [field.key]: e.target.value }))}
+                        rows={3}
+                        className="w-full border border-slate-200 focus:border-violet-400 outline-none rounded-lg px-2 py-1.5 font-bold text-slate-800 bg-slate-50 text-[11px] resize-none"
+                      />
+                    ) : (
+                      <input
+                        type={field.type}
+                        value={values[field.key] ?? field.defaultValue}
+                        onChange={(e) => setValues(prev => ({ ...prev, [field.key]: e.target.value }))}
+                        className={`w-full border border-slate-200 focus:border-violet-400 outline-none rounded-lg px-2 py-1.5 font-bold text-slate-800 bg-slate-50 ${field.type === 'number' ? 'text-sm text-center' : 'text-[11px]'}`}
+                      />
+                    )}
                     {field.unit && (
                       <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xs">
                         {field.unit}

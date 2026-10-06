@@ -58,22 +58,18 @@ router.get('/invited', validateTelegramAuth, async (req: AuthRequest, res) => {
 });
 // Fetch support contact and channel link from settings
 router.get('/support-contact', validateTelegramAuth, async (req: AuthRequest, res) => {
-  const { data: supportData } = await supabase
-    .from('settings')
-    .select('value')
-    .eq('key', 'support_username')
-    .single();
+  const { data: allSettings } = await supabase.from('settings').select('key, value');
+  const getSetting = (k: string, def: string) => {
+    const row = allSettings?.find(s => s.key === k);
+    return row ? row.value : def;
+  };
 
-  const { data: channelData } = await supabase
-    .from('settings')
-    .select('value')
-    .eq('key', 'channel_link')
-    .single();
-
-  const username = supportData ? supportData.value : 'adwabingo_admin';
-  const channel = channelData ? channelData.value : 'https://t.me/adwabingo';
-
-  res.json({ username, channel });
+  res.json({
+    username: getSetting('support_username', 'adwabingo_admin'),
+    channel: getSetting('channel_link', 'https://t.me/adwabingo'),
+    announcement_message: getSetting('announcement_message', ''),
+    announcement_max_views: parseInt(getSetting('announcement_max_views', '2'), 10)
+  });
 });
 
 // POST /api/player/transfer — transfer main_balance between users

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { Gift, ArrowDownToLine, Share2, PlusCircle, Info } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -11,6 +11,9 @@ export default function Home() {
 
   const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string; players: number }>>({});
   const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
+  const [announcement, setAnnouncement] = useState<{ message: string; maxViews: number } | null>(null);
+  const [showAnnouncement, setShowAnnouncement] = useState(false);
+  const announcementShownRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -71,6 +74,32 @@ export default function Home() {
     navigate('/invite');
   };
 
+    // ---- ANNOUNCEMENT POPUP LOGIC ----
+  useEffect(() => {
+    if (announcementShownRef.current) return;
+    const initData = typeof WebApp !== 'undefined' ? WebApp.initData : '';
+    const API_URL_LOCAL = import.meta.env.VITE_API_URL || '/api';
+    fetch(`${API_URL_LOCAL}/player/support-contact`, {
+      headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData }
+    })
+      .then(r => r.json())
+      .then(data => {
+        const msg = data.announcement_message || '';
+        const maxViews = typeof data.announcement_max_views === 'number' ? data.announcement_max_views : 2;
+        if (!msg.trim()) return;
+        const storageKey = `ann_views_${msg.slice(0, 20)}`;
+        const viewCount = parseInt(localStorage.getItem(storageKey) || '0', 10);
+        if (viewCount < maxViews) {
+          localStorage.setItem(storageKey, String(viewCount + 1));
+          setAnnouncement({ message: msg, maxViews });
+          setShowAnnouncement(true);
+          announcementShownRef.current = true;
+        }
+      })
+      .catch(() => {});
+  }, []);
+  // ----------------------------------
+
   const handleHelp = async () => {
     const initData = typeof WebApp !== 'undefined' ? WebApp.initData : '';
     const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -99,6 +128,42 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen pb-20 space-y-4">
+      {/* ANNOUNCEMENT POPUP */}
+      {showAnnouncement && announcement && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowAnnouncement(false)}>
+          <div
+            className="bg-white dark:bg-[#111729] rounded-2xl shadow-2xl border border-gray-100 dark:border-white/10 w-full max-w-sm overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="h-2 bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 rounded-t-2xl" />
+            <div className="px-5 pt-4 pb-2 flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center shadow-md shrink-0">
+                <Info size={20} className="text-white" />
+              </div>
+              <div>
+                <p className="text-[11px] font-bold text-fuchsia-600 dark:text-fuchsia-400 uppercase tracking-widest">Announcement</p>
+                <p className="text-sm font-black text-slate-800 dark:text-white">ADWA Bingo</p>
+              </div>
+              <button onClick={() => setShowAnnouncement(false)} className="ml-auto w-7 h-7 rounded-full bg-slate-100 dark:bg-white/10 flex items-center justify-center text-slate-500 dark:text-white/60 active:bg-slate-200">
+                <span className="text-sm font-black">x</span>
+              </button>
+            </div>
+            <div className="h-px bg-gray-100 dark:bg-white/5 mx-4" />
+            <div className="px-5 py-4">
+              <p className="text-sm text-slate-700 dark:text-slate-300 font-semibold leading-relaxed whitespace-pre-wrap">{announcement.message}</p>
+            </div>
+            <div className="px-5 pb-5">
+              <button
+                onClick={() => setShowAnnouncement(false)}
+                className="w-full py-2.5 bg-gradient-to-r from-violet-500 to-fuchsia-600 text-white font-black text-sm rounded-xl shadow-md active:scale-95 transition-transform"
+              >
+                Got it!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* HEADER SECTION */}
       <div className="bg-white dark:bg-slate-900 px-4 py-4 rounded-b-2xl shadow-sm border-b border-gray-100 dark:border-slate-800 flex items-center justify-between transition-colors">
         <div className="flex items-center space-x-3">
