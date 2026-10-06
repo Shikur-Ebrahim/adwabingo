@@ -52,7 +52,6 @@ class BingoEngine {
         .select('*')
         .eq('stake', stake)
         .neq('status', 'finished')
-        .neq('status', 'resolving')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -170,7 +169,7 @@ class BingoEngine {
     // This prevents duplicate notifications on rapid ticks (race condition fix)
     const { data: claimResult, error: claimError } = await supabase
       .from('bingo_games')
-      .update({ status: 'resolving', updated_at: new Date().toISOString() })
+      .update({ status: 'finished', updated_at: new Date().toISOString() })
       .eq('id', gameId)
       .eq('status', 'calling')
       .select('id');

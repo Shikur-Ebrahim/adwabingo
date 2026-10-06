@@ -9,7 +9,7 @@ const API = import.meta.env.VITE_API_URL || "/api";
 
 interface BGame {
   id: string; game_id: string; stake: number; prize_pool: number;
-  status: "waiting" | "calling" | "resolving" | "finished";
+  status: "waiting" | "calling" | "finished";
   called_numbers: number[];
   winner_cartela: number | null; winner_telegram_id: string | null;
   winner_first_name: string | null; winner_prize: number | null;
@@ -349,10 +349,9 @@ export default function BingoGame() {
 
   // Fire celebration when game finishes — play sound + fetch winner card
   useEffect(() => {
-    if (game?.status !== 'finished' && game?.status !== 'resolving') return;
+    if (game?.status !== 'finished') return;
     if (hasCelebratedRef.current === game.id) return;
-    // Only celebrate when winner info is available (resolving may not have it yet)
-    if (game.status === 'resolving' && !game.winner_cartela && game.winner_first_name !== 'REMATCH') return;
+    
     hasCelebratedRef.current = game.id;
 
     // ── REMATCH: 3+ way tie ───────────────────────────────────────────────────
@@ -389,9 +388,9 @@ export default function BingoGame() {
         if (isMounted) setCelebration({ winner_name: game.winner_first_name || 'Player', winner_cartela: game.winner_cartela!, winner_prize: game.winner_prize!, winner_matrix: null, iWon, called: [...game.called_numbers] });
       });
     return () => { isMounted = false; };
-  }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name, game?.winner_telegram_id]);
+  }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name]);
 
-  // Auto-dismiss celebration after 15 seconds — gives users time to see the winner card
+  // Auto-dismiss celebration after 2 seconds — gives users time to see the winner card
   useEffect(() => {
     if (!celebration) return;
     const timer = setTimeout(() => {
@@ -402,7 +401,7 @@ export default function BingoGame() {
       setTaken([]);
       fetchState();
       refreshUser();
-    }, 15000);
+    }, 2000);
     return () => clearTimeout(timer);
   }, [celebration]);
 
@@ -470,7 +469,7 @@ export default function BingoGame() {
   const initial = user?.first_name ? user.first_name.charAt(0).toUpperCase() : "U";
   let statusTxt = "Finished", statusCls = "text-slate-400";
   if (game?.status === "waiting") { statusTxt = timeLeft > 86400 ? "Waiting..." : `${timeLeft}s`; statusCls = "text-orange-400"; }
-  else if (game?.status === "calling" || game?.status === "resolving") { statusTxt = "Active"; statusCls = "text-emerald-400"; }
+  else if (game?.status === "calling") { statusTxt = "Active"; statusCls = "text-emerald-400"; }
 
   const Header = () => (
     <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between shrink-0">
