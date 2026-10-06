@@ -113,6 +113,7 @@ export default function BingoGame() {
   const [maxPlayers, setMaxPlayers] = useState<number>(150);
   const [maxCartelasPerUser, setMaxCartelasPerUser] = useState<number>(2);
   const [myCartelas, setMyCartelas] = useState<Array<{ cartela_number: number; card_matrix: number[][] }>>([]);
+  const [uniquePlayers, setUniquePlayers] = useState<number>(0);
   const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string; players: number }>>({});
   const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
   const [soundEnabled, setSoundEnabled] = useState(false);
@@ -129,17 +130,20 @@ export default function BingoGame() {
         const p: Record<number, any> = {};
         data.forEach(g => { p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status, players: 0, _id: g.id }; });
 
-        // Fetch player counts
+        // Fetch unique player counts
         const ids = data.map(g => g.id);
         if (ids.length > 0) {
           const { data: playerRows } = await supabase
             .from('bingo_players')
-            .select('game_id')
+            .select('game_id, telegram_id')
             .in('game_id', ids);
           if (playerRows) {
-            const countMap: Record<string, number> = {};
-            playerRows.forEach((r: any) => { countMap[r.game_id] = (countMap[r.game_id] || 0) + 1; });
-            data.forEach(g => { if (p[g.stake]) p[g.stake].players = countMap[g.id] || 0; });
+            const uniqueMap: Record<string, Set<string>> = {};
+            playerRows.forEach((r: any) => {
+              if (!uniqueMap[r.game_id]) uniqueMap[r.game_id] = new Set();
+              uniqueMap[r.game_id].add(r.telegram_id);
+            });
+            data.forEach(g => { if (p[g.stake]) p[g.stake].players = uniqueMap[g.id]?.size || 0; });
           }
         }
         setHomeGames(p);
@@ -291,6 +295,7 @@ export default function BingoGame() {
         if (d.max_players) setMaxPlayers(Number(d.max_players));
         if (d.max_cartelas_per_user) setMaxCartelasPerUser(Number(d.max_cartelas_per_user));
         if (d.my_cartelas) setMyCartelas(d.my_cartelas);
+        if (d.unique_players !== undefined) setUniquePlayers(Number(d.unique_players));
         if (d.game && d.game.id !== gameIdRef.current) {
           setGame(d.game); setTaken(d.taken_cartelas ?? []); setMyCard(d.my_card ?? null);
           gameIdRef.current = d.game.id;
@@ -422,6 +427,7 @@ export default function BingoGame() {
         const newCard = { cartela_number: seat, card_matrix: d.card_matrix };
         setMyCartelas(prev => [...prev, newCard]);
         setMyCard(newCard); // also set my_card for backward compat
+        if (d.unique_players !== undefined) setUniquePlayers(Number(d.unique_players));
         refreshUser();
       } else {
         setTaken(prev => prev.filter(n => n !== seat));
@@ -791,9 +797,10 @@ export default function BingoGame() {
                 <span className="text-sm font-black text-white leading-tight">{game.game_id}</span>
               </div>
             </div>
-            <div className="grid grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-5 gap-1.5">
               <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Stake</p><p className="text-xs font-black text-white">{game.stake} ETB</p></div>
-              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Players</p><p className="text-xs font-black text-emerald-400">{taken.length}</p></div>
+              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Players</p><p className="text-xs font-black text-emerald-400">{uniquePlayers}</p></div>
+              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Cartelas</p><p className="text-xs font-black text-cyan-400">{taken.length}</p></div>
               <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Derash</p><p className="text-xs font-black text-yellow-400">{game.prize_pool} ETB</p></div>
               <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Status</p><p className={`text-xs font-black ${statusCls}`}>{statusTxt}</p></div>
             </div>

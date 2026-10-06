@@ -27,13 +27,15 @@ router.get('/current', validateTelegramAuth, async (req: AuthRequest, res) => {
     .eq('game_id', game.id);
 
   const taken_cartelas = (rows || []).map((p: any) => Number(p.cartela_number));
+  const unique_players = new Set((rows || []).map((p: any) => p.telegram_id)).size;
+  
   const myRows = (rows || []).filter((p: any) => p.telegram_id === telegramId);
   const my_cartelas = myRows.map((p: any) => ({ cartela_number: p.cartela_number, card_matrix: p.card_matrix }));
   // Backward compat: my_card = first cartela
   const my_card = my_cartelas.length > 0 ? my_cartelas[0] : null;
 
   const cfg = await getSettings();
-  res.json({ game, taken_cartelas, my_card, my_cartelas, max_players: cfg.max_players, max_cartelas_per_user: cfg.max_cartelas_per_user });
+  res.json({ game, taken_cartelas, unique_players, my_card, my_cartelas, max_players: cfg.max_players, max_cartelas_per_user: cfg.max_cartelas_per_user });
 });
 
 // ── POST /api/bingo/join ────────────────────────────────────────────────────
@@ -116,7 +118,7 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
 
   if (insertErr) {
     await supabase.from('users').update({ main_balance: mainBal, bonus_balance: bonusBal }).eq('telegram_id', telegramId);
-    res.status(400).json({ error: 'Seat taken or error' }); return;
+    res.status(400).json({ error: `Insert error: ${insertErr.message}` }); return;
   }
 
   const { count } = await supabase.from('bingo_players').select('*', { count: 'exact', head: true }).eq('game_id', game.id);
@@ -126,6 +128,9 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   const prizePool = playersCount < 3
     ? playersCount * stakeAmt
     : Math.floor(playersCount * stakeAmt * cfg.prize_percent / 100);
+
+  const { data: pRows } = await supabase.from('bingo_players').select('telegram_id').eq('game_id', game.id);
+  const unique_players = new Set((pRows || []).map(r => r.telegram_id)).size;
 
   let newStartAt = game.start_at;
   // Trigger countdown from settings waiting_period_s when first player joins
@@ -139,7 +144,7 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
     updated_at: new Date().toISOString()
   }).eq('id', game.id);
 
-  res.json({ success: true, cartela_number: seat, card_matrix });
+  res.json({ success: true, cartela_number: seat, card_matrix, unique_players });
 });
 
 router.get('/card', validateTelegramAuth, async (req, res) => {

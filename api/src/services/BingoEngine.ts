@@ -87,17 +87,19 @@ class BingoEngine {
     if (startTime > Date.now() + 86400000) return;
     if (Date.now() < startTime) return;
 
-    const { count } = await supabase
+    const { data: pRows } = await supabase
       .from('bingo_players')
-      .select('*', { count: 'exact', head: true })
+      .select('telegram_id')
       .eq('game_id', game.id);
+    
+    const uniquePlayers = new Set((pRows || []).map(r => r.telegram_id)).size;
 
-    if ((count ?? 0) < cfg.min_players) {
+    if (uniquePlayers < cfg.min_players) {
       await supabase.from('bingo_games').update({
         start_at: new Date(Date.now() + cfg.waiting_period_s * 1000 / 2).toISOString(),
         updated_at: new Date().toISOString(),
       }).eq('id', game.id);
-      console.log(`🎰 Game #${game.game_id} extended (only ${count} player, need ${cfg.min_players})`);
+      console.log(`🎰 Game #${game.game_id} extended (only ${uniquePlayers} unique player, need ${cfg.min_players})`);
       return;
     }
 
@@ -106,7 +108,7 @@ class BingoEngine {
       called_numbers: [],
       updated_at: new Date().toISOString(),
     }).eq('id', game.id);
-    console.log(`🎰 Game #${game.game_id} started with ${count} players!`);
+    console.log(`🎰 Game #${game.game_id} started with ${uniquePlayers} unique players!`);
   }
 
   private async handleCalling(game: any) {
