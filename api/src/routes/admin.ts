@@ -665,7 +665,7 @@ router.put('/workers/:telegramId/permissions', async (req, res) => {
 
 // GET /admin/settings — return all key/value settings
 router.get('/settings', validateTelegramAuth, requireAdmin, async (_req, res) => {
-  const { data, error } = await supabase.from('settings').select('key, value, label, description');
+  const { data, error } = await supabase.from('settings').select('key, value');
   if (error) { res.status(500).json({ error: error.message }); return; }
   res.json({ settings: data || [] });
 });
