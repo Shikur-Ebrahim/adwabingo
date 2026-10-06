@@ -6,34 +6,21 @@ import { getSettings } from './adminSettings';
 
 const router = Router();
 
-// ── GET /api/bingo/pools ── server-side unique player count (bypasses RLS) ──
+// ── GET /api/bingo/pools ── server-side unique player count ──
 router.get('/pools', validateTelegramAuth, async (_req, res) => {
   const { data: games } = await supabase
     .from('bingo_games')
-    .select('id, stake, prize_pool, start_at, status')
+    .select('id, stake, prize_pool, start_at, status, unique_players')
     .in('status', ['waiting', 'calling']);
 
   if (!games || games.length === 0) { res.json({ pools: [] }); return; }
-
-  const ids = games.map(g => g.id);
-  const { data: rows } = await supabase
-    .from('bingo_players')
-    .select('game_id, telegram_id')
-    .in('game_id', ids);
-
-  // Count unique players per game
-  const uniqueMap: Record<string, Set<string>> = {};
-  (rows || []).forEach((r: any) => {
-    if (!uniqueMap[r.game_id]) uniqueMap[r.game_id] = new Set();
-    uniqueMap[r.game_id].add(r.telegram_id);
-  });
 
   const pools = games.map(g => ({
     stake: g.stake,
     prize_pool: g.prize_pool,
     start_at: g.start_at,
     status: g.status,
-    unique_players: uniqueMap[g.id]?.size || 0,
+    unique_players: g.unique_players || 0,
   }));
 
   res.json({ pools });
@@ -193,6 +180,7 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
 
   await supabase.from('bingo_games').update({
     prize_pool: prizePool,
+    unique_players: unique_players,
     start_at: newStartAt,
     updated_at: new Date().toISOString()
   }).eq('id', game.id);
