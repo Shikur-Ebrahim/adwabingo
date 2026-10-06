@@ -171,6 +171,12 @@ export default function Profile() {
               <ChevronRight size={11} className="text-slate-300" />
             </button>
 
+            <button onClick={() => navigateTo('/audit')} className={row}>
+              <div className={icon('bg-indigo-50 text-indigo-500')}><History size={12} /></div>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Full Audit Ledger</span>
+              <ChevronRight size={11} className="text-slate-300" />
+            </button>
+
             <button onClick={() => navigateTo('/invited')} className={row}>
               <div className={icon('bg-emerald-50 text-emerald-500')}><Users size={12} /></div>
               <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Invite Person</span>

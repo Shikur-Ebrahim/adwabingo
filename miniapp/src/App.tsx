@@ -14,6 +14,7 @@ import BingoGame from './pages/BingoGame';
 import AdminBingoGames from './pages/AdminBingoGames';
 import Leaderboard from './pages/Leaderboard';
 import GamesReport from './pages/GamesReport';
+import Audit from './pages/Audit';
 import Rules from './pages/Rules';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -221,6 +222,7 @@ function App() {
           <Route path="/withdraw" element={<Withdraw />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/games-report" element={<GamesReport />} />
+          <Route path="/audit" element={<Audit />} />
           <Route path="/rules" element={<Rules />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/bingo-games" element={<AdminBingoGames />} />
@@ -242,3 +244,4 @@ function App() {
 }
 
 export default App;
+
