@@ -201,12 +201,23 @@ class BingoEngine {
         }
       }
 
+      // Determine win_type for reporting
+      let winType = 'normal';
+      if (cfg.early_call_8_enabled && called.length <= 8) {
+        const rewards8 = cfg.early_call_8_rewards as Record<string, number>;
+        if (rewards8[String(stake)]) winType = 'jackpot_8';
+      } else if (cfg.early_call_10_enabled && called.length <= 10) {
+        const rewards10 = cfg.early_call_10_rewards as Record<string, number>;
+        if (rewards10[String(stake)]) winType = 'jackpot_10';
+      }
+
       await supabase.from('bingo_games').update({
         status:             'finished',
         winner_telegram_id: w.telegram_id,
         winner_first_name:  isEarlyCall ? `🚀 EARLY BINGO: ${w.first_name}` : w.first_name,
         winner_cartela:     w.cartela_number,
         winner_prize:       finalPrize,
+        win_type:           winType,
         finished_at:        new Date().toISOString(),
         updated_at:         new Date().toISOString(),
       }).eq('id', gameId);

@@ -478,6 +478,7 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   let totalDeposits = 0;
   let totalWithdrawals = 0;
   let totalDepBonus = 0;
+  let totalSecondDepBonus = 0;
   let totalInvBonus = 0;
 
   const txList: any[] = [];
@@ -499,8 +500,13 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
       }
 
       if (bonusAmount > 0) {
-        totalDepBonus += bonusAmount;
-        txList.push({ id: d.id + '_db', type: 'deposit_bonus', amount: bonusAmount, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
+        if (isFirst) {
+          totalDepBonus += bonusAmount;
+          txList.push({ id: d.id + '_db', type: 'deposit_bonus', amount: bonusAmount, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
+        } else if (isSecond) {
+          totalSecondDepBonus += bonusAmount;
+          txList.push({ id: d.id + '_db2', type: 'second_deposit_bonus', amount: bonusAmount, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
+        }
       }
 
       if (isFirst && d.users?.inviter_id) {
@@ -517,10 +523,41 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
     txList.push({ id: w.id, type: 'withdrawal', amount: Number(w.amount), status: w.status, created_at: w.created_at, username, telegram_id: w.telegram_id });
   });
 
+  // ─── Bingo jackpot wins (8-call and 10-call) ────────────────────────────────
+  let bingoQuery = supabase
+    .from('bingo_games')
+    .select('id, game_id, stake, winner_prize, winner_telegram_id, winner_first_name, win_type, finished_at')
+    .in('win_type', ['jackpot_8', 'jackpot_10'])
+    .eq('status', 'finished');
+  if (from) bingoQuery = bingoQuery.gte('finished_at', from);
+  if (to)   bingoQuery = bingoQuery.lte('finished_at', to);
+  const { data: jackpotGames } = await bingoQuery;
+
+  // Get winner usernames
+  const winnerIds = [...new Set((jackpotGames || []).map((g: any) => g.winner_telegram_id).filter(Boolean))];
+  let winnerUsernameMap: Record<string, string> = {};
+  if (winnerIds.length > 0) {
+    const { data: wu } = await supabase.from('users').select('telegram_id, username').in('telegram_id', winnerIds);
+    (wu || []).forEach((u: any) => { winnerUsernameMap[u.telegram_id] = u.username || 'Unknown'; });
+  }
+
+  let totalJackpot8 = 0, totalJackpot10 = 0;
+  (jackpotGames || []).forEach((g: any) => {
+    const uname = winnerUsernameMap[g.winner_telegram_id] || g.winner_first_name || 'Unknown';
+    const prize = Number(g.winner_prize || 0);
+    if (g.win_type === 'jackpot_8') {
+      totalJackpot8 += prize;
+      txList.push({ id: g.id + '_j8', type: 'jackpot_8', amount: prize, status: 'approved', created_at: g.finished_at, username: uname, telegram_id: g.winner_telegram_id, game_id: g.game_id, stake: g.stake });
+    } else if (g.win_type === 'jackpot_10') {
+      totalJackpot10 += prize;
+      txList.push({ id: g.id + '_j10', type: 'jackpot_10', amount: prize, status: 'approved', created_at: g.finished_at, username: uname, telegram_id: g.winner_telegram_id, game_id: g.game_id, stake: g.stake });
+    }
+  });
+
   txList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   res.json({
-    stats: { totalDeposits, totalWithdrawals, totalDepBonus, totalInvBonus },
+    stats: { totalDeposits, totalWithdrawals, totalDepBonus, totalSecondDepBonus, totalInvBonus, totalJackpot8, totalJackpot10 },
     transactions: txList
   });
 });
