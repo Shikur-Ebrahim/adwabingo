@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
+import ReactMarkdown from 'react-markdown';
 
 const API = import.meta.env.VITE_API_URL || '';
 
@@ -114,12 +115,16 @@ export default function SupportPage() {
                 <Bot size={15} className="text-white" />
               </div>
             )}
-            <div className={`max-w-[80%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+            <div className={`max-w-[85%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${
               msg.role === 'user'
-                ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white rounded-br-sm shadow-md'
-                : 'bg-white text-slate-800 shadow-sm border border-slate-100 rounded-bl-sm'
+                ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white rounded-br-sm shadow-md whitespace-pre-wrap'
+                : 'bg-white text-slate-800 shadow-sm border border-slate-100 rounded-bl-sm prose prose-sm prose-slate prose-p:my-1 prose-strong:text-violet-900 prose-ul:my-1 prose-li:my-0 prose-ul:pl-4 max-w-none'
             }`}>
-              {msg.content}
+              {msg.role === 'assistant' ? (
+                <ReactMarkdown>{msg.content}</ReactMarkdown>
+              ) : (
+                msg.content
+              )}
             </div>
           </div>
         ))}

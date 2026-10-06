@@ -244,25 +244,24 @@ export default function Home() {
           className="fixed bottom-[74px] left-2 right-2 z-50"
           style={{ animation: 'slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}
         >
-          <div className="flex items-center bg-white border border-violet-300 rounded-2xl px-3 py-3 shadow-[0_4px_28px_rgba(109,40,217,0.3)] gap-2">
-            {/* Pulsing dot */}
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+          <div className="flex items-center bg-white border border-violet-300 rounded-2xl p-1 shadow-[0_4px_28px_rgba(109,40,217,0.3)]">
             {/* Clickable area — takes all available space */}
             <button
               onClick={() => { setShowSupportBanner(false); navigate('/support'); }}
-              className="flex items-center gap-2 flex-1 min-w-0 active:opacity-70 transition-opacity text-left"
+              className="flex-1 flex items-center gap-2.5 active:bg-violet-50 transition-colors rounded-xl px-3 py-2 text-left"
             >
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
               <MessageCircle size={15} className="text-violet-600 flex-shrink-0" />
-              <span className="text-violet-800 font-bold text-[13px] leading-tight whitespace-nowrap">
+              <span className="text-violet-800 font-bold text-[13px] leading-tight flex-1">
                 Hello, do you need help? 👋
               </span>
             </button>
             {/* Dismiss X */}
             <button
               onClick={(e) => { e.stopPropagation(); setShowSupportBanner(false); }}
-              className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 active:bg-slate-200 transition-colors flex-shrink-0 text-xs font-black"
+              className="w-8 h-8 mr-1 rounded-full flex items-center justify-center text-slate-400 active:bg-slate-100 transition-colors flex-shrink-0 text-lg"
             >
-              ✕
+              ×
             </button>
           </div>
         </div>
