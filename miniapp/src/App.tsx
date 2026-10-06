@@ -12,6 +12,7 @@ import Admin from './pages/Admin';
 import Worker from './pages/Worker';
 import BingoGame from './pages/BingoGame';
 import AdminBingoGames from './pages/AdminBingoGames';
+import AdminUserAudit from './pages/AdminUserAudit';
 import Leaderboard from './pages/Leaderboard';
 import GamesReport from './pages/GamesReport';
 import Audit from './pages/Audit';
@@ -226,6 +227,7 @@ function App() {
           <Route path="/rules" element={<Rules />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/bingo-games" element={<AdminBingoGames />} />
+          <Route path="/admin/user-audit" element={<AdminUserAudit />} />
           <Route path="/admin/deposit-methods" element={<AdminDepositMethods />} />
           <Route path="/admin/withdrawal-methods" element={<AdminWithdrawalMethods />} />
           <Route path="/admin/deposits" element={<AdminDeposits />} />

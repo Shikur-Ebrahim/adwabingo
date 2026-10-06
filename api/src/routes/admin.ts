@@ -852,4 +852,93 @@ router.post('/bingo-games/:id/finish', validateTelegramAuth, requireAdmin, async
   res.json({ success: true });
 });
 
+
+router.get('/user-audit/:telegramId', async (req, res) => {
+  const telegramId = req.params.telegramId;
+  try {
+    const txList: any[] = [];
+    
+    // 1. Get settings for percentages
+    const { data: allSettings } = await supabase.from('settings').select('key, value');
+    const getSetting = (key: string, def: string) => {
+      const row = allSettings?.find(s => s.key === key);
+      return row ? row.value : def;
+    };
+    const depPct = parseFloat(getSetting('first_deposit_bonus_pct', '20')) / 100;
+    const secondDepPct = parseFloat(getSetting('second_deposit_bonus_pct', '10')) / 100;
+    const invPct = parseFloat(getSetting('invitation_reward_pct', '10')) / 100;
+
+    // 2. Fetch Deposits
+    const { data: deposits } = await supabase.from('deposits').select('*').eq('telegram_id', telegramId).order('created_at', { ascending: true });
+    let approvedCount = 0;
+    (deposits || []).forEach((d: any) => {
+      txList.push({ id: d.id, type: 'deposit', amount: d.amount, status: d.status, created_at: d.created_at, note: d.payment_method });
+      
+      if (d.status === 'approved') {
+        approvedCount++;
+        if (approvedCount === 1 && depPct > 0) {
+          const bAmount = d.amount * depPct;
+          txList.push({ id: d.id + '_db1', type: 'deposit_bonus', amount: bAmount, status: 'approved', created_at: d.created_at, note: '1st Deposit Bonus' });
+        } else if (approvedCount === 2 && secondDepPct > 0) {
+          const bAmount = d.amount * secondDepPct;
+          txList.push({ id: d.id + '_db2', type: 'second_deposit_bonus', amount: bAmount, status: 'approved', created_at: d.created_at, note: '2nd Deposit Bonus' });
+        }
+      }
+    });
+
+    // 3. Fetch Withdrawals
+    const { data: withdrawals } = await supabase.from('withdrawals').select('*').eq('telegram_id', telegramId);
+    (withdrawals || []).forEach((w: any) => {
+      txList.push({ id: w.id, type: 'withdrawal', amount: w.amount, status: w.status, created_at: w.created_at, note: w.withdrawal_method });
+    });
+
+    // 4. Fetch Bingo Wins
+    const { data: wins } = await supabase.from('bingo_games').select('*').eq('winner_telegram_id', telegramId).eq('status', 'finished');
+    (wins || []).forEach((g: any) => {
+      const wType = g.win_type || 'normal';
+      let typeLabel = 'game_win';
+      if (wType === 'jackpot_8') typeLabel = 'jackpot_8';
+      if (wType === 'jackpot_10') typeLabel = 'jackpot_10';
+      
+      txList.push({ id: 'win_' + g.id, type: typeLabel, amount: g.winner_prize, status: 'approved', created_at: g.finished_at, note: 'Game #' + g.id });
+    });
+
+    // 5. Fetch Bingo Stakes (Games Played)
+    const { data: plays } = await supabase.from('bingo_players').select('created_at, game_id, bingo_games(stake, status)').eq('telegram_id', telegramId);
+    (plays || []).forEach((p: any) => {
+      if (p.bingo_games) {
+        if (p.bingo_games.status !== 'cancelled') {
+           txList.push({ id: 'play_' + p.game_id + '_' + Math.random(), type: 'game_stake', amount: p.bingo_games.stake, status: 'approved', created_at: p.created_at, note: 'Game #' + p.game_id });
+        }
+      }
+    });
+
+    // 6. Fetch Invitation Rewards
+    const { data: invited } = await supabase.from('users').select('telegram_id, username').eq('inviter_id', telegramId);
+    if (invited && invited.length > 0) {
+      const invitedIds = invited.map((u: any) => u.telegram_id);
+      const { data: theirDeps } = await supabase.from('deposits').select('telegram_id, amount, status, created_at').in('telegram_id', invitedIds).eq('status', 'approved').order('created_at', { ascending: true });
+      
+      const countedFirstDep = new Set();
+      (theirDeps || []).forEach((d: any) => {
+        if (!countedFirstDep.has(d.telegram_id)) {
+          countedFirstDep.add(d.telegram_id);
+          const iAmount = d.amount * invPct;
+          if (iAmount > 0) {
+            const uInfo = invited.find((u: any) => u.telegram_id === d.telegram_id);
+            txList.push({ id: 'inv_' + d.telegram_id, type: 'invitation_reward', amount: iAmount, status: 'approved', created_at: d.created_at, note: 'Invited @' + (uInfo?.username || 'user') });
+          }
+        }
+      });
+    }
+
+    // 7. Get user info
+    const { data: user } = await supabase.from('users').select('username, first_name, balance').eq('telegram_id', telegramId).single();
+
+    txList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    res.json({ transactions: txList, user });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 export default router;
