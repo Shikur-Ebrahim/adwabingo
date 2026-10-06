@@ -147,7 +147,7 @@ export default function SupportPage() {
 
       {/* Quick Questions */}
       {showQuickQuestions && (
-        <div className="fixed left-0 right-0 bg-white border-t border-slate-100 px-3 py-2 flex flex-col gap-2" style={{ bottom: '72px' }}>
+        <div className="fixed left-0 right-0 bg-white border-t border-slate-100 px-3 py-3 flex flex-col gap-2 z-10" style={{ bottom: '70px' }}>
           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Quick Questions</p>
           <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
             {QUICK_QUESTIONS.map(q => (
@@ -164,7 +164,7 @@ export default function SupportPage() {
       )}
 
       {/* Input Bar */}
-      <div className="fixed left-0 right-0 bottom-0 px-3 py-2.5 bg-white border-t border-slate-100 flex gap-2 items-center shadow-lg" style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom))' }}>
+      <div className="fixed left-0 right-0 bottom-0 px-3 py-3 bg-white border-t border-slate-100 flex gap-2 items-center shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-20 pb-safe">
         <input
           ref={inputRef}
           value={input}
@@ -172,14 +172,14 @@ export default function SupportPage() {
           onKeyDown={handleKeyDown}
           placeholder="Type your message..."
           disabled={loading}
-          className="flex-1 bg-slate-100 rounded-full px-4 py-2.5 text-sm text-slate-800 outline-none placeholder:text-slate-400 disabled:opacity-60 border border-slate-200"
+          className="flex-1 bg-slate-100 rounded-full px-4 py-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 disabled:opacity-60 border border-slate-200"
         />
         <button
           onClick={() => sendMessage(input)}
           disabled={!input.trim() || loading}
-          className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center active:scale-90 transition-all disabled:opacity-40 shadow-md flex-shrink-0"
+          className="w-11 h-11 rounded-full bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center active:scale-90 transition-all disabled:opacity-40 shadow-md flex-shrink-0"
         >
-          <Send size={16} className="text-white translate-x-[1px]" />
+          <Send size={18} className="text-white translate-x-[1px]" />
         </button>
       </div>
     </div>

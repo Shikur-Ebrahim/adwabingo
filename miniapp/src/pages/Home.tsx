@@ -241,25 +241,25 @@ export default function Home() {
       {/* SUPPORT BANNER — fixed floating above bottom nav */}
       {showSupportBanner && (
         <div
-          className="fixed bottom-[74px] left-2 right-2 z-50"
+          className="fixed bottom-[74px] left-0 right-0 z-50 flex justify-center pointer-events-none px-4"
           style={{ animation: 'slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}
         >
-          <div className="flex items-center bg-white border border-violet-300 rounded-2xl p-1 shadow-[0_4px_28px_rgba(109,40,217,0.3)]">
-            {/* Clickable area — takes all available space */}
+          <div className="flex items-center bg-white border border-violet-300 rounded-full p-1 shadow-[0_4px_28px_rgba(109,40,217,0.3)] pointer-events-auto max-w-fit">
+            {/* Clickable area */}
             <button
               onClick={() => { setShowSupportBanner(false); navigate('/support'); }}
-              className="flex-1 flex items-center gap-2.5 active:bg-violet-50 transition-colors rounded-xl px-3 py-2 text-left"
+              className="flex items-center gap-2 active:bg-violet-50 transition-colors rounded-full px-3 py-1.5"
             >
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
               <MessageCircle size={15} className="text-violet-600 flex-shrink-0" />
-              <span className="text-violet-800 font-bold text-[13px] leading-tight flex-1">
+              <span className="text-violet-800 font-bold text-[13px] leading-tight">
                 Hello, do you need help? 👋
               </span>
             </button>
             {/* Dismiss X */}
             <button
               onClick={(e) => { e.stopPropagation(); setShowSupportBanner(false); }}
-              className="w-8 h-8 mr-1 rounded-full flex items-center justify-center text-slate-400 active:bg-slate-100 transition-colors flex-shrink-0 text-lg"
+              className="w-7 h-7 ml-1 mr-0.5 rounded-full flex items-center justify-center text-slate-400 active:bg-slate-100 transition-colors flex-shrink-0 text-lg"
             >
               ×
             </button>
