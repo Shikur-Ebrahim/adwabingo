@@ -391,7 +391,7 @@ export default function BingoGame() {
     return () => { isMounted = false; };
   }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name]);
 
-  // Auto-dismiss celebration after 2 seconds — gives users time to see the winner card
+  // Auto-dismiss celebration after 3 seconds
   useEffect(() => {
     if (!celebration) return;
     const timer = setTimeout(() => {
@@ -402,7 +402,7 @@ export default function BingoGame() {
       setTaken([]);
       fetchState();
       refreshUser();
-    }, 2000);
+    }, 3000);
     return () => clearTimeout(timer);
   }, [celebration]);
 
@@ -875,78 +875,98 @@ export default function BingoGame() {
 
       {/* Winner Celebration */}
       {celebration && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/95 backdrop-blur-md overflow-y-auto pt-8 pb-20">
-          <div className="bg-[#111] border border-white/10 rounded-3xl p-5 text-center max-w-sm w-full shadow-2xl flex flex-col items-center relative">
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-3 bg-black/95 backdrop-blur-md overflow-y-auto">
+          <div className="bg-gradient-to-b from-[#1a0a3e] to-[#0a0f1e] border border-yellow-400/30 rounded-3xl p-4 text-center max-w-sm w-full shadow-[0_0_40px_rgba(250,204,21,0.3)] flex flex-col items-center relative">
+
             {/* Close button */}
             <button
               onClick={() => { setCelebration(null); setMyCard(null); setMyCartelas([]); setActiveCartelaIdx(0); setTaken([]); fetchState(); refreshUser(); }}
-              className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/50 hover:bg-white/20 active:scale-90 transition-all text-sm font-black"
+              className="absolute top-3 right-3 w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/50 active:scale-90 transition-all text-sm font-black z-10"
             >✕</button>
 
-            {/* ── REMATCH: 3+ way tie ────────────────────────────────────── */}
+            {/* ── REMATCH ── */}
             {celebration.winner_name === 'REMATCH' ? (<>
-              <span className="text-5xl mb-2 block animate-spin">🔄</span>
-              <h2 className="text-4xl font-black text-orange-400 mb-2 drop-shadow-[0_0_15px_rgba(251,146,60,0.6)]">REMATCH!</h2>
-              <div className="bg-white/5 rounded-xl p-4 mb-3 w-full border border-orange-500/20">
-                <p className="text-orange-300 font-black text-base mb-1">3+ Players hit BINGO simultaneously!</p>
-                <p className="text-white/60 text-sm">Your stake has been refunded.</p>
-                <p className="text-white/40 text-xs mt-2">A new game is starting...</p>
+              <div className="text-5xl mb-2 animate-spin">🔄</div>
+              <h2 className="text-3xl font-black text-orange-400 mb-2">REMATCH!</h2>
+              <div className="bg-orange-500/10 rounded-2xl p-3 mb-3 w-full border border-orange-500/30">
+                <p className="text-orange-300 font-black text-sm mb-1">3+ Players hit BINGO at once!</p>
+                <p className="text-white/60 text-xs">Your stake has been refunded.</p>
+                <p className="text-white/40 text-xs mt-1">A new game is starting...</p>
               </div>
-              <p className="text-white/40 text-xs font-bold animate-pulse mt-1">Starting rematch...</p>
 
-            {/* ── 2-WAY TIE: split prize ─────────────────────────────────── */}
+            {/* ── 2-WAY TIE ── */}
             </>) : celebration.winner_name.includes(' & ') ? (<>
-              <span className="text-5xl mb-2 block animate-bounce">🤝</span>
-              <h2 className="text-4xl font-black text-yellow-400 mb-2 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">TIE!</h2>
-              <div className="bg-white/5 rounded-xl p-3 mb-3 w-full border border-white/5">
-                <p className="text-white/60 text-[10px] uppercase tracking-widest mb-1">2 Winners</p>
-                <p className="text-white font-black text-xl">{celebration.winner_name}</p>
-                <p className="text-white/50 text-xs mt-1">Prize split equally</p>
+              <div className="text-5xl mb-2 animate-bounce">🤝</div>
+              <h2 className="text-3xl font-black text-yellow-400 mb-1">TIE!</h2>
+              <p className="text-white/50 text-[10px] uppercase tracking-widest mb-3">Prize split equally</p>
+              <div className="bg-white/5 rounded-2xl p-3 mb-3 w-full border border-white/10">
+                <p className="text-white font-black text-lg">{celebration.winner_name}</p>
                 <div className="mt-2 inline-block bg-emerald-500/20 text-emerald-400 px-4 py-1 rounded-full font-black text-lg border border-emerald-500/30">
                   {celebration.winner_prize} ETB each
                 </div>
               </div>
-              <p className="text-white/40 text-xs font-bold animate-pulse mt-1">Returning to game...</p>
+              <p className="text-white/30 text-[10px] font-bold animate-pulse">Returning to game...</p>
 
-            {/* ── SINGLE WINNER: normal ──────────────────────────────────── */}
+            {/* ── SINGLE WINNER ── */}
             </>) : (<>
-              <span className="text-5xl mb-2 block animate-bounce">🏆</span>
-              <h2 className="text-4xl font-black text-yellow-400 mb-2 drop-shadow-[0_0_15px_rgba(250,204,21,0.6)]">BINGO!</h2>
-              <div className="bg-white/5 rounded-xl p-3 mb-3 w-full border border-white/5">
-                <p className="text-white/60 text-[10px] uppercase tracking-widest mb-1">Winner</p>
-                <p className="text-white font-black text-2xl">{celebration.winner_name}</p>
-                <p className="text-slate-400 text-sm font-bold">Cartela #{celebration.winner_cartela}</p>
-                <div className="mt-2 inline-block bg-emerald-500/20 text-emerald-400 px-4 py-1 rounded-full font-black text-lg border border-emerald-500/30">
-                  WON {celebration.winner_prize} ETB
+              {/* Trophy + BINGO label — NO overlap */}
+              <div className="flex flex-col items-center mb-3">
+                <div className="text-5xl mb-1 animate-bounce">🏆</div>
+                <div className="bg-yellow-400 text-yellow-900 px-6 py-1 rounded-full font-black text-2xl tracking-widest shadow-[0_0_20px_rgba(250,204,21,0.5)]">
+                  BINGO!
                 </div>
               </div>
+
+              {/* Winner info */}
+              <div className="w-full bg-white/5 rounded-2xl p-3 mb-3 border border-white/10">
+                <p className="text-white/50 text-[9px] uppercase tracking-widest mb-1">Winner</p>
+                <p className="text-white font-black text-xl leading-tight">{celebration.winner_name}</p>
+                <p className="text-yellow-400/70 text-xs font-bold mt-0.5">Cartela #{celebration.winner_cartela}</p>
+                <div className="mt-2 inline-block bg-emerald-500 text-white px-5 py-1 rounded-full font-black text-lg shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                  🎉 {celebration.winner_prize} ETB
+                </div>
+              </div>
+
+              {/* Winner Card — green win cells, white other cells */}
               {celebration.winner_matrix && (() => {
                 const winCells = getWinningCells(celebration.winner_matrix, celebration.called);
                 return (
-                  <div className="w-full bg-[#131b31] rounded-xl overflow-hidden border border-indigo-500/30 mb-4">
+                  <div className="w-full rounded-2xl overflow-hidden border-2 border-yellow-400/40 mb-3 shadow-[0_0_20px_rgba(250,204,21,0.15)]">
+                    {/* BINGO header */}
                     <div className="grid grid-cols-5">
-                      {BINGO_LETTERS.map(l => <div key={l} className="flex items-center justify-center py-1 font-black text-white text-xs" style={{ background: LETTER_BG[l] }}>{l}</div>)}
+                      {BINGO_LETTERS.map(l => (
+                        <div key={l} className="flex items-center justify-center py-1.5 font-black text-white text-sm" style={{ background: LETTER_BG[l] }}>{l}</div>
+                      ))}
                     </div>
-                    <div className="grid grid-cols-5 gap-[2px] p-[2px] bg-[#0a0f1e]">
+                    {/* Card grid */}
+                    <div className="grid grid-cols-5 gap-[2px] p-[2px] bg-slate-200">
                       {Array.from({ length: 5 }).flatMap((_, r) => Array.from({ length: 5 }).map((_, c) => {
                         const num = celebration.winner_matrix![r][c];
-                        const isFree = num === 0, isWin = winCells.has(`${r}-${c}`), isCalled = celebration.called.includes(num);
+                        const isFree = num === 0;
+                        const isWin = winCells.has(`${r}-${c}`);
                         return (
-                          <div key={`${r}-${c}`} className={`aspect-square rounded flex items-center justify-center font-black text-xs ${
-                            isFree ? 'bg-yellow-400 text-yellow-900' :
-                            isWin ? 'bg-emerald-500 text-white shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
-                            isCalled ? 'bg-slate-700 text-slate-300' : 'bg-slate-800 text-slate-500'
-                          }`}>{isFree ? "★" : num}</div>
+                          <div key={`${r}-${c}`} className={`aspect-square flex items-center justify-center font-black text-xs rounded transition-all ${
+                            isFree
+                              ? 'bg-yellow-400 text-yellow-900'
+                              : isWin
+                              ? 'bg-emerald-500 text-white shadow-[0_0_6px_rgba(16,185,129,0.6)]'
+                              : 'bg-white text-slate-700'
+                          }`}>
+                            {isFree ? '★' : num}
+                          </div>
                         );
                       }))}
                     </div>
-                    <div className="py-1 text-center border-t border-white/5 bg-[#0a0f1e]">
-                      <p className="text-white/40 text-[9px] font-bold tracking-widest uppercase">CARTELA # {celebration.winner_cartela}</p>
+                    {/* Cartela label */}
+                    <div className="py-1.5 text-center bg-[#0a0f1e]">
+                      <p className="text-yellow-400/60 text-[9px] font-black tracking-widest uppercase">CARTELA # {celebration.winner_cartela}</p>
                     </div>
                   </div>
                 );
               })()}
-              <p className="text-white/40 text-xs font-bold animate-pulse mt-1">Returning to game...</p>
+
+              {/* Auto-dismiss indicator */}
+              <p className="text-white/30 text-[10px] font-bold animate-pulse">Returning to game...</p>
             </>)}
 
           </div>
