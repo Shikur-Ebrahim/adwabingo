@@ -633,8 +633,9 @@ export default function BingoGame() {
           </div>
         </div>
 
-        {/* Caller Row + Card — narrow, centred */}
-        <div className="w-full max-w-[290px] mx-auto flex flex-col gap-1">
+        {/* Caller Row + Card — scrollable */}
+        <div className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
+        <div className="w-full max-w-[290px] mx-auto flex flex-col gap-1 pb-2">
           {/* Caller Row */}
           <div className="shrink-0 bg-[#0a0f1e] rounded-xl border border-white/5 px-2 py-1.5">
             <div className="flex items-center justify-between">
@@ -680,18 +681,18 @@ export default function BingoGame() {
             <div className="flex flex-col gap-2">
               {/* Tab Switcher */}
               {myCartelas.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
                   {myCartelas.map((card, idx) => (
                     <button
                       key={card.cartela_number}
                       onClick={() => setActiveCartelaIdx(idx)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-all ${
-                        activeCartelaIdx === idx 
-                          ? 'bg-emerald-500 text-white shadow-[0_0_10px_rgba(16,185,129,0.5)] ring-2 ring-yellow-300'
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black whitespace-nowrap flex-shrink-0 transition-all ${
+                        activeCartelaIdx === idx
+                          ? 'bg-emerald-500 text-white ring-1 ring-yellow-300 shadow-[0_0_6px_rgba(16,185,129,0.5)]'
                           : 'bg-white/10 text-white/50 border border-white/10 active:scale-95'
                       }`}
                     >
-                      CARTELA #{card.cartela_number}
+                      #{card.cartela_number}
                     </button>
                   ))}
                 </div>
@@ -768,6 +769,7 @@ export default function BingoGame() {
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
     );
