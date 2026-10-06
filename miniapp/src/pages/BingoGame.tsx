@@ -351,7 +351,9 @@ export default function BingoGame() {
   useEffect(() => {
     if (game?.status !== 'finished') return;
     if (hasCelebratedRef.current === game.id) return;
-    
+    // Guard: wait for backend to finish populating winner fields before celebrating
+    if (!game.winner_cartela && game.winner_first_name !== 'REMATCH') return;
+
     hasCelebratedRef.current = game.id;
 
     // ── REMATCH: 3+ way tie ───────────────────────────────────────────────────
@@ -369,7 +371,6 @@ export default function BingoGame() {
     }
 
     // ── Normal or 2-way tie ───────────────────────────────────────────────────
-    if (!game.winner_cartela) return;
     const iWon = game.winner_telegram_id === String(user?.telegram_id);
     let isMounted = true;
     playSpecial('bingo_win');
