@@ -19,7 +19,7 @@ router.get('/current', validateTelegramAuth, async (req: AuthRequest, res) => {
     .limit(1)
     .maybeSingle();
 
-  if (!game) { res.json({ game: null, taken_cartelas: [], my_card: null, max_players: 150 }); return; }
+  if (!game) { res.json({ game: null, taken_cartelas: [], my_card: null, my_cartelas: [], max_players: 150, max_cartelas_per_user: 2 }); return; }
 
   const { data: rows } = await supabase
     .from('bingo_players')
@@ -27,13 +27,13 @@ router.get('/current', validateTelegramAuth, async (req: AuthRequest, res) => {
     .eq('game_id', game.id);
 
   const taken_cartelas = (rows || []).map((p: any) => Number(p.cartela_number));
-  const mine = (rows || []).find((p: any) => p.telegram_id === telegramId);
-  const my_card = mine
-    ? { cartela_number: mine.cartela_number, card_matrix: mine.card_matrix }
-    : null;
+  const myRows = (rows || []).filter((p: any) => p.telegram_id === telegramId);
+  const my_cartelas = myRows.map((p: any) => ({ cartela_number: p.cartela_number, card_matrix: p.card_matrix }));
+  // Backward compat: my_card = first cartela
+  const my_card = my_cartelas.length > 0 ? my_cartelas[0] : null;
 
   const cfg = await getSettings();
-  res.json({ game, taken_cartelas, my_card, max_players: cfg.max_players });
+  res.json({ game, taken_cartelas, my_card, my_cartelas, max_players: cfg.max_players, max_cartelas_per_user: cfg.max_cartelas_per_user });
 });
 
 // ── POST /api/bingo/join ────────────────────────────────────────────────────
@@ -67,9 +67,11 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
     .from('bingo_players')
     .select('id')
     .eq('game_id', game.id)
-    .eq('telegram_id', telegramId)
-    .maybeSingle();
-  if (existing) { res.status(400).json({ error: 'You already joined this game' }); return; }
+    .eq('telegram_id', telegramId);
+  const existingCount = existing?.length || 0;
+  if (existingCount >= cfg.max_cartelas_per_user) {
+    res.status(400).json({ error: `You can only pick ${cfg.max_cartelas_per_user} cartela${cfg.max_cartelas_per_user > 1 ? 's' : ''} per game` }); return;
+  }
 
   const { data: user } = await supabase.from('users').select('main_balance, bonus_balance, first_name').eq('telegram_id', telegramId).single();
   if (!user) { res.status(404).json({ error: 'User not found' }); return; }

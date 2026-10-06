@@ -10,16 +10,15 @@ interface SettingField {
   key: string;
   label: string;
   icon: React.ReactNode;
-  type: 'number' | 'text' | 'toggle';
+  type: 'number' | 'text';
   unit?: string;
   color: string;
   bg: string;
-  defaultValue: string | number | boolean;
+  defaultValue: string | number;
 }
 
 const SETTING_FIELDS: SettingField[] = [
   { key: 'first_deposit_bonus_pct', label: '1st Deposit Bonus', icon: <Gift size={16} />, type: 'number', unit: '%', color: 'text-emerald-600', bg: 'bg-emerald-50', defaultValue: 20 },
-  { key: 'second_deposit_bonus_enabled', label: 'Enable 2nd Deposit Bonus', icon: <Gift size={16} />, type: 'toggle', color: 'text-blue-600', bg: 'bg-blue-50', defaultValue: 'false' },
   { key: 'second_deposit_bonus_pct', label: '2nd Deposit Bonus', icon: <Gift size={16} />, type: 'number', unit: '%', color: 'text-blue-600', bg: 'bg-blue-50', defaultValue: 10 },
   { key: 'invitation_reward_pct', label: 'Invite Reward', icon: <Users size={16} />, type: 'number', unit: '%', color: 'text-violet-600', bg: 'bg-violet-50', defaultValue: 10 },
   { key: 'support_username', label: 'Support Team User', icon: <Headphones size={16} />, type: 'text', color: 'text-orange-600', bg: 'bg-orange-50', defaultValue: 'adwabingo_admin' },
@@ -129,10 +128,7 @@ export default function AdminSettings() {
           </div>
         ) : (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 space-y-1">
-            {SETTING_FIELDS.map((field, idx) => {
-              if (field.key === 'second_deposit_bonus_pct' && values['second_deposit_bonus_enabled'] === 'false') return null;
-              
-              return (
+            {SETTING_FIELDS.map((field, idx) => (
               <div key={field.key} className={`p-2 flex flex-col space-y-2 ${idx !== SETTING_FIELDS.length - 1 ? 'border-b border-gray-50' : ''}`}>
                 <div className="flex items-center space-x-2">
                   <div className={`w-7 h-7 rounded-lg ${field.bg} ${field.color} flex items-center justify-center shrink-0`}>
@@ -142,22 +138,13 @@ export default function AdminSettings() {
                 </div>
                 <div className="flex items-center space-x-2">
                   <div className="flex-1 relative">
-                    {field.type === 'toggle' ? (
-                      <button
-                        onClick={() => setValues(prev => ({ ...prev, [field.key]: prev[field.key] === 'true' ? 'false' : 'true' }))}
-                        className={`w-12 h-6 rounded-full relative transition-colors ${values[field.key] === 'true' ? 'bg-emerald-500' : 'bg-slate-200'}`}
-                      >
-                        <div className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${values[field.key] === 'true' ? 'translate-x-6' : 'translate-x-0'}`} />
-                      </button>
-                    ) : (
-                      <input
-                        type={field.type}
-                        value={values[field.key] ?? field.defaultValue}
-                        onChange={(e) => setValues(prev => ({ ...prev, [field.key]: e.target.value }))}
-                        className={`w-full border border-slate-200 focus:border-violet-400 outline-none rounded-lg px-2 py-1.5 font-bold text-slate-800 bg-slate-50 ${field.type === 'number' ? 'text-sm text-center' : 'text-[11px]'}`}
-                      />
-                    )}
-                    {field.unit && field.type !== 'toggle' && (
+                    <input
+                      type={field.type}
+                      value={values[field.key] ?? field.defaultValue}
+                      onChange={(e) => setValues(prev => ({ ...prev, [field.key]: e.target.value }))}
+                      className={`w-full border border-slate-200 focus:border-violet-400 outline-none rounded-lg px-2 py-1.5 font-bold text-slate-800 bg-slate-50 ${field.type === 'number' ? 'text-sm text-center' : 'text-[11px]'}`}
+                    />
+                    {field.unit && (
                       <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xs">
                         {field.unit}
                       </span>
@@ -179,8 +166,7 @@ export default function AdminSettings() {
                   </button>
                 </div>
               </div>
-              );
-            })}
+            ))}
           </div>
         )}
       </div>

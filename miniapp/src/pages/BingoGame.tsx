@@ -111,6 +111,8 @@ export default function BingoGame() {
   const urlStake = searchParams.get("stake");
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
   const [maxPlayers, setMaxPlayers] = useState<number>(150);
+  const [maxCartelasPerUser, setMaxCartelasPerUser] = useState<number>(2);
+  const [myCartelas, setMyCartelas] = useState<Array<{ cartela_number: number; card_matrix: number[][] }>>([]);
   const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string; players: number }>>({});
   const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
   const [soundEnabled, setSoundEnabled] = useState(false);
@@ -287,6 +289,8 @@ export default function BingoGame() {
       if (r.ok) {
         const d = await r.json();
         if (d.max_players) setMaxPlayers(Number(d.max_players));
+        if (d.max_cartelas_per_user) setMaxCartelasPerUser(Number(d.max_cartelas_per_user));
+        if (d.my_cartelas) setMyCartelas(d.my_cartelas);
         if (d.game && d.game.id !== gameIdRef.current) {
           setGame(d.game); setTaken(d.taken_cartelas ?? []); setMyCard(d.my_card ?? null);
           gameIdRef.current = d.game.id;
@@ -387,6 +391,7 @@ export default function BingoGame() {
     const timer = setTimeout(() => {
       setCelebration(null);
       setMyCard(null);
+      setMyCartelas([]);
       setTaken([]);
       fetchState();
       refreshUser();
@@ -397,7 +402,7 @@ export default function BingoGame() {
   const joinGame = async (seat: number) => {
     initWebAudio();
     if (!game || game.status !== "waiting") return;
-    if (myCard) { setErrMsg("You already have a cartela!"); return; }
+    if (myCartelas.length >= maxCartelasPerUser) { setErrMsg(`Max ${maxCartelasPerUser} cartela${maxCartelasPerUser > 1 ? 's' : ''} per game`); return; }
     if (taken.includes(seat)) { setErrMsg("Taken! Pick another."); return; }
     const bonusBal = Number(user?.bonus_balance || 0), mainBal = Number(user?.main_balance || 0);
     if (!user || bonusBal + mainBal < game.stake) { setErrMsg(`Need ${game.stake} ETB`); return; }
@@ -414,7 +419,9 @@ export default function BingoGame() {
       const d = await r.json();
       if (r.ok) {
         if (WebApp?.HapticFeedback) WebApp.HapticFeedback.notificationOccurred("success");
-        setMyCard({ cartela_number: seat, card_matrix: d.card_matrix });
+        const newCard = { cartela_number: seat, card_matrix: d.card_matrix };
+        setMyCartelas(prev => [...prev, newCard]);
+        setMyCard(newCard); // also set my_card for backward compat
         refreshUser();
       } else {
         setTaken(prev => prev.filter(n => n !== seat));
@@ -636,20 +643,22 @@ export default function BingoGame() {
             </div>
           </div>
 
-          {/* My Card — SQUARE cells using grid + aspect-square */}
-          {myCard ? (
-            <div className="rounded-2xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
+          {/* My Cards — show all cartelas */}
+          {myCartelas.length > 0 ? (
+            <div className="space-y-3">
+              {myCartelas.map((card) => (
+            <div key={card.cartela_number} className="rounded-2xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
               {/* BINGO Header */}
               <div className="grid grid-cols-5">
                 {BINGO_LETTERS.map(l => (
                   <div key={l} className="flex items-center justify-center py-1.5 font-black text-white text-sm" style={{ background: LETTER_BG[l] }}>{l}</div>
                 ))}
               </div>
-              {/* Card Grid — aspect-square cells = always perfect squares */}
+              {/* Card Grid */}
               <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0f1e]">
                 {Array.from({ length: 5 }).flatMap((_, r) =>
                   Array.from({ length: 5 }, (_, c) => {
-                    const num = myCard.card_matrix[r][c];
+                    const num = card.card_matrix[r][c];
                     const isFree = num === 0, marked = isFree || called.includes(num), isLast = num === lastNum;
                     return (
                       <div key={`${r}-${c}`} className={`aspect-square flex items-center justify-center font-black text-base rounded-lg transition-all duration-300 ${
@@ -663,8 +672,10 @@ export default function BingoGame() {
               </div>
               {/* Cartela Label */}
               <div className="py-1 text-center bg-[#0a0f1e] border-t border-white/10">
-                <p className="text-white/70 font-black text-[10px] tracking-widest uppercase">CARTELA # {myCard.cartela_number}</p>
+                <p className="text-white/70 font-black text-[10px] tracking-widest uppercase">CARTELA # {card.cartela_number}</p>
               </div>
+            </div>
+              ))}
             </div>
           ) : (
             <div className="relative rounded-2xl overflow-hidden border border-white/10 mt-1 pointer-events-none" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
@@ -707,17 +718,32 @@ export default function BingoGame() {
     );
   };
 
-  const renderCartelaPicker = () => (
+  const renderCartelaPicker = () => {
+    const myNums = myCartelas.map(c => c.cartela_number);
+    const canPickMore = myCartelas.length < maxCartelasPerUser;
+    return (
     <div className="flex-1 overflow-y-auto relative p-2 pb-16">
-      <p className="text-center text-[10px] text-cyan-300 font-black uppercase tracking-widest mb-2">
-        {!myCard ? `TAP TO PICK YOUR CARTELA — ${taken.length}/${maxPlayers} TAKEN` : `CARTELA #${myCard.cartela_number} SECURED ✓`}
-      </p>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[10px] text-cyan-300 font-black uppercase tracking-widest">
+          {canPickMore ? `TAP TO PICK — ${taken.length}/${maxPlayers} TAKEN` : `ALL CARTELAS SELECTED ✓`}
+        </p>
+        <p className="text-[10px] text-yellow-300 font-black">
+          {myCartelas.length}/{maxCartelasPerUser} PICKED
+        </p>
+      </div>
+      {/* My Cartelas chips */}
+      {myNums.length > 0 && (
+        <div className="flex gap-2 mb-2 flex-wrap">
+          {myNums.map(n => (
+            <span key={n} className="px-3 py-1 bg-emerald-500 text-white text-xs font-black rounded-full ring-2 ring-yellow-300">#{n} ✓</span>
+          ))}
+        </div>
+      )}
       <div className="rounded-2xl border-[3px] border-cyan-400 overflow-hidden bg-[#05081a] shadow-[0_0_25px_rgba(34,211,238,0.4)]">
         <div className="grid gap-[2px] p-[2px]" style={{ gridTemplateColumns: "repeat(10, 1fr)" }}>
           {Array.from({ length: maxPlayers }, (_, i) => {
             const n = i + 1;
-            const isTaken = taken.includes(n), isMine = myCard?.cartela_number === n, isBuying = buying === n;
-
+            const isTaken = taken.includes(n), isMine = myNums.includes(n), isBuying = buying === n;
             if (isMine) {
               return (
                 <div key={n} className="aspect-square flex items-center justify-center rounded-[7px] text-[10px] font-black bg-emerald-500 text-white ring-[2.5px] ring-yellow-300 z-10">
@@ -733,8 +759,8 @@ export default function BingoGame() {
               );
             }
             return (
-              <button key={n} disabled={buying !== null || !!myCard} onClick={() => joinGame(n)}
-                className={`aspect-square flex items-center justify-center rounded-[7px] text-[11px] font-black bg-white text-black transition-all duration-150 ${isBuying ? 'opacity-40 scale-90' : 'active:scale-90 cursor-pointer'}`}>
+              <button key={n} disabled={buying !== null || !canPickMore} onClick={() => joinGame(n)}
+                className={`aspect-square flex items-center justify-center rounded-[7px] text-[11px] font-black transition-all duration-150 ${!canPickMore ? 'bg-white/20 text-white/30 cursor-not-allowed' : isBuying ? 'bg-white opacity-40 scale-90' : 'bg-white text-black active:scale-90 cursor-pointer'}`}>
                 {n}
               </button>
             );
@@ -742,7 +768,8 @@ export default function BingoGame() {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col select-none" onClick={initWebAudio}>
@@ -753,7 +780,7 @@ export default function BingoGame() {
             <div className="flex items-center gap-2 mb-2">
               <button onClick={() => setSelectedStake(null)} className="h-9 w-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl"><ArrowLeft size={18} className="text-white" /></button>
               <div className="relative">
-                <select value={selectedStake} onChange={e => { setSelectedStake(Number(e.target.value)); setGame(null); setMyCard(null); setTaken([]); }} disabled={!!myCard}
+                <select value={selectedStake} onChange={e => { setSelectedStake(Number(e.target.value)); setGame(null); setMyCard(null); setMyCartelas([]); setTaken([]); }} disabled={myCartelas.length > 0}
                   className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-3 pr-7 h-9 text-white font-black text-sm outline-none cursor-pointer" style={{ colorScheme: "dark" }}>
                   <option value={10}>10 ETB</option><option value={20}>20 ETB</option><option value={50}>50 ETB</option><option value={100}>100 ETB</option>
                 </select>

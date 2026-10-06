@@ -23,6 +23,7 @@ interface GameSettings {
   min_players: number;
   max_players: number;
   prize_percent: number;
+  max_cartelas_per_user: number;
   early_call_8_enabled?: boolean;
   early_call_8_rewards?: Record<number, number>;
   early_call_10_enabled?: boolean;
@@ -34,6 +35,7 @@ const DEFAULT: GameSettings = {
   min_players: 2, 
   max_players: 150, 
   prize_percent: 80,
+  max_cartelas_per_user: 2,
   early_call_8_enabled: false,
   early_call_8_rewards: { 10: 100, 20: 200, 50: 500, 100: 1000 },
   early_call_10_enabled: false,
@@ -108,6 +110,7 @@ export default function AdminBingoGames() {
           min_players:      Number(raw.min_players)      || DEFAULT.min_players,
           max_players:      Number(raw.max_players)      || DEFAULT.max_players,
           prize_percent:    Number(raw.prize_percent)    || DEFAULT.prize_percent,
+          max_cartelas_per_user: Number(raw.max_cartelas_per_user) || DEFAULT.max_cartelas_per_user,
           early_call_8_enabled:  raw.early_call_8_enabled  ?? DEFAULT.early_call_8_enabled,
           early_call_8_rewards:  raw.early_call_8_rewards  ?? DEFAULT.early_call_8_rewards,
           early_call_10_enabled: raw.early_call_10_enabled ?? DEFAULT.early_call_10_enabled,
@@ -136,6 +139,7 @@ export default function AdminBingoGames() {
           min_players:      Number(body.settings?.min_players)      || draft.min_players,
           max_players:      Number(body.settings?.max_players)      || draft.max_players,
           prize_percent:    Number(body.settings?.prize_percent)    || draft.prize_percent,
+          max_cartelas_per_user: Number(body.settings?.max_cartelas_per_user) || draft.max_cartelas_per_user,
           early_call_8_enabled:  body.settings?.early_call_8_enabled  ?? draft.early_call_8_enabled,
           early_call_8_rewards:  body.settings?.early_call_8_rewards  ?? draft.early_call_8_rewards,
           early_call_10_enabled: body.settings?.early_call_10_enabled ?? draft.early_call_10_enabled,
@@ -173,11 +177,12 @@ export default function AdminBingoGames() {
 
   type FieldKey = keyof GameSettings;
   const FIELDS: { key: FieldKey; label: string; unit: string; Icon: any; min: number; max: number; step: number; hint: string }[] = [
-    { key: "call_interval_ms", label: "Call Interval",   unit: "ms", Icon: Zap,       min: 1000, max: 30000, step: 500,  hint: "1000-30000ms" },
-    { key: "waiting_period_s", label: "Waiting Period",  unit: "s",  Icon: Clock,     min: 10,   max: 3600,  step: 5,    hint: "10-3600s" },
-    { key: "min_players",      label: "Min Players",     unit: "",   Icon: UserCheck,  min: 2,    max: 50,    step: 1,    hint: "2-50" },
-    { key: "max_players",      label: "Max Players",     unit: "",   Icon: Users,      min: 10,   max: 500,   step: 10,   hint: "10-500" },
-    { key: "prize_percent",    label: "Prize %",         unit: "%",  Icon: Percent,   min: 50,   max: 100,   step: 5,    hint: "50-100%" },
+    { key: "call_interval_ms",      label: "Call Interval",       unit: "ms", Icon: Zap,       min: 1000, max: 30000, step: 500, hint: "1000-30000ms" },
+    { key: "waiting_period_s",      label: "Waiting Period",      unit: "s",  Icon: Clock,     min: 10,   max: 3600,  step: 5,   hint: "10-3600s" },
+    { key: "min_players",           label: "Min Players",         unit: "",   Icon: UserCheck, min: 2,    max: 50,    step: 1,   hint: "2-50" },
+    { key: "max_players",           label: "Max Players",         unit: "",   Icon: Users,     min: 10,   max: 500,   step: 10,  hint: "10-500" },
+    { key: "prize_percent",         label: "Prize %",             unit: "%",  Icon: Percent,   min: 50,   max: 100,   step: 5,   hint: "50-100%" },
+    { key: "max_cartelas_per_user", label: "Max Cartelas / User", unit: "",   Icon: Trophy,    min: 1,    max: 10,    step: 1,   hint: "1-10 cartelas" },
   ];
 
   return (

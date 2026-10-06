@@ -205,7 +205,6 @@ router.post('/deposits/:id/approve', async (req, res) => {
     };
 
     const firstDepositPct = parseFloat(getSetting('first_deposit_bonus_pct', '20') as string) / 100;
-    const secondDepositEnabled = getSetting('second_deposit_bonus_enabled', 'false') === 'true';
     const secondDepositPct = parseFloat(getSetting('second_deposit_bonus_pct', '10') as string) / 100;
     const invitationPct = parseFloat(getSetting('invitation_reward_pct', '10') as string) / 100;
 
@@ -219,7 +218,7 @@ router.post('/deposits/:id/approve', async (req, res) => {
         inviterId = depRecord.inviter_id;
         inviterBonus = deposit.amount * invitationPct;
       }
-    } else if (isSecondDeposit && secondDepositEnabled) {
+    } else if (isSecondDeposit && secondDepositPct > 0) {
       depositorBonus = deposit.amount * secondDepositPct;
       bonusReason = 'Second Deposit';
     }
@@ -473,7 +472,6 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   };
 
   const depPct = parseFloat(getSetting('first_deposit_bonus_pct', '20')) / 100;
-  const secondDepEnabled = getSetting('second_deposit_bonus_enabled', 'false') === 'true';
   const secondDepPct = parseFloat(getSetting('second_deposit_bonus_pct', '10')) / 100;
   const invPct = parseFloat(getSetting('invitation_reward_pct', '10')) / 100;
 
@@ -496,7 +494,7 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
 
       if (isFirst) {
         bonusAmount = Number(d.amount) * depPct;
-      } else if (isSecond && secondDepEnabled) {
+      } else if (isSecond && secondDepPct > 0) {
         bonusAmount = Number(d.amount) * secondDepPct;
       }
 

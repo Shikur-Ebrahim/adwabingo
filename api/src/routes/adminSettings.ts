@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS = {
   min_players:       2,
   max_players:       150,
   prize_percent:     80,   // % of total stakes (for 3+ players)
+  max_cartelas_per_user: 2, // max cartelas a single user can pick per game
   early_call_8_enabled: false,
   early_call_8_rewards: { '10': 100, '20': 200, '50': 500, '100': 1000 } as Record<string, number>,
   early_call_10_enabled: false,
@@ -33,6 +34,7 @@ export async function getSettings(): Promise<typeof DEFAULT_SETTINGS> {
       min_players:      data.min_players      ?? DEFAULT_SETTINGS.min_players,
       max_players:      data.max_players      ?? DEFAULT_SETTINGS.max_players,
       prize_percent:    data.prize_percent     ?? DEFAULT_SETTINGS.prize_percent,
+      max_cartelas_per_user: data.max_cartelas_per_user ?? DEFAULT_SETTINGS.max_cartelas_per_user,
       early_call_8_enabled:  data.early_call_8_enabled ?? DEFAULT_SETTINGS.early_call_8_enabled,
       early_call_8_rewards:  data.early_call_8_rewards ?? DEFAULT_SETTINGS.early_call_8_rewards,
       early_call_10_enabled: data.early_call_10_enabled ?? DEFAULT_SETTINGS.early_call_10_enabled,
