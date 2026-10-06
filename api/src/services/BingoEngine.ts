@@ -52,6 +52,7 @@ class BingoEngine {
         .select('*')
         .eq('stake', stake)
         .neq('status', 'finished')
+        .neq('status', 'resolving')
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -112,6 +113,14 @@ class BingoEngine {
   }
 
   private async handleCalling(game: any) {
+    // Guard: re-fetch to confirm the game is still calling (prevents stale reads)
+    const { data: freshGame } = await supabase
+      .from('bingo_games')
+      .select('status')
+      .eq('id', game.id)
+      .single();
+    if (!freshGame || freshGame.status !== 'calling') return;
+
     const cfg = await getSettings();
     const lastUpdate = new Date(game.updated_at).getTime();
     if (Date.now() - lastUpdate < cfg.call_interval_ms) return;
@@ -156,6 +165,21 @@ class BingoEngine {
     // ── Find ALL simultaneous winners ─────────────────────────────────────────
     const winners = players.filter(p => checkBingo(p.card_matrix as number[][], called));
     if (winners.length === 0) return;
+
+    // ── ATOMIC CLAIM: Only process if game is still 'calling' ─────────────────
+    // This prevents duplicate notifications on rapid ticks (race condition fix)
+    const { data: claimResult, error: claimError } = await supabase
+      .from('bingo_games')
+      .update({ status: 'resolving', updated_at: new Date().toISOString() })
+      .eq('id', gameId)
+      .eq('status', 'calling')
+      .select('id');
+    
+    // If 0 rows updated, another tick already claimed this game → skip entirely
+    if (claimError || !claimResult || claimResult.length === 0) {
+      console.log(`[BingoEngine] Game #${gameLabel} already claimed by another tick — skipping`);
+      return;
+    }
 
     const prize = Number(prizePool);
     const token = process.env.BOT_TOKEN;
