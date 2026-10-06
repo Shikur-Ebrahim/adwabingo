@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useGameStore } from '../store/gameStore';
 import { Gift, ArrowDownToLine, Share2, PlusCircle, Info, MessageCircle } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import { supabase } from '../lib/supabase';
 
 export default function Home() {
   const { user } = useGameStore();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string; players: number }>>({});
   const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
@@ -17,7 +18,7 @@ export default function Home() {
 
   // Support banner state
   const [showSupportBanner, setShowSupportBanner] = useState(false);
-  const supportBannerShownRef = useRef(false);
+  const bannerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Play popup sound using Web Audio API
   const playPopSound = () => {
@@ -37,16 +38,25 @@ export default function Home() {
     } catch { /* ignore if audio blocked */ }
   };
 
-  // Show support banner 2 seconds after Home loads
+  // Show banner 2s after each visit to home — cooldown 30s between re-shows
   useEffect(() => {
-    if (supportBannerShownRef.current) return;
-    const t = setTimeout(() => {
+    if (location.pathname !== '/') return;
+    if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current);
+    setShowSupportBanner(false);
+
+    const lastShown = parseInt(sessionStorage.getItem('support_banner_ts') || '0', 10);
+    const cooldown = 30 * 1000; // 30 seconds cooldown between re-shows
+    const now = Date.now();
+    const delay = (now - lastShown < cooldown) ? 2000 : 2000; // always 2s delay
+
+    bannerTimerRef.current = setTimeout(() => {
       setShowSupportBanner(true);
-      supportBannerShownRef.current = true;
+      sessionStorage.setItem('support_banner_ts', String(Date.now()));
       playPopSound();
-    }, 2000);
-    return () => clearTimeout(t);
-  }, []);
+    }, delay);
+
+    return () => { if (bannerTimerRef.current) clearTimeout(bannerTimerRef.current); };
+  }, [location.pathname]);
 
   useEffect(() => {
     let isMounted = true;
@@ -230,25 +240,27 @@ export default function Home() {
 
       {/* SUPPORT BANNER — fixed floating above bottom nav */}
       {showSupportBanner && (
-        <div className="fixed bottom-[72px] left-0 right-0 z-50 px-3 pointer-events-none">
-          <div
-            className="flex items-center gap-2.5 bg-white border border-violet-300 rounded-2xl px-4 py-3 shadow-[0_4px_24px_rgba(109,40,217,0.25)] pointer-events-auto"
-            style={{ animation: 'slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}
-          >
+        <div
+          className="fixed bottom-[74px] left-2 right-2 z-50"
+          style={{ animation: 'slideUp 0.4s cubic-bezier(0.34,1.56,0.64,1)' }}
+        >
+          <div className="flex items-center bg-white border border-violet-300 rounded-2xl px-3 py-3 shadow-[0_4px_28px_rgba(109,40,217,0.3)] gap-2">
             {/* Pulsing dot */}
-            <div className="w-2.5 h-2.5 rounded-full bg-violet-500 animate-pulse flex-shrink-0" />
-            {/* Clickable message */}
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
+            {/* Clickable area — takes all available space */}
             <button
               onClick={() => { setShowSupportBanner(false); navigate('/support'); }}
-              className="flex-1 text-left flex items-center gap-2 active:opacity-70 transition-opacity"
+              className="flex items-center gap-2 flex-1 min-w-0 active:opacity-70 transition-opacity text-left"
             >
-              <MessageCircle size={16} className="text-violet-600 flex-shrink-0" />
-              <span className="text-violet-800 font-bold text-sm">Hello, do you need help? 👋</span>
+              <MessageCircle size={15} className="text-violet-600 flex-shrink-0" />
+              <span className="text-violet-800 font-bold text-[13px] leading-tight whitespace-nowrap">
+                Hello, do you need help? 👋
+              </span>
             </button>
             {/* Dismiss X */}
             <button
-              onClick={() => setShowSupportBanner(false)}
-              className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center text-violet-500 active:bg-violet-200 transition-colors flex-shrink-0 font-black text-xs"
+              onClick={(e) => { e.stopPropagation(); setShowSupportBanner(false); }}
+              className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 active:bg-slate-200 transition-colors flex-shrink-0 text-xs font-black"
             >
               ✕
             </button>
