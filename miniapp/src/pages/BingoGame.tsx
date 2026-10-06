@@ -125,41 +125,31 @@ export default function BingoGame() {
   useEffect(() => {
     if (selectedStake) return;
     let isMounted = true;
-    
-    const fetchPools = async () => {
-      const { data } = await supabase.from('bingo_games').select('id, stake, prize_pool, start_at, status').in('status', ['waiting', 'calling']);
-      if (data && isMounted) {
-        const p: Record<number, any> = {};
-        data.forEach(g => { p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status, players: 0, _id: g.id }; });
 
-        // Fetch unique player counts
-        const ids = data.map(g => g.id);
-        if (ids.length > 0) {
-          const { data: playerRows } = await supabase
-            .from('bingo_players')
-            .select('game_id, telegram_id')
-            .in('game_id', ids);
-          if (playerRows) {
-            const uniqueMap: Record<string, Set<string>> = {};
-            playerRows.forEach((r: any) => {
-              if (!uniqueMap[r.game_id]) uniqueMap[r.game_id] = new Set();
-              uniqueMap[r.game_id].add(r.telegram_id);
-            });
-            data.forEach(g => { if (p[g.stake]) p[g.stake].players = uniqueMap[g.id]?.size || 0; });
-          }
-        }
-        setHomeGames(p);
-      }
+    const fetchPools = async () => {
+      // Use backend API — service key bypasses RLS so unique player count is always accurate
+      const r = await fetch(`${API}/bingo/pools`, { headers: hdrs() });
+      if (!r.ok || !isMounted) return;
+      const { pools } = await r.json();
+      const p: Record<number, any> = {};
+      (pools || []).forEach((g: any) => {
+        p[Number(g.stake)] = {
+          pool: g.prize_pool,
+          start_at: g.start_at,
+          status: g.status,
+          players: g.unique_players,
+        };
+      });
+      if (isMounted) setHomeGames(p);
     };
     fetchPools();
 
-    // Listen to actual bingo_games table because active_bingo_games view might not trigger realtime properly
+    // Listen to table changes so home page updates in real-time
     const ch = supabase.channel('home_pools')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_games' }, () => {
         if (isMounted) fetchPools();
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'bingo_players' }, () => {
-        // Re-fetch so unique player count is always accurate (multi-cartela buyers must not inflate count)
         if (isMounted) fetchPools();
       })
       .subscribe();
