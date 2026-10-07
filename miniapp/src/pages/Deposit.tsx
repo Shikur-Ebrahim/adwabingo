@@ -230,7 +230,7 @@ export default function Deposit() {
           <button onClick={() => setStep('list')} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-colors">
             <ArrowLeft size={18} />
           </button>
-          <h1 className="font-black text-slate-800 dark:text-slate-100 text-lg">Deposit via {typeLabels[selected.type]}</h1>
+          <h1 className="font-black text-slate-800 dark:text-slate-100 text-lg">{t[language].deposit.depositVia} {typeLabels[selected.type]}</h1>
         </div>
 
         <div className="p-4 space-y-4">
@@ -264,14 +264,14 @@ export default function Deposit() {
               </div>
             </div>
             <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Min Deposit</span>
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t[language].deposit.minDepositText}</span>
               <span className="font-black text-emerald-600">{selected.min_deposit.toLocaleString('en-US')} ETB</span>
             </div>
           </div>
 
           {/* Instructions */}
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
-            <p className="text-xs font-black text-blue-700 mb-2">HOW TO DEPOSIT</p>
+            <p className="text-xs font-black text-blue-700 mb-2">{t[language].deposit.howToDeposit}</p>
             <ol className="space-y-1.5">
               {['Send the exact amount to the account above.', 'Take a screenshot of the payment receipt.', 'Enter the amount & upload the screenshot below.', 'Submit and wait for admin approval.'].map((step, i) => (
                 <li key={i} className="flex items-start space-x-2 text-xs text-blue-600 font-semibold">
@@ -284,7 +284,7 @@ export default function Deposit() {
 
           {/* Amount Input */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-5">
-            <label className="block text-[10px] font-black text-slate-400 tracking-widest mb-3">AMOUNT YOU SENT (ETB)</label>
+            <label className="block text-[10px] font-black text-slate-400 tracking-widest mb-3">{t[language].deposit.amountSent}</label>
             <div className="relative">
               <input
                 type="number"
@@ -300,7 +300,7 @@ export default function Deposit() {
 
           {/* Screenshot Upload */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-5">
-            <label className="block text-[10px] font-black text-slate-400 tracking-widest mb-3">PAYMENT SCREENSHOT</label>
+            <label className="block text-[10px] font-black text-slate-400 tracking-widest mb-3">{t[language].deposit.paymentScreenshot}</label>
             {file ? (
               <div className="relative">
                 <img src={URL.createObjectURL(file)} alt="Receipt" className="w-full max-h-52 object-cover rounded-xl border border-gray-100 dark:border-slate-800" />
@@ -316,8 +316,8 @@ export default function Deposit() {
                 <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-3">
                   <UploadCloud size={24} className="text-blue-500" />
                 </div>
-                <p className="font-bold text-slate-600 dark:text-slate-300">Tap to upload screenshot</p>
-                <p className="text-xs text-slate-400 mt-1">JPG, PNG supported</p>
+                <p className="font-bold text-slate-600 dark:text-slate-300">{t[language].deposit.tapToUpload}</p>
+                <p className="text-xs text-slate-400 mt-1">{t[language].deposit.jpgPng}</p>
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] || null); setError(''); }} />
               </label>
             )}
@@ -353,8 +353,8 @@ export default function Deposit() {
           <ArrowLeft size={18} />
         </Link>
         <div>
-          <h1 className="font-black text-slate-800 dark:text-slate-100 text-lg leading-tight">Deposit</h1>
-          <p className="text-xs text-slate-400 font-semibold">Choose a payment method</p>
+          <h1 className="font-black text-slate-800 dark:text-slate-100 text-lg leading-tight">{t[language].deposit.title}</h1>
+          <p className="text-xs text-slate-400 font-semibold">{t[language].deposit.selectMethod}</p>
         </div>
       </div>
 
@@ -372,7 +372,7 @@ export default function Deposit() {
           </div>
         ) : (
           <>
-            <p className="text-[11px] font-black text-slate-400 tracking-widest px-1 pt-1">AVAILABLE METHODS</p>
+            <p className="text-[11px] font-black text-slate-400 tracking-widest px-1 pt-1">{t[language].deposit.availableMethods}</p>
             {methods.map((method) => (
               <button
                 key={method.id}

@@ -79,22 +79,22 @@ export default function Transfer() {
           <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5">
             <CheckCircle2 size={40} className="text-emerald-500" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-1">Transfer Sent!</h2>
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-1">{t[language].transfer.successTitle}</h2>
           <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
-            <span className="font-bold text-slate-700 dark:text-slate-200">{Number(amount).toLocaleString('en-US')} ETB</span> successfully transferred to <span className="font-bold text-slate-700 dark:text-slate-200">{recipientName}</span>.
+            <span className="font-bold text-slate-700 dark:text-slate-200">{Number(amount).toLocaleString('en-US')} ETB</span> {t[language].transfer.successDesc.split('{amount}')[1]?.split('{recipient}')[0] || 'transferred to'} <span className="font-bold text-slate-700 dark:text-slate-200">{recipientName}</span>.
           </p>
           <div className="bg-emerald-50 rounded-2xl p-4 mb-6 text-left">
-            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">New Balance</p>
+            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider mb-0.5">{language === 'am' ? 'አዲስ ሂሳብ' : 'New Balance'}</p>
             <p className="text-2xl font-black text-slate-800 dark:text-slate-100">{(user?.main_balance || 0).toLocaleString('en-US')} <span className="text-xs">ETB</span></p>
           </div>
           <button
             onClick={() => { setStep('form'); setRecipientId(''); setAmount(''); }}
             className="w-full bg-slate-800 text-white py-3.5 rounded-2xl font-black text-sm mb-3"
           >
-            Send Another Transfer
+            {language === 'am' ? 'ሌላ ያስተላልፉ' : 'Send Another Transfer'}
           </button>
           <button onClick={handleBack} className="w-full text-slate-400 text-sm font-semibold py-2">
-            Back to Profile
+            {t[language].profile?.logout || (language === 'am' ? 'ፕሮፋይል' : 'Back to Profile')}
           </button>
         </div>
       </div>
@@ -114,8 +114,8 @@ export default function Transfer() {
           <ArrowLeft size={20} />
         </button>
         <div className="ml-4 flex-1">
-          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Transfer</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Send ETB to another player</p>
+          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{t[language].transfer.transferTitle}</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t[language].transfer.transferSubtitle}</p>
         </div>
         <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center">
           <ArrowRightLeft size={18} className="text-emerald-500" />
@@ -127,7 +127,7 @@ export default function Transfer() {
         {/* BALANCE CARD */}
         <div className="bg-slate-900 rounded-[1.5rem] p-5 flex justify-between items-center">
           <div>
-            <p className="text-white/50 text-xs font-semibold mb-1">Your Main Balance</p>
+            <p className="text-white/50 text-xs font-semibold mb-1">{t[language].transfer.yourMainBalance}</p>
             <p className="text-3xl font-black text-white">{(user?.main_balance || 0).toLocaleString('en-US')} <span className="text-sm">ETB</span></p>
           </div>
           <div className="w-12 h-12 rounded-full bg-white dark:bg-slate-900/10 flex items-center justify-center">
@@ -138,11 +138,11 @@ export default function Transfer() {
         {/* RECIPIENT INPUT */}
         <div className="bg-white dark:bg-slate-900 rounded-[1.5rem] p-5 shadow-sm border border-gray-100 dark:border-slate-800 space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">User ID</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">{t[language].transfer.userIdLabel}</label>
             <input
               type="number"
               inputMode="numeric"
-              placeholder="e.g. 7898071735"
+              placeholder={t[language].transfer.userIdPlaceholder}
               value={recipientId}
               onChange={e => { setRecipientId(e.target.value); setErrorMsg(''); setStep('form'); }}
               className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-slate-800 dark:text-slate-100 font-bold text-base focus:outline-none focus:border-emerald-400 transition-colors"
@@ -155,7 +155,7 @@ export default function Transfer() {
           <div className="h-px bg-slate-100 dark:bg-slate-800" />
 
           <div>
-            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Amount (ETB)</label>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">{t[language].transfer.amountLabel}</label>
             <div className="relative">
               <input
                 type="number"
@@ -189,13 +189,13 @@ export default function Transfer() {
           ) : (
             <>
               <Send size={18} />
-              <span>Send Transfer</span>
+              <span>{t[language].transfer.transferBtn}</span>
             </>
           )}
         </button>
 
         <p className="text-center text-[10px] text-slate-400 font-semibold">
-          ⚠️ Transfers are instant and cannot be reversed. Only transfers from Main Balance.
+          ⚠️ {t[language].transfer.cannotTransferSelf}
         </p>
       </div>
     </div>

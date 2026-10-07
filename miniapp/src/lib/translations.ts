@@ -20,6 +20,17 @@ export const t = {
       logout: 'Close Profile',
     },
     deposit: {
+
+      availableMethods: 'AVAILABLE METHODS',
+      depositVia: 'Deposit via',
+      minDepositText: 'Min Deposit',
+      howToDeposit: 'HOW TO DEPOSIT',
+      amountSent: 'AMOUNT YOU SENT (ETB)',
+      paymentScreenshot: 'PAYMENT SCREENSHOT',
+      tapToUpload: 'Tap to upload screenshot',
+      jpgPng: 'JPG, PNG supported',
+      submitting: 'Submitting...',
+
       title: 'Deposit Funds',
       selectMethod: 'Select a Deposit Method',
       submitted: 'Submitted!',
@@ -38,6 +49,19 @@ export const t = {
       copy: 'Copy',
     },
     withdraw: {
+
+      minWithdrawal: 'Min withdrawal:',
+      amountLabel: 'Amount (ETB)',
+      fullNameLabel: 'Full Name',
+      fullNamePlaceholder: 'Your full name on the account',
+      phoneLabel: 'Phone Number',
+      accNumberLabel: 'Account Number',
+      infoBox: 'Your main balance will be immediately debited. Funds will be transferred to your account within a few minutes.',
+      withdrawVia: 'Withdraw via',
+      chooseWithdrawMethod: 'Choose a withdrawal method',
+      availableMethods: 'AVAILABLE METHODS',
+      submitting: 'Submitting...',
+
       title: 'Withdraw Funds',
       balance: 'Available Balance',
       amountTitle: 'WITHDRAWAL AMOUNT',
@@ -58,9 +82,21 @@ export const t = {
       insufficientBalance: 'Insufficient Balance',
       insufficientDesc: 'You do not have enough funds to withdraw this amount.',
       backHome: 'Back to Home',
-      contactSupport: 'Contact Support'
+      contactSupport: 'Contact Support',
+      onlyMainBalance: 'Only main balance can be withdrawn',
     },
     transfer: {
+
+      transferTitle: 'Transfer',
+      transferSubtitle: 'Send ETB to another player',
+      yourMainBalance: 'Your Main Balance',
+      userIdLabel: 'User ID',
+      userIdPlaceholder: 'e.g. 7898071735',
+      amountLabel: 'Amount (ETB)',
+      minTransfer: 'Min transfer is {min} ETB',
+      transferBtn: 'Transfer ETB',
+      transferring: 'Transferring...',
+
       title: 'Transfer Funds',
       balance: 'Available Balance',
       amountTitle: 'TRANSFER AMOUNT',
@@ -115,6 +151,17 @@ export const t = {
       logout: 'ፕሮፋይል ዝጋ',
     },
     deposit: {
+
+      availableMethods: 'ያሉ መንገዶች',
+      depositVia: 'በዚህ ያስገቡ:',
+      minDepositText: 'ዝቅተኛ ማስገቢያ',
+      howToDeposit: 'እንዴት እንደሚያስገቡ',
+      amountSent: 'የላኩት መጠን (ETB)',
+      paymentScreenshot: 'የክፍያ ማረጋገጫ (Screenshot)',
+      tapToUpload: 'ማረጋገጫ ለማስገባት ይንኩ',
+      jpgPng: 'JPG, PNG ይቻላል',
+      submitting: 'እየተላከ ነው...',
+
       title: 'ገንዘብ ማስገቢያ',
       selectMethod: 'የገንዘብ ማስገቢያ መንገድ ይምረጡ',
       submitted: 'ተልኳል!',
@@ -133,6 +180,19 @@ export const t = {
       copy: 'ቅዳ',
     },
     withdraw: {
+
+      minWithdrawal: 'ዝቅተኛ ማውጫ:',
+      amountLabel: 'መጠን (ETB)',
+      fullNameLabel: 'ሙሉ ስም',
+      fullNamePlaceholder: 'በአካውንቱ ላይ ያለዎት ሙሉ ስም',
+      phoneLabel: 'ስልክ ቁጥር',
+      accNumberLabel: 'የአካውንት ቁጥር',
+      infoBox: 'ዋናው ሂሳብዎ ወዲያውኑ ይቀነሳል። ገንዘቡ በደቂቃዎች ውስጥ ወደ አካውንትዎ ይተላለፋል።',
+      withdrawVia: 'በዚህ ያውጡ:',
+      chooseWithdrawMethod: 'የገንዘብ ማውጫ መንገድ ይምረጡ',
+      availableMethods: 'ያሉ መንገዶች',
+      submitting: 'እየተላከ ነው...',
+
       title: 'ገንዘብ ማውጫ',
       balance: 'ያሎት ሂሳብ',
       amountTitle: 'የሚያወጡት መጠን',
@@ -156,6 +216,17 @@ export const t = {
       contactSupport: 'ድጋፍ ሰጪ ያግኙ'
     },
     transfer: {
+
+      transferTitle: 'ማስተላለፊያ',
+      transferSubtitle: 'ለሌላ ተጫዋች ETB ይላኩ',
+      yourMainBalance: 'ዋና ሂሳብዎ',
+      userIdLabel: 'የተጠቃሚ ID',
+      userIdPlaceholder: 'ምሳሌ: 7898071735',
+      amountLabel: 'መጠን (ETB)',
+      minTransfer: 'ዝቅተኛ ማስተላለፊያ {min} ETB ነው',
+      transferBtn: 'ETB አስተላልፍ',
+      transferring: 'እየተላለፈ ነው...',
+
       title: 'ገንዘብ ማስተላለፊያ',
       balance: 'ያሎት ሂሳብ',
       amountTitle: 'የሚያስተላልፉት መጠን',

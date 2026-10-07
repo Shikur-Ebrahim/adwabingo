@@ -158,12 +158,12 @@ export default function Withdraw() {
           <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-5 border-4 border-yellow-100">
             <Clock size={40} className="text-yellow-500" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">Withdrawal Pending</h2>
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">{t[language].withdraw.alreadyPendingTitle}</h2>
           <p className="text-slate-500 dark:text-slate-400 font-medium mt-2 leading-relaxed">
-            You have a withdrawal of <span className="font-black text-slate-700 dark:text-slate-200">{pendingAmount?.toLocaleString('en-US')} ETB</span> pending review.
+            {t[language].withdraw.alreadyPendingDesc.split('{amount}')[0]}<span className="font-black text-slate-700 dark:text-slate-200">{pendingAmount?.toLocaleString('en-US')} ETB</span>{t[language].withdraw.alreadyPendingDesc.split('{amount}')[1]}
           </p>
           <div className="mt-5 bg-blue-50 border border-blue-100 rounded-xl p-4">
-            <p className="text-xs text-blue-700 font-semibold text-center">Please wait for admin to process before making a new request.</p>
+            <p className="text-xs text-blue-700 font-semibold text-center">{t[language].withdraw.waitAdmin}</p>
           </div>
           {supportContact && (
             <a 
@@ -193,12 +193,12 @@ export default function Withdraw() {
           <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5 border-4 border-green-100">
             <CheckCircle2 size={40} className="text-green-500" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">Request Submitted!</h2>
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">{t[language].withdraw.submitted}</h2>
           <p className="text-slate-500 dark:text-slate-400 font-medium mt-2 leading-relaxed">
-            Your withdrawal of <span className="font-black text-slate-700 dark:text-slate-200">{parseFloat(amount).toLocaleString('en-US')} ETB</span> is being processed.
+            {t[language].withdraw.pendingReview.split('{amount}')[0]}<span className="font-black text-slate-700 dark:text-slate-200">{parseFloat(amount).toLocaleString('en-US')} ETB</span>{t[language].withdraw.pendingReview.split('{amount}')[1]}
           </p>
           <div className="mt-5 bg-green-50 border border-green-100 rounded-xl p-4">
-            <p className="text-xs text-green-700 font-semibold text-center">Your balance has been debited. Funds will be transferred within a few minutes.</p>
+            <p className="text-xs text-green-700 font-semibold text-center">{t[language].withdraw.willBeProcessed}</p>
           </div>
           {supportContact && (
             <a 
@@ -238,7 +238,7 @@ export default function Withdraw() {
           <div className="bg-white rounded-2xl p-4 shadow-md border border-white/10">
             <p className="text-slate-500 text-sm font-medium">{t[language].withdraw.balance}</p>
             <p className="text-3xl font-black text-slate-800">{userBalance.toLocaleString('en-US')} <span className="text-xl text-slate-600">ETB</span></p>
-            <p className="text-slate-400 text-xs mt-1">Min withdrawal: {selected.min_withdrawal.toLocaleString('en-US')} ETB</p>
+            <p className="text-slate-400 text-xs mt-1">{t[language].withdraw.minWithdrawal} {selected.min_withdrawal.toLocaleString('en-US')} ETB</p>
           </div>
         </div>
 
@@ -255,7 +255,7 @@ export default function Withdraw() {
 
             {/* Amount */}
             <div>
-              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Amount (ETB)</label>
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t[language].withdraw.amountLabel}</label>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">ETB</span>
                 <input
@@ -271,7 +271,7 @@ export default function Withdraw() {
               </div>
               <div className="flex justify-between mt-1">
                 <p className={`text-xs font-bold ${amount && parseFloat(amount) > 0 && parseFloat(amount) < selected.min_withdrawal ? 'text-red-500' : 'text-slate-400'}`}>
-                  Min: {selected.min_withdrawal.toLocaleString('en-US')} ETB
+                  {t[language].withdraw.minWithdrawal} {selected.min_withdrawal.toLocaleString('en-US')} ETB
                   {amount && parseFloat(amount) > 0 && parseFloat(amount) < selected.min_withdrawal && ' ⚠️ Too low'}
                 </p>
                 <button
@@ -286,14 +286,14 @@ export default function Withdraw() {
 
             {/* Full Name */}
             <div>
-              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Full Name</label>
+              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t[language].withdraw.fullNameLabel}</label>
               <div className="relative">
                 <User size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   value={accountName}
                   onChange={e => setAccountName(e.target.value)}
-                  placeholder="Your full name on the account"
+                  placeholder={t[language].withdraw.fullNamePlaceholder}
                   className="w-full pl-10 pr-4 py-3.5 border-2 border-gray-100 dark:border-slate-800 rounded-xl focus:border-blue-400 focus:outline-none text-slate-800 dark:text-slate-100 font-medium bg-slate-50 dark:bg-slate-900"
                   required
                 />
@@ -303,7 +303,7 @@ export default function Withdraw() {
             {/* Account / Phone Number */}
             <div>
               <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                {selected.type === 'telebirr' || selected.type === 'mpesa' ? 'Phone Number' : 'Account Number'}
+                {selected.type === 'telebirr' || selected.type === 'mpesa' ? t[language].withdraw.phoneLabel : t[language].withdraw.accNumberLabel}
               </label>
               <div className="relative">
                 <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -321,7 +321,7 @@ export default function Withdraw() {
             {/* Info box */}
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
               <p className="text-xs text-blue-700 font-medium leading-relaxed">
-                ⚠️ Your main balance will be immediately debited. Funds will be transferred to your account within a few minutes.
+                ⚠️ {t[language].withdraw.infoBox}
               </p>
             </div>
 
@@ -334,7 +334,7 @@ export default function Withdraw() {
                   : `bg-gradient-to-r ${gradient}`
               }`}
             >
-              {submitting ? 'Processing...' : `Withdraw ${(amount && !isNaN(parseFloat(amount))) ? parseFloat(amount).toLocaleString('en-US') : '0'} ETB`}
+              {submitting ? t[language].withdraw.submitting : `${t[language].withdraw.title} ${(amount && !isNaN(parseFloat(amount))) ? parseFloat(amount).toLocaleString('en-US') : '0'} ETB`}
             </button>
           </div>
         </form>
@@ -351,12 +351,12 @@ export default function Withdraw() {
           <Link to="/" className="text-white/80 hover:text-white p-1">
             <ArrowLeft size={22} />
           </Link>
-          <h1 className="text-xl font-black text-white">Withdraw</h1>
+          <h1 className="text-xl font-black text-white">{t[language].withdraw.title}</h1>
         </div>
         <div className="bg-white rounded-2xl p-4 shadow-md border border-white/10">
-          <p className="text-slate-500 text-sm font-medium">Main Balance</p>
+          <p className="text-slate-500 text-sm font-medium">{t[language].withdraw.balance}</p>
           <p className="text-3xl font-black text-slate-800">{userBalance.toLocaleString('en-US')} <span className="text-xl text-slate-600">ETB</span></p>
-          <p className="text-slate-400 text-xs mt-1">Only main balance can be withdrawn</p>
+          <p className="text-slate-400 text-xs mt-1">{language === 'am' ? 'ዋናው ሂሳብ ብቻ ሊወጣ ይችላል' : 'Only main balance can be withdrawn'}</p>
         </div>
       </div>
 
@@ -364,7 +364,7 @@ export default function Withdraw() {
       <div className="px-4 -mt-4 pb-8">
         <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-50">
-            <h2 className="font-black text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wider">Select Withdrawal Method</h2>
+            <h2 className="font-black text-slate-700 dark:text-slate-200 text-sm uppercase tracking-wider">{t[language].withdraw.methodTitle}</h2>
           </div>
 
           {methods.length === 0 ? (
