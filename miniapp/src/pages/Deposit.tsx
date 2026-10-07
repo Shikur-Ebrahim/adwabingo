@@ -337,7 +337,7 @@ export default function Deposit() {
             disabled={submitting}
             className="w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-950 font-black py-4 rounded-2xl shadow-sm text-lg transition-all active:scale-95 disabled:opacity-50"
           >
-            {submitting ? 'Submitting...' : '✅ {t[language].deposit.submitBtn}'}
+            {submitting ? t[language].deposit.submitting : t[language].deposit.submitBtn}
           </button>
         </div>
       </div>

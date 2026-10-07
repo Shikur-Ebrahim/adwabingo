@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Clock, CheckCircle2, XCircle, ArrowUpFromLine, Receipt, ChevronDown, ChevronUp } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
+import { t } from '../lib/translations';
 import WebApp from '@twa-dev/sdk';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -23,7 +24,7 @@ export default function WithdrawHistory() {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { setProfileOpen } = useGameStore();
+  const { setProfileOpen, language } = useGameStore();
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -55,9 +56,9 @@ export default function WithdrawHistory() {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'approved': return { color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: CheckCircle2, label: 'Approved', badgeBg: 'bg-emerald-100 text-emerald-700' };
-      case 'rejected': return { color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: XCircle, label: 'Rejected', badgeBg: 'bg-rose-100 text-rose-700' };
-      default: return { color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', icon: Clock, label: 'Pending', badgeBg: 'bg-amber-100 text-amber-700' };
+      case 'approved': return { color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: CheckCircle2, label: t[language].withdrawHistory.statusApproved, badgeBg: 'bg-emerald-100 text-emerald-700' };
+      case 'rejected': return { color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: XCircle, label: t[language].withdrawHistory.statusRejected, badgeBg: 'bg-rose-100 text-rose-700' };
+      default: return { color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', icon: Clock, label: t[language].withdrawHistory.statusPending, badgeBg: 'bg-amber-100 text-amber-700' };
     }
   };
 
@@ -88,8 +89,8 @@ export default function WithdrawHistory() {
           <ArrowLeft size={20} />
         </button>
         <div className="ml-4 flex-1">
-          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Withdrawal History</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Your recent cashout records</p>
+        <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{t[language].withdrawHistory.title}</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t[language].withdrawHistory.subtitle}</p>
         </div>
       </div>
 
@@ -98,17 +99,17 @@ export default function WithdrawHistory() {
         {loading ? (
           <div className="flex flex-col items-center justify-center h-48 space-y-3">
             <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-sm font-bold text-slate-400">Loading history...</p>
+            <p className="text-sm font-bold text-slate-400">{t[language].withdrawHistory.loading}</p>
           </div>
         ) : history.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
               <Receipt size={32} className="text-slate-300" />
             </div>
-            <h3 className="text-lg font-black text-slate-700 dark:text-slate-200 mb-1">No Withdrawals Yet</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">You haven't made any withdrawal requests.</p>
+            <h3 className="text-lg font-black text-slate-700 dark:text-slate-200 mb-1">{t[language].withdrawHistory.noWithdrawalsTitle}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{t[language].withdrawHistory.noWithdrawalsDesc}</p>
             <Link to="/withdraw" className="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-xl font-black text-sm shadow-sm active:scale-95 transition-transform">
-              Withdraw Now
+              {t[language].withdrawHistory.withdrawNow}
             </Link>
           </div>
         ) : (
@@ -151,7 +152,7 @@ export default function WithdrawHistory() {
                     onClick={() => setExpandedId(isExpanded ? null : withdrawal.id)}
                     className={`w-full flex items-center justify-center space-x-1.5 py-2.5 border-t ${border} text-xs font-bold transition-colors ${isExpanded ? `${bg} ${color}` : 'text-blue-500 hover:bg-blue-50'}`}
                   >
-                    <span>{isExpanded ? 'Hide Details' : 'View Details'}</span>
+                    <span>{isExpanded ? t[language].withdrawHistory.hideDetails : t[language].withdrawHistory.viewDetails}</span>
                     {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                   </button>
 
@@ -160,22 +161,22 @@ export default function WithdrawHistory() {
                     <div className="px-4 pb-4 pt-3 space-y-2">
                       <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-3 space-y-2">
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Account Name</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t[language].withdrawHistory.accountName}</span>
                           <span className="text-xs font-black text-slate-700 dark:text-slate-200">{withdrawal.account_name}</span>
                         </div>
                         <div className="h-px bg-slate-100 dark:bg-slate-800" />
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Account Number</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t[language].withdrawHistory.accountNumber}</span>
                           <span className="text-xs font-black text-slate-700 dark:text-slate-200 font-mono">{withdrawal.account_number}</span>
                         </div>
                         <div className="h-px bg-slate-100 dark:bg-slate-800" />
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Amount</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t[language].withdrawHistory.amount}</span>
                           <span className={`text-xs font-black ${color}`}>{withdrawal.amount.toLocaleString('en-US')} ETB</span>
                         </div>
                         <div className="h-px bg-slate-100 dark:bg-slate-800" />
                         <div className="flex justify-between items-center">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t[language].withdrawHistory.status}</span>
                           <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${badgeBg} flex items-center space-x-0.5`}>
                             <StatusIcon size={9} />
                             <span className="ml-0.5">{label}</span>

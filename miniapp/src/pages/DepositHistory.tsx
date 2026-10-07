@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, Clock, CheckCircle2, XCircle, ArrowDownToLine, Receipt, ChevronDown, ChevronUp, Image, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
+import { t } from '../lib/translations';
 import WebApp from '@twa-dev/sdk';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -24,7 +25,7 @@ export default function DepositHistory() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { setProfileOpen } = useGameStore();
+  const { setProfileOpen, language } = useGameStore();
 
   const handleBack = () => {
     navigate(-1);
@@ -61,9 +62,9 @@ export default function DepositHistory() {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'approved': return { color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: CheckCircle2, label: 'Approved', badgeBg: 'bg-emerald-100 text-emerald-700' };
-      case 'rejected': return { color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: XCircle, label: 'Rejected', badgeBg: 'bg-rose-100 text-rose-700' };
-      default: return { color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', icon: Clock, label: 'Pending', badgeBg: 'bg-amber-100 text-amber-700' };
+      case 'approved': return { color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', icon: CheckCircle2, label: t[language].depositHistory.statusApproved, badgeBg: 'bg-emerald-100 text-emerald-700' };
+      case 'rejected': return { color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100', icon: XCircle, label: t[language].depositHistory.statusRejected, badgeBg: 'bg-rose-100 text-rose-700' };
+      default: return { color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', icon: Clock, label: t[language].depositHistory.statusPending, badgeBg: 'bg-amber-100 text-amber-700' };
     }
   };
 
@@ -79,8 +80,8 @@ export default function DepositHistory() {
           <ArrowLeft size={20} />
         </button>
         <div className="ml-4 flex-1">
-          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Deposit History</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Your recent top-up records</p>
+          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{t[language].depositHistory.title}</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t[language].depositHistory.subtitle}</p>
         </div>
       </div>
 
@@ -89,17 +90,17 @@ export default function DepositHistory() {
         {loading ? (
           <div className="flex flex-col items-center justify-center h-48 space-y-3">
             <div className="w-8 h-8 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-sm font-bold text-slate-400">Loading history...</p>
+            <p className="text-sm font-bold text-slate-400">{t[language].depositHistory.loading}</p>
           </div>
         ) : history.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-center">
             <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
               <Receipt size={32} className="text-slate-300" />
             </div>
-            <h3 className="text-lg font-black text-slate-700 dark:text-slate-200 mb-1">No Deposits Yet</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">You haven't made any deposits.</p>
+            <h3 className="text-lg font-black text-slate-700 dark:text-slate-200 mb-1">{t[language].depositHistory.noDepositsTitle}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{t[language].depositHistory.noDepositsDesc}</p>
             <Link to="/deposit" className="bg-yellow-400 hover:bg-yellow-500 text-yellow-950 px-6 py-3 rounded-xl font-black text-sm shadow-sm active:scale-95 transition-transform">
-              Deposit Now
+              {t[language].depositHistory.depositNow}
             </Link>
           </div>
         ) : (
@@ -144,7 +145,7 @@ export default function DepositHistory() {
                       className={`w-full flex items-center justify-center space-x-1.5 py-2.5 border-t ${border} text-xs font-bold transition-colors ${isExpanded ? `${bg} ${color}` : 'text-blue-500 hover:bg-blue-50'}`}
                     >
                       <Image size={13} />
-                      <span>{isExpanded ? 'Hide Screenshot' : 'View Screenshot'}</span>
+                      <span>{isExpanded ? t[language].depositHistory.hideDetails : t[language].depositHistory.viewReceipt}</span>
                       {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                     </button>
                   )}
@@ -162,7 +163,7 @@ export default function DepositHistory() {
                           className="w-full object-contain max-h-64"
                         />
                       </div>
-                      <p className="text-center text-[10px] text-slate-400 font-semibold mt-2">Tap image to view full size</p>
+                      <p className="text-center text-[10px] text-slate-400 font-semibold mt-2">{t[language].depositHistory.viewReceipt}</p>
                     </div>
                   )}
                 </div>
