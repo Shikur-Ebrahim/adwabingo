@@ -54,7 +54,7 @@ Game Rules:
 - Players can buy up to 2 cartelas per game.
 - Derash (Prize Pool) = 80% of total stakes if 3+ unique players join, otherwise 100%.
 - To win: get 5 numbers in a complete row (horizontal or vertical) on your cartela.
-- Deposits via Chapa or bank transfer. Withdrawals to bank account.
+- Deposits and withdrawals are available via CBE, BOA, Telebirr, and M-Pesa. Do not mention Chapa.
 - The user you are talking to is named ${user?.first_name || 'Player'}.
 Keep answers short and clear. Use emojis to be friendly.`;
 
