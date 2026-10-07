@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { ArrowLeft, Trophy, Target, TrendingUp, Coins, Gamepad2, Crown, XCircle, Clock, RefreshCw, ChevronDown, Hash } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
+import { useGameStore } from '../store/gameStore';
+import { t } from '../lib/translations';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -40,20 +42,21 @@ function getStakeGradient(stake: number): string {
   return STAKE_COLORS[stake] || 'from-slate-400 to-slate-600';
 }
 
-function timeAgo(dateStr: string | null): string {
+function timeAgo(dateStr: string | null, lang: 'en' | 'am'): string {
   if (!dateStr) return '—';
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
   const h = Math.floor(m / 60);
   const d = Math.floor(h / 24);
-  if (d > 0) return `${d}d ago`;
-  if (h > 0) return `${h}h ago`;
-  if (m > 0) return `${m}m ago`;
-  return 'Just now';
+  if (d > 0) return t[lang].gamesReport.daysAgo.replace('{d}', d.toString());
+  if (h > 0) return t[lang].gamesReport.hoursAgo.replace('{h}', h.toString());
+  if (m > 0) return t[lang].gamesReport.minutesAgo.replace('{m}', m.toString());
+  return t[lang].gamesReport.justNow;
 }
 
 export default function GamesReport() {
   const navigate = useNavigate();
+  const { language } = useGameStore();
   const [games, setGames] = useState<GameRecord[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,8 +108,8 @@ export default function GamesReport() {
             <ArrowLeft size={18} className="text-slate-600" />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-black text-slate-800 leading-tight">Games Report</h1>
-            <p className="text-xs text-slate-400">Your full bingo history</p>
+            <h1 className="text-lg font-black text-slate-800 leading-tight">{t[language].gamesReport.title}</h1>
+            <p className="text-xs text-slate-400">{t[language].gamesReport.subtitle}</p>
           </div>
           <button onClick={() => fetchReport(1, true)}
             className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center active:scale-90 transition-all shrink-0">
@@ -118,7 +121,7 @@ export default function GamesReport() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-24">
           <div className="w-12 h-12 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-slate-400 font-medium text-sm">Loading your history...</p>
+          <p className="text-slate-400 font-medium text-sm">{t[language].gamesReport.loading}</p>
         </div>
       ) : (
         <>
@@ -130,17 +133,17 @@ export default function GamesReport() {
               <div className="flex gap-3">
                 <div className="flex-1 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-2xl p-4 shadow-sm">
                   <p className="text-white/80 text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
-                    <Trophy size={10} /> Total Wins
+                    <Trophy size={10} /> {t[language].gamesReport.totalWins}
                   </p>
                   <p className="text-4xl font-black text-white leading-none">{stats.wins}</p>
-                  <p className="text-white/70 text-[10px] mt-1">{stats.total} total games</p>
+                  <p className="text-white/70 text-[10px] mt-1">{t[language].gamesReport.totalGames.replace('{total}', stats.total.toString())}</p>
                 </div>
                 <div className="flex-1 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-2xl p-4 shadow-sm">
                   <p className="text-white/80 text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
-                    <TrendingUp size={10} /> Win Rate
+                    <TrendingUp size={10} /> {t[language].gamesReport.winRate}
                   </p>
                   <p className="text-4xl font-black text-white leading-none">{stats.win_rate}<span className="text-lg">%</span></p>
-                  <p className="text-white/70 text-[10px] mt-1">of finished games</p>
+                  <p className="text-white/70 text-[10px] mt-1">{t[language].gamesReport.ofFinished}</p>
                 </div>
               </div>
 
@@ -148,17 +151,17 @@ export default function GamesReport() {
               <div className="flex gap-3">
                 <div className="flex-1 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
                   <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
-                    <Coins size={10} /> Played
+                    <Coins size={10} /> {t[language].gamesReport.played}
                   </p>
                   <p className="text-2xl font-black text-slate-800 leading-none">{stats.total_wagered.toLocaleString()}</p>
-                  <p className="text-slate-400 text-[10px] mt-1">ETB wagered</p>
+                  <p className="text-slate-400 text-[10px] mt-1">{t[language].gamesReport.wagered}</p>
                 </div>
                 <div className="flex-1 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm">
                   <p className="text-emerald-500 text-[10px] font-black uppercase tracking-widest mb-1 flex items-center gap-1">
-                    <Target size={10} /> Won
+                    <Target size={10} /> {t[language].gamesReport.won}
                   </p>
                   <p className="text-2xl font-black text-emerald-600 leading-none">{stats.total_won.toLocaleString()}</p>
-                  <p className="text-slate-400 text-[10px] mt-1">ETB prize total</p>
+                  <p className="text-slate-400 text-[10px] mt-1">{t[language].gamesReport.prizeTotal}</p>
                 </div>
               </div>
             </div>
@@ -168,15 +171,15 @@ export default function GamesReport() {
           <div className="px-4 pb-3 flex gap-2">
             <button onClick={() => setFilter('all')}
               className={`flex-1 py-2 rounded-xl text-[11px] font-black transition-all ${filter === 'all' ? 'bg-slate-800 text-white shadow-sm' : 'bg-white text-slate-400 border border-gray-100'}`}>
-              All ({stats?.total || 0})
+              {t[language].gamesReport.filterAll} ({stats?.total || 0})
             </button>
             <button onClick={() => setFilter('wins')}
               className={`flex-1 py-2 rounded-xl text-[11px] font-black transition-all ${filter === 'wins' ? 'bg-yellow-400 text-white shadow-sm' : 'bg-white text-slate-400 border border-gray-100'}`}>
-              🏆 Wins ({winsCount})
+              🏆 {t[language].gamesReport.filterWins} ({winsCount})
             </button>
             <button onClick={() => setFilter('losses')}
               className={`flex-1 py-2 rounded-xl text-[11px] font-black transition-all ${filter === 'losses' ? 'bg-rose-500 text-white shadow-sm' : 'bg-white text-slate-400 border border-gray-100'}`}>
-              ❌ Loss ({lossesCount})
+              ❌ {t[language].gamesReport.filterLoss} ({lossesCount})
             </button>
           </div>
 
@@ -186,8 +189,8 @@ export default function GamesReport() {
               <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mb-4 shadow-sm border border-gray-100">
                 <Gamepad2 size={36} className="text-slate-300" />
               </div>
-              <p className="font-black text-slate-700 text-base">No games yet</p>
-              <p className="text-slate-400 text-sm mt-1">Join a bingo game to see your history!</p>
+              <p className="font-black text-slate-700 text-base">{t[language].gamesReport.noGames}</p>
+              <p className="text-slate-400 text-sm mt-1">{t[language].gamesReport.joinGame}</p>
             </div>
           ) : (
             <div className="px-4 space-y-3">
@@ -214,15 +217,15 @@ export default function GamesReport() {
                       <div>
                         {g.is_winner && (
                           <span className="bg-yellow-300 text-yellow-900 text-[10px] font-black px-2.5 py-1 rounded-full flex items-center gap-1">
-                            <Crown size={10} /> YOU WON!
+                            <Crown size={10} /> {t[language].gamesReport.youWon}
                           </span>
                         )}
                         {isFinished && !g.is_winner && (
-                          <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">FINISHED</span>
+                          <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">{t[language].gamesReport.finished}</span>
                         )}
                         {isOngoing && (
                           <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                            <Clock size={9} /> LIVE
+                            <Clock size={9} /> {t[language].gamesReport.live}
                           </span>
                         )}
                       </div>
@@ -231,20 +234,20 @@ export default function GamesReport() {
                     {/* Stats row */}
                     <div className="px-4 py-3 grid grid-cols-3 divide-x divide-gray-100">
                       <div className="pr-3">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">Cartela</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">{t[language].gamesReport.cartela}</p>
                         <p className="font-black text-slate-800 text-lg leading-none">
                           {g.cartela_number ? `#${g.cartela_number}` : '—'}
                         </p>
                       </div>
                       <div className="px-3">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">Prize Pool</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">{t[language].gamesReport.prizePool}</p>
                         <p className="font-black text-slate-700 text-lg leading-none">
                           {g.prize_pool.toLocaleString()}
                           <span className="text-[10px] text-slate-400 font-bold"> ETB</span>
                         </p>
                       </div>
                       <div className="pl-3">
-                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">Calls</p>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-0.5">{t[language].gamesReport.calls}</p>
                         <p className="font-black text-slate-700 text-lg leading-none">{g.total_calls}</p>
                       </div>
                     </div>
@@ -254,23 +257,23 @@ export default function GamesReport() {
                       {g.is_winner ? (
                         <div className="flex items-center gap-1.5 bg-yellow-50 border border-yellow-100 rounded-xl px-3 py-1.5 flex-1">
                           <Trophy size={13} className="text-yellow-500 shrink-0" />
-                          <span className="text-yellow-700 font-black text-xs">Won {g.winner_prize.toLocaleString()} ETB</span>
+                          <span className="text-yellow-700 font-black text-xs">{t[language].gamesReport.wonAmount.replace('{amount}', g.winner_prize.toLocaleString())}</span>
                         </div>
                       ) : isFinished ? (
                         <div className="flex items-center gap-1.5 bg-slate-50 border border-gray-100 rounded-xl px-3 py-1.5 flex-1">
                           <XCircle size={13} className="text-slate-400 shrink-0" />
                           <span className="text-slate-500 font-bold text-xs truncate">
-                            Won by {g.winner_name || 'another player'}
+                            {t[language].gamesReport.wonBy.replace('{name}', g.winner_name || t[language].gamesReport.anotherPlayer)}
                           </span>
                         </div>
                       ) : (
                         <div className="flex items-center gap-1.5 bg-blue-50 border border-blue-100 rounded-xl px-3 py-1.5 flex-1">
                           <Clock size={13} className="text-blue-500 shrink-0" />
-                          <span className="text-blue-600 font-bold text-xs">In progress</span>
+                          <span className="text-blue-600 font-bold text-xs">{t[language].gamesReport.inProgress}</span>
                         </div>
                       )}
                       <span className="text-[10px] text-slate-400 font-medium shrink-0">
-                        {timeAgo(g.finished_at || g.created_at)}
+                        {timeAgo(g.finished_at || g.created_at, language)}
                       </span>
                     </div>
                   </div>
@@ -282,7 +285,7 @@ export default function GamesReport() {
                   className="w-full py-3.5 rounded-2xl bg-white border border-gray-100 text-slate-500 font-bold text-sm flex items-center justify-center gap-2 active:scale-95 transition-all shadow-sm">
                   {loadingMore
                     ? <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                    : <><ChevronDown size={16} /> Load more games</>
+                    : <><ChevronDown size={16} /> {t[language].gamesReport.loadMore}</>
                   }
                 </button>
               )}
