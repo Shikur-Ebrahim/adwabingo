@@ -1,4 +1,4 @@
-import { ArrowLeft, Trophy, Clock, Users, Coins, Star, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Trophy, Clock, Users, Coins, Star, AlertCircle, CheckCircle2, Zap, Gift } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const rules = [
@@ -43,6 +43,41 @@ const rules = [
     color: 'bg-teal-50 text-teal-500',
     title: 'Withdrawal',
     body: 'Minimum withdrawal applies per payment method. Withdrawals are reviewed and processed within 24 hours. Bonus balance cannot be withdrawn directly.',
+  },
+];
+
+const bonusRules = [
+  {
+    icon: Zap,
+    color: 'bg-amber-50 text-amber-500',
+    badge: '⚡ Speed Bonus',
+    title: '8-Call Early Win Bonus',
+    body: 'If you win a BINGO in 8 calls or fewer, you earn a special speed bonus reward on top of the regular prize pool. The faster you win, the bigger the glory!',
+    highlight: true,
+  },
+  {
+    icon: Zap,
+    color: 'bg-violet-50 text-violet-500',
+    badge: '🚀 Speed Bonus',
+    title: '10-Call Early Win Bonus',
+    body: 'Win BINGO within 10 called numbers and receive an additional bonus reward. This bonus is added automatically to your winnings.',
+    highlight: true,
+  },
+  {
+    icon: Gift,
+    color: 'bg-emerald-50 text-emerald-500',
+    badge: '🎁 Welcome Reward',
+    title: 'First Deposit Bonus',
+    body: 'New users receive a bonus on their very first deposit. The bonus is added directly to your Bonus Balance and can be used to join games immediately.',
+    highlight: true,
+  },
+  {
+    icon: Gift,
+    color: 'bg-pink-50 text-pink-500',
+    badge: '🎁 Loyalty Reward',
+    title: 'Second Deposit Bonus',
+    body: 'Make your second deposit and receive an additional loyalty bonus. This reward is our way of saying thank you for continuing to play ADWA Bingo!',
+    highlight: true,
   },
 ];
 
@@ -96,6 +131,43 @@ export default function Rules() {
             </div>
           );
         })}
+
+        {/* Bonus Rewards Section */}
+        <div className="mt-6">
+          {/* Section header */}
+          <div className="flex items-center gap-3 mb-3">
+            <div className="flex-1 h-px bg-gradient-to-r from-yellow-300 to-orange-300" />
+            <div className="bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full px-3 py-1 flex items-center gap-1.5 shadow-sm">
+              <Gift size={13} className="text-white" />
+              <span className="text-white font-black text-[11px] uppercase tracking-wide">Bonus Rewards</span>
+            </div>
+            <div className="flex-1 h-px bg-gradient-to-l from-yellow-300 to-orange-300" />
+          </div>
+
+          <div className="space-y-3">
+            {bonusRules.map((rule, i) => {
+              const Icon = rule.icon;
+              return (
+                <div key={i} className="bg-gradient-to-br from-white to-amber-50/30 rounded-2xl p-4 border border-amber-100 shadow-sm flex gap-3 relative overflow-hidden">
+                  {/* Subtle glow accent */}
+                  <div className="absolute top-0 right-0 w-20 h-20 bg-yellow-400/5 rounded-full -translate-y-6 translate-x-6 pointer-events-none" />
+                  <div className={`w-9 h-9 rounded-xl ${rule.color} flex items-center justify-center shrink-0 mt-0.5`}>
+                    <Icon size={16} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="bg-gradient-to-r from-amber-400 to-orange-400 text-white text-[9px] font-black px-2 py-0.5 rounded-full shrink-0">
+                        {rule.badge}
+                      </span>
+                    </div>
+                    <p className="font-black text-slate-800 text-sm mb-1">{rule.title}</p>
+                    <p className="text-slate-500 text-[11px] leading-relaxed">{rule.body}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Footer note */}
         <div className="bg-slate-800 rounded-2xl px-4 py-3.5 flex items-start gap-3 mt-2">
