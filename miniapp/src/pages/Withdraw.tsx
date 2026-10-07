@@ -3,6 +3,7 @@ import { ArrowLeft, ChevronRight, CheckCircle2, Clock, AlertCircle, User, Phone,
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import { useGameStore } from '../store/gameStore';
+import { t } from '../lib/translations';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -37,7 +38,7 @@ const typeEmoji: Record<string, string> = {
 type Step = 'list' | 'form' | 'success' | 'pending_status';
 
 export default function Withdraw() {
-  const { user } = useGameStore();
+  const { user, language } = useGameStore();
   const userBalance = Number(user?.main_balance || 0);
 
   const [methods, setMethods] = useState<WithdrawalMethod[]>([]);
@@ -172,12 +173,12 @@ export default function Withdraw() {
               className="mt-4 flex items-center justify-center space-x-2 text-blue-600 font-black text-sm bg-blue-50 hover:bg-blue-100 transition-colors py-3.5 rounded-xl w-full border border-blue-100"
             >
               <MessageCircle size={18} />
-              <span>Need Help? Contact Support</span>
+              <span>Need Help? {t[language].withdraw.contactSupport}</span>
             </a>
           )}
 
           <Link to="/" className="mt-3 block w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-black py-4 rounded-xl text-center transition-all active:scale-95">
-            Back to Home
+            {t[language].withdraw.backHome}
           </Link>
         </div>
       </div>
@@ -207,12 +208,12 @@ export default function Withdraw() {
               className="mt-4 flex items-center justify-center space-x-2 text-blue-600 font-black text-sm bg-blue-50 hover:bg-blue-100 transition-colors py-3.5 rounded-xl w-full border border-blue-100"
             >
               <MessageCircle size={18} />
-              <span>Need Help? Contact Support</span>
+              <span>Need Help? {t[language].withdraw.contactSupport}</span>
             </a>
           )}
 
           <Link to="/" className="mt-3 block w-full bg-gradient-to-r from-green-500 to-emerald-500 text-white font-black py-4 rounded-xl text-center transition-all active:scale-95">
-            Back to Home
+            {t[language].withdraw.backHome}
           </Link>
         </div>
       </div>
@@ -235,7 +236,7 @@ export default function Withdraw() {
             </h1>
           </div>
           <div className="bg-white rounded-2xl p-4 shadow-md border border-white/10">
-            <p className="text-slate-500 text-sm font-medium">Available Balance</p>
+            <p className="text-slate-500 text-sm font-medium">{t[language].withdraw.balance}</p>
             <p className="text-3xl font-black text-slate-800">{userBalance.toLocaleString('en-US')} <span className="text-xl text-slate-600">ETB</span></p>
             <p className="text-slate-400 text-xs mt-1">Min withdrawal: {selected.min_withdrawal.toLocaleString('en-US')} ETB</p>
           </div>

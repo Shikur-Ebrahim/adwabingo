@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { ArrowLeft, Share2, Copy, Check, Users, Gift, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
+import { t } from '../lib/translations';
 import WebApp from '@twa-dev/sdk';
 
 export default function Invite() {
-  const { user, setProfileOpen } = useGameStore();
+  const { user, setProfileOpen, language } = useGameStore();
   const [copied, setCopied] = useState(false);
   const navigate = useNavigate();
 
@@ -56,8 +57,8 @@ export default function Invite() {
           <ArrowLeft size={20} />
         </button>
         <div className="ml-4 flex-1">
-          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Invite Friends</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Earn bonus ETB</p>
+          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{t[language].invite.title}</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t[language].invite.subtitle}</p>
         </div>
       </div>
 
@@ -70,16 +71,16 @@ export default function Invite() {
             <Gift size={24} className="text-white" />
           </div>
           <div className="z-10">
-            <h2 className="text-lg font-black leading-tight mb-0.5">Earn 10% Bonus</h2>
+            <h2 className="text-lg font-black leading-tight mb-0.5">{t[language].invite.heroTitle}</h2>
             <p className="text-white/90 text-[11px] font-medium leading-snug">
-              Get 10% of your friends' first deposit straight into your Bonus Balance!
+              {t[language].invite.heroDesc}
             </p>
           </div>
         </div>
 
         {/* LINK SECTION (MOVED UP) */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-slate-800 shrink-0">
-          <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">Your Invite Link</label>
+          <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-2">{t[language].invite.linkTitle}</label>
           <div className="flex bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden p-1 mb-3">
             <div className="flex-1 px-2 py-2 overflow-x-auto whitespace-nowrap hide-scrollbar flex items-center">
               <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300">{inviteLink}</span>
@@ -97,33 +98,33 @@ export default function Invite() {
             className="w-full bg-slate-800 text-white hover:bg-slate-700 py-2.5 rounded-xl font-black text-sm shadow-sm transition-transform active:scale-95 flex items-center justify-center space-x-2"
           >
             <Share2 size={16} />
-            <span>Share Link</span>
+            <span>{t[language].invite.shareBtn}</span>
           </button>
         </div>
 
         {/* COMPACT HOW IT WORKS */}
         <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-slate-800 flex-1">
-          <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 mb-3">How it works</h3>
+          <h3 className="text-xs font-bold text-slate-800 dark:text-slate-100 mb-3">{t[language].invite.howItWorks}</h3>
           <div className="space-y-3">
             <div className="flex items-center">
               <div className="w-7 h-7 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center font-black text-[10px] shrink-0 mr-3">1</div>
               <div>
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Share your link</p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">Send your invite link to friends.</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{t[language].invite.step1Title}</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">{t[language].invite.step1Desc}</p>
               </div>
             </div>
             <div className="flex items-center">
               <div className="w-7 h-7 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center font-black text-[10px] shrink-0 mr-3">2</div>
               <div>
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">Friend joins & deposits</p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">They start the bot and make their 1st deposit.</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{t[language].invite.step2Title}</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">{t[language].invite.step2Desc}</p>
               </div>
             </div>
             <div className="flex items-center">
               <div className="w-7 h-7 rounded-full bg-purple-50 text-purple-500 flex items-center justify-center font-black text-[10px] shrink-0 mr-3">3</div>
               <div>
-                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">You get rewarded!</p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">You instantly receive 10% in your Bonus Balance.</p>
+                <p className="text-xs font-bold text-slate-700 dark:text-slate-200">{t[language].invite.step3Title}</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">{t[language].invite.step3Desc}</p>
               </div>
             </div>
           </div>

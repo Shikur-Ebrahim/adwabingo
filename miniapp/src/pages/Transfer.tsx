@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, ArrowRightLeft, CheckCircle2, AlertCircle, Send, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
+import { t } from '../lib/translations';
 import WebApp from '@twa-dev/sdk';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -9,6 +10,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 type Step = 'form' | 'success' | 'error';
 
 export default function Transfer() {
+  const { user, fetchUser, language, setProfileOpen } = useGameStore();
   const [recipientId, setRecipientId] = useState('');
   const [amount, setAmount] = useState('');
   const [step, setStep] = useState<Step>('form');
@@ -16,7 +18,6 @@ export default function Transfer() {
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { user, setProfileOpen, fetchUser } = useGameStore();
 
   const handleBack = () => {
     navigate(-1);

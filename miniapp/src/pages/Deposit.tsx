@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { ArrowLeft, ChevronRight, CheckCircle2, UploadCloud, X, Clock, AlertCircle, Copy, Check, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
+import { useGameStore } from '../store/gameStore';
+import { t } from '../lib/translations';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -31,6 +33,7 @@ const typeBadge: Record<string, string> = {
 type Step = 'list' | 'form' | 'success' | 'pending_status';
 
 export default function Deposit() {
+  const { language } = useGameStore();
   const [methods, setMethods] = useState<DepositMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<DepositMethod | null>(null);
@@ -154,16 +157,16 @@ export default function Deposit() {
           <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-5 border-4 border-emerald-100">
             <CheckCircle2 size={40} className="text-emerald-500" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">Submitted!</h2>
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">{t[language].deposit.submitted}</h2>
           <p className="text-slate-500 dark:text-slate-400 font-medium mt-2 leading-relaxed">
-            Your deposit request of <span className="font-black text-slate-700 dark:text-slate-200">{parseFloat(amount).toLocaleString('en-US')} ETB</span> is now <span className="text-yellow-600 font-black">pending review</span>.
+            {t[language].deposit.pendingReview.split('{amount}')[0]}<span className="font-black text-slate-700 dark:text-slate-200">{parseFloat(amount).toLocaleString('en-US')} ETB</span>{t[language].deposit.pendingReview.split('{amount}')[1]}
           </p>
           <div className="mt-5 bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex items-start space-x-3">
             <Clock size={18} className="text-yellow-600 mt-0.5 flex-shrink-0" />
-            <p className="text-xs text-yellow-700 font-semibold text-left">Your balance will be credited once an admin approves your payment. This usually takes a few minutes.</p>
+            <p className="text-xs text-yellow-700 font-semibold text-left">{t[language].deposit.willBeCredited}</p>
           </div>
           <Link to="/" className="mt-3 block w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-black py-4 rounded-xl text-center transition-all active:scale-95">
-            Back to Home
+            {t[language].deposit.backHome}
           </Link>
           
           {supportUsername && (
@@ -174,7 +177,7 @@ export default function Deposit() {
               className="mt-4 flex items-center justify-center space-x-2 text-blue-600 font-black text-sm bg-blue-50 hover:bg-blue-100 transition-colors py-3.5 rounded-xl w-full border border-blue-100"
             >
               <MessageCircle size={18} />
-              <span>Need Help? Contact Support</span>
+              <span>Need Help? {t[language].deposit.contactSupport}</span>
             </a>
           )}
         </div>
@@ -190,12 +193,12 @@ export default function Deposit() {
           <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto mb-5 border-4 border-yellow-100">
             <Clock size={40} className="text-yellow-500" />
           </div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">Pending Review</h2>
+          <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100">{t[language].deposit.alreadyPendingTitle}</h2>
           <p className="text-slate-500 dark:text-slate-400 font-medium mt-2 leading-relaxed">
-            You already have a deposit of <span className="font-black text-slate-700 dark:text-slate-200">{pendingAmount?.toLocaleString('en-US')} ETB</span> waiting for approval.
+            {t[language].deposit.alreadyPendingDesc.split('{amount}')[0]}<span className="font-black text-slate-700 dark:text-slate-200">{pendingAmount?.toLocaleString('en-US')} ETB</span> {t[language].deposit.alreadyPendingDesc.split('{amount}')[1]}
           </p>
           <div className="mt-5 bg-blue-50 border border-blue-100 rounded-xl p-4">
-            <p className="text-xs text-blue-700 font-semibold text-center">Please wait for an admin to process your current request before making a new one.</p>
+            <p className="text-xs text-blue-700 font-semibold text-center">{t[language].deposit.waitAdmin}</p>
           </div>
           
           {supportUsername && (
@@ -206,12 +209,12 @@ export default function Deposit() {
               className="mt-4 flex items-center justify-center space-x-2 text-blue-600 font-black text-sm bg-blue-50 hover:bg-blue-100 transition-colors py-3.5 rounded-xl w-full border border-blue-100"
             >
               <MessageCircle size={18} />
-              <span>Need Help? Contact Support</span>
+              <span>Need Help? {t[language].deposit.contactSupport}</span>
             </a>
           )}
 
           <Link to="/" className="mt-3 block w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-black py-4 rounded-xl text-center transition-all active:scale-95">
-            Back to Home
+            {t[language].deposit.backHome}
           </Link>
         </div>
       </div>
@@ -233,7 +236,7 @@ export default function Deposit() {
         <div className="p-4 space-y-4">
           {/* Method Card */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 p-5">
-            <p className="text-[10px] font-black text-slate-400 tracking-widest mb-3">SEND MONEY TO</p>
+            <p className="text-[10px] font-black text-slate-400 tracking-widest mb-3">{t[language].deposit.sendMoneyTo}</p>
             <div className="flex items-center space-x-4">
               {selected.logo_url ? (
                 <img src={selected.logo_url} alt="logo" className="w-16 h-16 rounded-2xl object-contain bg-slate-50 dark:bg-slate-900 border border-slate-100 p-1.5" />
@@ -255,7 +258,7 @@ export default function Deposit() {
                         : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-200'
                     }`}
                   >
-                    {copied ? <><Check size={13} strokeWidth={3} /><span>Copied!</span></> : <><Copy size={13} /><span>Copy</span></>}
+                    {copied ? <><Check size={13} strokeWidth={3} /><span>{t[language].deposit.copySuccess}</span></> : <><Copy size={13} /><span>{t[language].deposit.copy}</span></>}
                   </button>
                 </div>
               </div>
@@ -334,7 +337,7 @@ export default function Deposit() {
             disabled={submitting}
             className="w-full bg-yellow-400 hover:bg-yellow-500 text-yellow-950 font-black py-4 rounded-2xl shadow-sm text-lg transition-all active:scale-95 disabled:opacity-50"
           >
-            {submitting ? 'Submitting...' : '✅ Submit Deposit Request'}
+            {submitting ? 'Submitting...' : '✅ {t[language].deposit.submitBtn}'}
           </button>
         </div>
       </div>

@@ -1,24 +1,12 @@
-export const t = {
-  en: {
-    profile: {
-      mainBalance: 'MAIN',
-      bonusBalance: 'BONUS',
-      deposit: 'Deposit',
-      withdraw: 'Withdraw',
-      invite: 'Invite',
-      transfer: 'Transfer',
-      depositHistory: 'Deposit History',
-      withdrawHistory: 'Withdraw History',
-      gamesReport: 'Games Report',
-      fullAudit: 'Full Audit Ledger',
-      invitePerson: 'Invite Person',
-      rules: 'Rules',
-      language: 'Language',
-      darkMode: 'Dark Mode',
-      support: 'Support Team',
-      channel: 'Channel',
-      logout: 'Close Profile',
-    },
+const fs = require('fs');
+const path = './miniapp/src/lib/translations.ts';
+
+let content = fs.readFileSync(path, 'utf8');
+
+// The file has export const t = { en: { ... }, am: { ... } };
+// We need to parse it or just use regex to insert the new blocks.
+
+const enAdditions = `
     deposit: {
       title: 'Deposit Funds',
       selectMethod: 'Select a Deposit Method',
@@ -57,8 +45,6 @@ export const t = {
       waitAdmin: 'Please wait for an admin to process your current request before making a new one.',
       insufficientBalance: 'Insufficient Balance',
       insufficientDesc: 'You do not have enough funds to withdraw this amount.',
-      backHome: 'Back to Home',
-      contactSupport: 'Contact Support'
     },
     transfer: {
       title: 'Transfer Funds',
@@ -80,40 +66,23 @@ export const t = {
     },
     invite: {
       title: 'Invite Friends',
-      subtitle: 'Earn bonus ETB',
-      heroTitle: 'Earn 10% Bonus',
-      heroDesc: "Get 10% of your friends' first deposit straight into your Bonus Balance!",
-      linkTitle: 'Your Invite Link',
+      inviteLinkTitle: 'YOUR INVITE LINK',
+      copyLinkBtn: 'Copy Link',
       shareBtn: 'Share Link',
-      howItWorks: 'How it works',
+      statsTitle: 'YOUR INVITE STATS',
+      totalInvited: 'Total Invited',
+      earnedFromInvites: 'Total Earned',
+      howItWorksTitle: 'HOW IT WORKS',
       step1Title: 'Share your link',
       step1Desc: 'Send your invite link to friends.',
-      step2Title: 'Friend joins & deposits',
-      step2Desc: 'They start the bot and make their 1st deposit.',
-      step3Title: 'You get rewarded!',
-      step3Desc: 'You instantly receive 10% in your Bonus Balance.',
-    }
-  },
-  am: {
-    profile: {
-      mainBalance: 'ዋና ሂሳብ',
-      bonusBalance: 'ቦነስ',
-      deposit: 'ገንዘብ አስገባ',
-      withdraw: 'ገንዘብ አውጣ',
-      invite: 'ጋብዝ',
-      transfer: 'አስተላልፍ',
-      depositHistory: 'የገንዘብ ማስገቢያ ታሪክ',
-      withdrawHistory: 'የገንዘብ ማውጫ ታሪክ',
-      gamesReport: 'የጨዋታዎች ሪፖርት',
-      fullAudit: 'ሙሉ የሂሳብ መዝገብ',
-      invitePerson: 'ሰዎችን ጋብዝ',
-      rules: 'ደንቦች',
-      language: 'ቋንቋ (Language)',
-      darkMode: 'የሌሊት ገጽታ',
-      support: 'ድጋፍ ሰጪ ቡድን',
-      channel: 'ቻናል (Channel)',
-      logout: 'ፕሮፋይል ዝጋ',
+      step2Title: 'Friends join',
+      step2Desc: 'They click the link and start playing.',
+      step3Title: 'You earn',
+      step3Desc: 'You get a bonus when they make their first deposit.',
     },
+`;
+
+const amAdditions = `
     deposit: {
       title: 'ገንዘብ ማስገቢያ',
       selectMethod: 'የገንዘብ ማስገቢያ መንገድ ይምረጡ',
@@ -152,8 +121,6 @@ export const t = {
       waitAdmin: 'እባክዎ አዲስ ጥያቄ ከማቅረብዎ በፊት ያቀረቡት ጥያቄ እስኪስተናገድ ይጠብቁ።',
       insufficientBalance: 'በቂ ሂሳብ የሎትም',
       insufficientDesc: 'ይህን ያህል መጠን ለማውጣት በቂ ሂሳብ የሎትም።',
-      backHome: 'ወደ ዋናው ገጽ ይመለሱ',
-      contactSupport: 'ድጋፍ ሰጪ ያግኙ'
     },
     transfer: {
       title: 'ገንዘብ ማስተላለፊያ',
@@ -175,18 +142,35 @@ export const t = {
     },
     invite: {
       title: 'ጓደኞችን ይጋብዙ',
-      subtitle: 'ቦነስ ያግኙ',
-      heroTitle: '10% ቦነስ ያግኙ',
-      heroDesc: 'ጓደኛዎ ለመጀመሪያ ጊዜ ከሚያስገባው ገንዘብ 10% በቀጥታ ወደ ቦነስ ሂሳብዎ ይገባል!',
-      linkTitle: 'የእርስዎ መጋበዣ ሊንክ',
+      inviteLinkTitle: 'የእርስዎ መጋበዣ ሊንክ',
+      copyLinkBtn: 'ሊንኩን ቅዳ',
       shareBtn: 'ሊንኩን አጋራ',
-      howItWorks: 'እንዴት እንደሚሰራ',
+      statsTitle: 'የመጋበዣ ስታትስቲክስ',
+      totalInvited: 'የተጋበዙ ሰዎች',
+      earnedFromInvites: 'ያገኙት ቦነስ',
+      howItWorksTitle: 'እንዴት እንደሚሰራ',
       step1Title: 'ሊንክዎን ያጋሩ',
       step1Desc: 'የመጋበዣ ሊንክዎን ለጓደኞችዎ ይላኩ።',
-      step2Title: 'ጓደኛዎ ሲቀላቀል እና ሲያስገባ',
-      step2Desc: 'ቦቱን አስጀምረው የመጀመሪያ ዴፖዚት ሲያደርጉ።',
-      step3Title: 'እርስዎ ይሸለማሉ!',
-      step3Desc: '10% ወዲያውኑ ወደ ቦነስ ሂሳብዎ ይገባል።',
-    }
+      step2Title: 'ጓደኞችዎ ሲቀላቀሉ',
+      step2Desc: 'በሊንክዎ ገብተው መጫወት ሲጀምሩ።',
+      step3Title: 'ቦነስ ያገኛሉ',
+      step3Desc: 'የመጀመሪያ ጊዜ ገንዘብ ሲያስገቡ እርስዎ ቦነስ ያገኛሉ።',
+    },
+`;
+
+content = content.replace(/profile:\s*\{[\s\S]*?\},/, (match) => {
+  return match + enAdditions;
+});
+
+// the second match will be in 'am' object
+let replacedCount = 0;
+content = content.replace(/profile:\s*\{[\s\S]*?\},/g, (match) => {
+  replacedCount++;
+  if (replacedCount === 2) {
+    return match + amAdditions;
   }
-};
+  return match;
+});
+
+fs.writeFileSync(path, content);
+console.log('Translations updated successfully.');
