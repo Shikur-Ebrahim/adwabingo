@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
+import { t } from '../lib/translations';
 import { 
   Wallet, Gift, PlusCircle, ArrowDownToLine, Share2, 
   ArrowRightLeft, History, Users, Globe, Headphones, Megaphone,
@@ -11,7 +12,8 @@ import WebApp from '@twa-dev/sdk';
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export default function Profile() {
-  const { user, isProfileOpen, setProfileOpen, isDarkMode, toggleDarkMode } = useGameStore();
+  const { user, isProfileOpen, setProfileOpen, isDarkMode, toggleDarkMode, language, setLanguage } = useGameStore();
+  const [showLangDropdown, setShowLangDropdown] = useState(false);
   const [supportUsername, setSupportUsername] = useState('adwabingo_admin');
   const [channelLink, setChannelLink] = useState('https://t.me/adwabingo');
   const [copied, setCopied] = useState(false);
@@ -113,14 +115,14 @@ export default function Profile() {
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-2 border border-white/10 flex flex-col">
               <div className="flex items-center space-x-1 text-white/70 mb-0.5">
                 <Wallet size={10} />
-                <p className="text-[8px] font-bold uppercase tracking-wider">Main</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider">{t[language].profile.mainBalance}</p>
               </div>
               <p className="text-base font-black text-white">{formatMoney(user?.main_balance)} <span className="text-[8px]">ETB</span></p>
             </div>
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-2 border border-white/10 flex flex-col">
               <div className="flex items-center space-x-1 text-purple-300 mb-0.5">
                 <Gift size={10} />
-                <p className="text-[8px] font-bold uppercase tracking-wider">Bonus</p>
+                <p className="text-[8px] font-bold uppercase tracking-wider">{t[language].profile.bonusBalance}</p>
               </div>
               <p className="text-base font-black text-white">{formatMoney(user?.bonus_balance)} <span className="text-[8px]">ETB</span></p>
             </div>
@@ -134,19 +136,19 @@ export default function Profile() {
           <div className="grid grid-cols-2 gap-1.5 shrink-0">
             <button onClick={() => navigateTo('/deposit')} className="bg-yellow-400 active:bg-yellow-500 transition-colors text-yellow-950 rounded-xl py-1.5 flex flex-col items-center justify-center shadow-sm">
               <PlusCircle size={16} className="mb-0.5" />
-              <span className="font-bold text-[9px]">Deposit</span>
+              <span className="font-bold text-[9px]">{t[language].profile.deposit}</span>
             </button>
             <button onClick={() => navigateTo('/withdraw')} className="bg-white dark:bg-slate-800 active:bg-gray-100 transition-colors text-slate-700 dark:text-slate-200 rounded-xl py-1.5 flex flex-col items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700">
               <ArrowDownToLine size={16} className="mb-0.5" />
-              <span className="font-bold text-[9px]">Withdraw</span>
+              <span className="font-bold text-[9px]">{t[language].profile.withdraw}</span>
             </button>
             <button onClick={() => navigateTo('/invite')} className="bg-white dark:bg-slate-800 active:bg-gray-100 transition-colors text-slate-700 dark:text-slate-200 rounded-xl py-1.5 flex flex-col items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700">
               <Share2 size={16} className="mb-0.5 text-blue-500" />
-              <span className="font-bold text-[9px]">Invite</span>
+              <span className="font-bold text-[9px]">{t[language].profile.invite}</span>
             </button>
             <button onClick={() => navigateTo('/transfer')} className="bg-white dark:bg-slate-800 active:bg-gray-100 transition-colors text-slate-700 dark:text-slate-200 rounded-xl py-1.5 flex flex-col items-center justify-center shadow-sm border border-gray-100 dark:border-slate-700">
               <ArrowRightLeft size={16} className="mb-0.5 text-emerald-500" />
-              <span className="font-bold text-[9px]">Transfer</span>
+              <span className="font-bold text-[9px]">{t[language].profile.transfer}</span>
             </button>
           </div>
 
@@ -155,50 +157,73 @@ export default function Profile() {
 
             <button onClick={() => navigateTo('/deposit-history')} className={row}>
               <div className={icon('bg-blue-50 text-blue-500')}><History size={12} /></div>
-              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Deposit History</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">{t[language].profile.depositHistory}</span>
               <ChevronRight size={11} className="text-slate-300" />
             </button>
 
             <button onClick={() => navigateTo('/withdraw-history')} className={row}>
               <div className={icon('bg-rose-50 text-rose-500')}><History size={12} /></div>
-              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Withdraw History</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">{t[language].profile.withdrawHistory}</span>
               <ChevronRight size={11} className="text-slate-300" />
             </button>
 
             <button onClick={() => navigateTo('/games-report')} className={row}>
               <div className={icon('bg-teal-50 text-teal-500')}><BarChart2 size={12} /></div>
-              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Games Report</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">{t[language].profile.gamesReport}</span>
               <ChevronRight size={11} className="text-slate-300" />
             </button>
 
             <button onClick={() => navigateTo('/audit')} className={row}>
               <div className={icon('bg-indigo-50 text-indigo-500')}><History size={12} /></div>
-              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Full Audit Ledger</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">{t[language].profile.fullAudit}</span>
               <ChevronRight size={11} className="text-slate-300" />
             </button>
 
             <button onClick={() => navigateTo('/invited')} className={row}>
               <div className={icon('bg-emerald-50 text-emerald-500')}><Users size={12} /></div>
-              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Invite Person</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">{t[language].profile.invitePerson}</span>
               <ChevronRight size={11} className="text-slate-300" />
             </button>
 
             <button onClick={() => navigateTo('/rules')} className={row}>
               <div className={icon('bg-yellow-50 text-yellow-500')}><BookOpen size={12} /></div>
-              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Rules</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">{t[language].profile.rules}</span>
               <ChevronRight size={11} className="text-slate-300" />
             </button>
 
-            <button onClick={() => { if(typeof WebApp !== 'undefined') WebApp.showAlert('English is currently selected.') }} className={row}>
-              <div className={icon('bg-purple-50 text-purple-500')}><Globe size={12} /></div>
-              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Language</span>
-              <span className="text-[8px] font-black text-slate-400 mr-1.5 uppercase bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">EN</span>
-              <ChevronRight size={11} className="text-slate-300" />
-            </button>
+            {/* Language Selector */}
+            <div className="relative">
+              <button onClick={() => setShowLangDropdown(!showLangDropdown)} className={row}>
+                <div className={icon('bg-purple-50 text-purple-500')}><Globe size={12} /></div>
+                <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">{t[language].profile.language}</span>
+                <span className="text-[8px] font-black text-slate-400 mr-1.5 uppercase bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded transition-all">{language.toUpperCase()}</span>
+                <ChevronRight size={11} className={`text-slate-300 transition-transform ${showLangDropdown ? 'rotate-90' : ''}`} />
+              </button>
+              
+              {showLangDropdown && (
+                <div className="absolute top-[100%] right-2 w-32 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-100 dark:border-slate-700 z-50 overflow-hidden">
+                  <button 
+                    onClick={() => { setLanguage('en'); setShowLangDropdown(false); }}
+                    className={`w-full text-left px-3 py-2 text-[10px] font-bold flex items-center justify-between ${language === 'en' ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/20' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
+                  >
+                    English
+                    {language === 'en' && <Check size={10} />}
+                  </button>
+                  <button 
+                    onClick={() => { setLanguage('am'); setShowLangDropdown(false); }}
+                    className={`w-full text-left px-3 py-2 text-[10px] font-bold flex items-center justify-between border-t border-slate-100 dark:border-slate-700 ${language === 'am' ? 'text-purple-600 bg-purple-50 dark:bg-purple-900/20' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'}`}
+                  >
+                    አማርኛ
+                    {language === 'am' && <Check size={10} />}
+                  </button>
+                </div>
+              )}
+              {showLangDropdown && <div className="fixed inset-0 z-40" onClick={() => setShowLangDropdown(false)} />}
+            </div>
 
             <button onClick={toggleDarkMode} className={row}>
               <div className={icon('bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300')}><Moon size={12} /></div>
-              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Dark Mode</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">{t[language].profile.darkMode}</span>
               <div className={`w-7 h-3.5 rounded-full relative mr-1 transition-colors ${isDarkMode ? 'bg-violet-500' : 'bg-slate-200'}`}>
                 <div className={`w-3 h-3 bg-white rounded-full absolute top-[1px] shadow-sm transition-all duration-300 ${isDarkMode ? 'left-[15px]' : 'left-[1px]'}`} />
               </div>
@@ -206,13 +231,13 @@ export default function Profile() {
 
             <button onClick={handleSupport} className={row}>
               <div className={icon('bg-orange-50 text-orange-500')}><Headphones size={12} /></div>
-              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Support Team</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">{t[language].profile.support}</span>
               <ChevronRight size={11} className="text-slate-300" />
             </button>
 
             <button onClick={handleChannel} className={row}>
               <div className={icon('bg-indigo-50 text-indigo-500')}><Megaphone size={12} /></div>
-              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">Channel</span>
+              <span className="flex-1 font-bold text-slate-700 dark:text-slate-200 text-[10px]">{t[language].profile.channel}</span>
               <ChevronRight size={11} className="text-slate-300" />
             </button>
 

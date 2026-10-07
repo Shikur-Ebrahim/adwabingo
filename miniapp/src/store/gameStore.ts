@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { User } from '../types';
 import WebApp from '@twa-dev/sdk';
@@ -16,6 +16,8 @@ interface GameStore {
   isBlocked: boolean;
   isProfileOpen: boolean;
   isDarkMode: boolean;
+  language: 'en' | 'am';
+  setLanguage: (lang: 'en' | 'am') => void;
   setProfileOpen: (isOpen: boolean) => void;
   toggleDarkMode: () => void;
   fetchUser: () => Promise<void>;
@@ -33,6 +35,8 @@ export const useGameStore = create<GameStore>()(
       isBlocked: false,
       isProfileOpen: false,
       isDarkMode: false,
+      language: 'en',
+      setLanguage: (lang) => set({ language: lang }),
       setProfileOpen: (isOpen: boolean) => set({ isProfileOpen: isOpen }),
       toggleDarkMode: () => set((state) => {
         const newMode = !state.isDarkMode;
