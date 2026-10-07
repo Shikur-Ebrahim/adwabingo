@@ -3,6 +3,7 @@ import { ArrowLeft, Users, Gift, CheckCircle2, Clock, UserPlus } from 'lucide-re
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
 import WebApp from '@twa-dev/sdk';
+import { t } from '../lib/translations';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -22,7 +23,7 @@ export default function InvitedPeople() {
   const [totalEarned, setTotalEarned] = useState(0);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-  const { setProfileOpen } = useGameStore();
+  const { setProfileOpen, language } = useGameStore();
 
   useEffect(() => {
     const fetchInvited = async () => {
@@ -81,8 +82,8 @@ export default function InvitedPeople() {
           <ArrowLeft size={20} />
         </button>
         <div className="ml-4 flex-1">
-          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Invited Friends</h1>
-          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">People you brought to ADWA Bingo</p>
+          <h1 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">{t[language].invitedPeople.title}</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">{t[language].invitedPeople.subtitle}</p>
         </div>
       </div>
 
@@ -95,21 +96,21 @@ export default function InvitedPeople() {
               <Users size={16} className="text-violet-500" />
             </div>
             <p className="text-2xl font-black text-slate-800 dark:text-slate-100">{invited.length}</p>
-            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Total Invited</p>
+            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{t[language].invitedPeople.totalInvited}</p>
           </div>
           <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 shadow-sm border border-gray-100 dark:border-slate-800 text-center">
             <div className="w-8 h-8 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-1.5">
               <CheckCircle2 size={16} className="text-emerald-500" />
             </div>
             <p className="text-2xl font-black text-slate-800 dark:text-slate-100">{depositedCount}</p>
-            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Deposited</p>
+            <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{t[language].invitedPeople.deposited}</p>
           </div>
           <div className="bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-3 shadow-sm text-center">
             <div className="w-8 h-8 bg-white dark:bg-slate-900/20 rounded-full flex items-center justify-center mx-auto mb-1.5">
               <Gift size={16} className="text-white" />
             </div>
             <p className="text-2xl font-black text-white">{totalEarned.toLocaleString('en-US')}</p>
-            <p className="text-[10px] font-semibold text-white/80 mt-0.5">ETB Earned</p>
+            <p className="text-[10px] font-semibold text-white/80 mt-0.5">{t[language].invitedPeople.etbEarned}</p>
           </div>
         </div>
 
@@ -117,15 +118,15 @@ export default function InvitedPeople() {
         {loading ? (
           <div className="flex flex-col items-center justify-center h-40 space-y-3">
             <div className="w-7 h-7 border-4 border-violet-400 border-t-transparent rounded-full animate-spin" />
-            <p className="text-xs font-bold text-slate-400">Loading...</p>
+            <p className="text-xs font-bold text-slate-400">{t[language].invitedPeople.loading}</p>
           </div>
         ) : invited.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-52 text-center">
             <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3">
               <UserPlus size={28} className="text-slate-300" />
             </div>
-            <h3 className="text-base font-black text-slate-700 dark:text-slate-200 mb-1">No Invites Yet</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-[200px]">Share your invite link to earn 10% bonus from every friend's first deposit!</p>
+            <h3 className="text-base font-black text-slate-700 dark:text-slate-200 mb-1">{t[language].invitedPeople.noInvites}</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-[200px]">{t[language].invitedPeople.shareLinkText}</p>
             <button
               onClick={() => navigate('/invite')}
               className="bg-violet-500 text-white px-5 py-2.5 rounded-xl font-black text-sm active:scale-95 transition-transform"
@@ -135,7 +136,7 @@ export default function InvitedPeople() {
           </div>
         ) : (
           <div className="space-y-2.5">
-            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1">Friends List ({invited.length})</p>
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-400 px-1">{t[language].invitedPeople.friendsList.replace('{count}', invited.length.toString())}</p>
             {invited.map((user) => (
               <div key={user.telegram_id} className="bg-white dark:bg-slate-900 rounded-2xl p-3.5 shadow-sm border border-gray-100 dark:border-slate-800 flex items-center">
 
@@ -151,16 +152,16 @@ export default function InvitedPeople() {
                     {user.has_deposited ? (
                       <span className="flex items-center space-x-0.5 text-[9px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">
                         <CheckCircle2 size={9} />
-                        <span>Deposited</span>
+                        <span>{t[language].invitedPeople.statusDeposited}</span>
                       </span>
                     ) : (
                       <span className="flex items-center space-x-0.5 text-[9px] font-black text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full">
                         <Clock size={9} />
-                        <span>Not yet</span>
+                        <span>{t[language].invitedPeople.notYet}</span>
                       </span>
                     )}
                     <span className="text-[10px] text-slate-400 font-medium">
-                      Joined {formatDate(user.joined_at)}
+                      {t[language].invitedPeople.joined.replace('{date}', formatDate(user.joined_at))}
                     </span>
                   </div>
                 </div>
@@ -170,12 +171,12 @@ export default function InvitedPeople() {
                   {user.has_deposited ? (
                     <>
                       <p className="text-sm font-black text-amber-600">+{user.reward_earned.toLocaleString('en-US')}</p>
-                      <p className="text-[9px] font-bold text-slate-400">ETB bonus</p>
+                      <p className="text-[9px] font-bold text-slate-400">{t[language].invitedPeople.etbBonus}</p>
                     </>
                   ) : (
                     <>
                       <p className="text-sm font-black text-slate-300">—</p>
-                      <p className="text-[9px] font-bold text-slate-400">Pending</p>
+                      <p className="text-[9px] font-bold text-slate-400">{t[language].invitedPeople.pending}</p>
                     </>
                   )}
                 </div>
