@@ -107,7 +107,7 @@ export default function SupportPage() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4" style={{ paddingBottom: showQuickQuestions ? '180px' : '80px' }}>
+      <div className="flex-1 overflow-y-auto px-3 py-4 space-y-4" style={{ paddingBottom: showQuickQuestions ? 'calc(220px + env(safe-area-inset-bottom, 0px))' : 'calc(140px + env(safe-area-inset-bottom, 0px))' }}>
         {messages.map((msg, i) => (
           <div key={i} className={`flex items-end gap-2 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
             {msg.role === 'assistant' && (
@@ -147,7 +147,7 @@ export default function SupportPage() {
 
       {/* Quick Questions */}
       {showQuickQuestions && (
-        <div className="fixed left-0 right-0 bg-white border-t border-slate-100 px-3 py-3 flex flex-col gap-2 z-10" style={{ bottom: '70px' }}>
+        <div className="fixed left-0 right-0 bg-white border-t border-slate-100 px-3 py-3 flex flex-col gap-2 z-10" style={{ bottom: 'calc(64px + 68px + env(safe-area-inset-bottom, 0px))' }}>
           <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Quick Questions</p>
           <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
             {QUICK_QUESTIONS.map(q => (
@@ -164,7 +164,7 @@ export default function SupportPage() {
       )}
 
       {/* Input Bar */}
-      <div className="fixed left-0 right-0 bottom-0 px-3 py-3 bg-white border-t border-slate-100 flex gap-2 items-center shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-20 pb-safe">
+      <div className="fixed left-0 right-0 px-3 py-3 bg-white border-t border-slate-100 flex gap-2 items-center shadow-[0_-4px_20px_rgba(0,0,0,0.05)] z-20" style={{ bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}>
         <input
           ref={inputRef}
           value={input}
