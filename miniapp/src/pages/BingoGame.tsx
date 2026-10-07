@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, ChevronDown, Gift, RefreshCw, Users, Clock, Trophy, Volume2, VolumeX, RotateCcw, LayoutGrid } from "lucide-react";
+import { ArrowLeft, ChevronDown, Gift, RefreshCw, Users, Clock, Trophy, Volume2, VolumeX, RotateCcw, LayoutGrid, Wand2, Hand } from "lucide-react";
 import WebApp from "@twa-dev/sdk";
 import { supabase } from "../lib/supabase";
 import { useGameStore } from "../store/gameStore";
@@ -120,6 +120,8 @@ export default function BingoGame() {
   const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [volume, setVolume] = useState(1.0);
+  const [autoMark, setAutoMark] = useState(true); // default: auto-mark called numbers
+  const [manuallyMarked, setManuallyMarked] = useState<Set<number>>(new Set());
 
   // Fetch and listen for active derash & status on stake selection screen
   useEffect(() => {
@@ -260,9 +262,7 @@ export default function BingoGame() {
     } catch(e) {}
   }, [soundEnabled, volume, audioAvailable]);
 
-  const replayLastCall = () => {
-    if (lastCallNum) playCallAudio(lastCallNum);
-  };
+
 
   useEffect(() => {
     if (!user?.telegram_id) return;
@@ -668,8 +668,8 @@ export default function BingoGame() {
                 })}
               </div>
               <div className="flex items-center gap-1.5">
-                <button onClick={replayLastCall} disabled={!lastCallNum} className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center active:scale-90 disabled:opacity-30">
-                  <RotateCcw size={13} className="text-blue-400" />
+                <button onClick={() => setAutoMark(a => !a)} className={`w-8 h-8 rounded-lg border flex items-center justify-center active:scale-90 ${autoMark ? 'bg-amber-500/20 border-amber-500/50' : 'bg-slate-800 border-slate-700'}`}>
+                  {autoMark ? <Wand2 size={13} className="text-amber-400" /> : <Hand size={13} className="text-slate-400" />}
                 </button>
                 <button onClick={() => { setSoundEnabled(s => !s); initWebAudio(); }}
                   className={`w-8 h-8 rounded-lg border flex items-center justify-center active:scale-90 ${soundEnabled ? 'bg-blue-500/20 border-blue-500/50' : 'bg-slate-800 border-slate-700'}`}>
@@ -717,13 +717,32 @@ export default function BingoGame() {
                       {Array.from({ length: 5 }).flatMap((_, r) =>
                         Array.from({ length: 5 }, (_, c) => {
                           const num = card.card_matrix[r][c];
-                          const isFree = num === 0, marked = isFree || called.includes(num), isLast = num === lastNum;
+                          const isFree = num === 0;
+                          const isCalled = called.includes(num);
+                          const isManualMarked = manuallyMarked.has(num);
+                          const marked = isFree || (autoMark ? isCalled : isManualMarked);
+                          const isLast = num === lastNum;
+                          const canTap = !autoMark && isCalled && !isFree;
                           return (
-                            <div key={`${r}-${c}`} className={`aspect-square flex items-center justify-center font-black text-base rounded-lg transition-all duration-300 ${
-                              isFree ? 'bg-yellow-400 text-yellow-900' :
-                              isLast ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
-                              marked ? 'bg-emerald-500 text-white' : 'bg-white text-[#1a2540]'
-                            }`}>{isFree ? '★' : num}</div>
+                            <div
+                              key={`${r}-${c}`}
+                              onClick={() => {
+                                if (!canTap) return;
+                                setManuallyMarked(prev => {
+                                  const next = new Set(prev);
+                                  if (next.has(num)) next.delete(num); else next.add(num);
+                                  return next;
+                                });
+                                if (WebApp?.HapticFeedback) WebApp.HapticFeedback.selectionChanged();
+                              }}
+                              className={`aspect-square flex items-center justify-center font-black text-base rounded-lg transition-all duration-200 select-none ${
+                                isFree ? 'bg-yellow-400 text-yellow-900' :
+                                isLast && autoMark ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
+                                marked ? 'bg-emerald-500 text-white' :
+                                canTap ? 'bg-white text-[#1a2540] active:scale-95 cursor-pointer ring-1 ring-blue-400/50' :
+                                'bg-white text-[#1a2540]'
+                              }`}
+                            >{isFree ? '★' : num}</div>
                           );
                         })
                       )}
