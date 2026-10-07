@@ -110,6 +110,7 @@ export default function BingoGame() {
 
   const urlStake = searchParams.get("stake");
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
+  const [showStakeDropdown, setShowStakeDropdown] = useState(false);
   const [maxPlayers, setMaxPlayers] = useState<number>(150);
   const [maxCartelasPerUser, setMaxCartelasPerUser] = useState<number>(2);
   const [myCartelas, setMyCartelas] = useState<Array<{ cartela_number: number; card_matrix: number[][] }>>([]);
@@ -863,11 +864,38 @@ export default function BingoGame() {
             <div className="flex items-center gap-2 mb-2">
               <button onClick={() => setSelectedStake(null)} className="h-9 w-10 flex items-center justify-center bg-white/5 border border-white/10 rounded-xl"><ArrowLeft size={18} className="text-white" /></button>
               <div className="relative">
-                <select value={selectedStake} onChange={e => { setSelectedStake(Number(e.target.value)); setGame(null); setMyCard(null); setMyCartelas([]); setActiveCartelaIdx(0); setTaken([]); }} disabled={myCartelas.length > 0}
-                  className="appearance-none bg-white/5 border border-white/10 rounded-xl pl-3 pr-7 h-9 text-white font-black text-sm outline-none cursor-pointer" style={{ colorScheme: "dark" }}>
-                  <option value={10}>10 ETB</option><option value={20}>20 ETB</option><option value={50}>50 ETB</option><option value={100}>100 ETB</option>
-                </select>
-                <ChevronDown size={12} className="text-white/40 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <button 
+                  onClick={() => {
+                    if (myCartelas.length === 0) setShowStakeDropdown(!showStakeDropdown);
+                  }}
+                  className={`flex items-center gap-2 bg-white/5 border border-white/10 rounded-xl pl-3 pr-3 h-9 text-white font-black text-sm transition-colors ${myCartelas.length > 0 ? 'opacity-50 cursor-not-allowed' : 'active:bg-white/10'}`}
+                >
+                  <span>{selectedStake} ETB</span>
+                  <ChevronDown size={14} className={`text-white/50 transition-transform ${showStakeDropdown ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {/* Dropdown Menu */}
+                {showStakeDropdown && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setShowStakeDropdown(false)} />
+                    <div className="absolute top-[calc(100%+8px)] left-0 w-32 bg-[#1a2540] border border-white/10 rounded-xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] z-50 overflow-hidden">
+                      {[10, 20, 50, 100].map(val => (
+                        <button
+                          key={val}
+                          onClick={() => {
+                            setSelectedStake(val);
+                            setGame(null); setMyCard(null); setMyCartelas([]); setActiveCartelaIdx(0); setTaken([]);
+                            setShowStakeDropdown(false);
+                          }}
+                          className={`w-full text-left px-4 py-3 flex items-center justify-between border-b border-white/5 last:border-0 hover:bg-white/5 active:bg-white/10 transition-colors ${selectedStake === val ? 'text-white' : 'text-slate-400'}`}
+                        >
+                          <span className="font-black text-sm">{val} ETB</span>
+                          {selectedStake === val && <div className="w-2 h-2 rounded-full bg-emerald-400" />}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
               <div className="flex-1 bg-white/5 border border-white/10 rounded-xl h-9 flex flex-col items-center justify-center">
                 <span className="text-[9px] text-white/30 font-bold leading-none">Game ID</span>
