@@ -67,17 +67,26 @@ export default function Home() {
         const p: Record<number, any> = {};
         data.forEach(g => { p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status, players: 0, _id: g.id }; });
 
-        // Fetch player counts for each active game
+        // Fetch unique player counts for each active game
         const ids = data.map(g => g.id);
         if (ids.length > 0) {
           const { data: playerRows } = await supabase
             .from('bingo_players')
-            .select('game_id')
+            .select('game_id, telegram_id')
             .in('game_id', ids);
           if (playerRows) {
-            const countMap: Record<string, number> = {};
-            playerRows.forEach((r: any) => { countMap[r.game_id] = (countMap[r.game_id] || 0) + 1; });
-            data.forEach(g => { if (p[g.stake]) p[g.stake].players = countMap[g.id] || 0; });
+            const uniquePlayersMap: Record<string, Set<string>> = {};
+            playerRows.forEach((r: any) => {
+              if (!uniquePlayersMap[r.game_id]) {
+                uniquePlayersMap[r.game_id] = new Set();
+              }
+              uniquePlayersMap[r.game_id].add(r.telegram_id);
+            });
+            data.forEach(g => {
+              if (p[g.stake]) {
+                p[g.stake].players = uniquePlayersMap[g.id] ? uniquePlayersMap[g.id].size : 0;
+              }
+            });
           }
         }
         setHomeGames(p);
