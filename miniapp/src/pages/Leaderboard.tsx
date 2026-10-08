@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Trophy, Users, Medal, RefreshCw, Crown, UserPlus } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 import { useGameStore } from '../store/gameStore';
+import { t } from '../lib/translations';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
@@ -26,12 +27,7 @@ interface Inviter {
   invites: number;
 }
 
-const PERIODS: { key: Period; label: string }[] = [
-  { key: 'daily', label: 'Daily' },
-  { key: 'weekly', label: 'Weekly' },
-  { key: 'monthly', label: 'Monthly' },
-  { key: 'all', label: 'All' },
-];
+
 
 const MEDAL_COLORS = ['#F59E0B', '#94A3B8', '#D97706'];
 const PODIUM_BG = [
@@ -57,7 +53,13 @@ function getAvatarColor(id: string) {
 }
 
 export default function Leaderboard() {
-  const { user } = useGameStore();
+  const { user, language } = useGameStore();
+  const PERIODS: { key: Period; label: string }[] = [
+    { key: 'daily', label: t[language].leaderboard.periodDaily },
+    { key: 'weekly', label: t[language].leaderboard.periodWeekly },
+    { key: 'monthly', label: t[language].leaderboard.periodMonthly },
+    { key: 'all', label: t[language].leaderboard.periodAll },
+  ];
   const [tab, setTab] = useState<Tab>('players');
   const [period, setPeriod] = useState<Period>('all');
   const [players, setPlayers] = useState<Player[]>([]);
@@ -123,8 +125,8 @@ export default function Leaderboard() {
               <Trophy size={20} className="text-yellow-500" />
             </div>
             <div>
-              <h1 className="text-lg font-black text-slate-800">Leaderboard</h1>
-              <p className="text-xs text-slate-400 font-medium">Top players of ADWA Bingo</p>
+              <h1 className="text-lg font-black text-slate-800">{t[language].leaderboard.title}</h1>
+              <p className="text-xs text-slate-400 font-medium">{t[language].leaderboard.subtitle}</p>
             </div>
           </div>
           <button
@@ -184,15 +186,15 @@ export default function Leaderboard() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
           <div className="w-10 h-10 border-4 border-yellow-400 border-t-transparent rounded-full animate-spin mb-3" />
-          <p className="text-slate-400 text-sm font-medium">Loading...</p>
+          <p className="text-slate-400 text-sm font-medium">{t[language].leaderboard.loading}</p>
         </div>
       ) : list.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 px-6 text-center">
           <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4">
             <Trophy size={32} className="text-slate-300" />
           </div>
-          <p className="font-black text-slate-600 text-base">No data yet</p>
-          <p className="text-slate-400 text-sm mt-1">Play games to appear here!</p>
+          <p className="font-black text-slate-600 text-base">{t[language].leaderboard.noData}</p>
+          <p className="text-slate-400 text-sm mt-1">{t[language].leaderboard.noDataDesc}</p>
         </div>
       ) : (
         <>
@@ -227,7 +229,7 @@ export default function Leaderboard() {
                         {p.first_name}
                       </p>
                       <p className={`font-bold text-center mt-0.5 ${isCenter ? 'text-yellow-600 text-xs' : 'text-slate-500 text-[10px]'}`}>
-                        {tab === 'players' ? `${(p as Player).wins} wins` : `${(p as Inviter).invites} invites`}
+                        {tab === 'players' ? `${(p as Player).wins} ${t[language].leaderboard.wins}` : `${(p as Inviter).invites} ${t[language].leaderboard.invites}`}
                       </p>
                       {/* Podium bar */}
                       <div className={`w-full mt-2 ${PODIUM_HEIGHTS[ri]} bg-gradient-to-b ${PODIUM_BG[ri]} rounded-t-xl opacity-80`} />
@@ -245,12 +247,12 @@ export default function Leaderboard() {
                 <div className="w-7 h-7 rounded-full bg-yellow-400 flex items-center justify-center">
                   <span className="text-white font-black text-xs">#{myRank}</span>
                 </div>
-                <span className="text-yellow-700 font-bold text-sm">Your Rank</span>
+                <span className="text-yellow-700 font-bold text-sm">{t[language].leaderboard.yourRank}</span>
               </div>
               <span className="text-yellow-600 text-xs font-bold">
                 {tab === 'players'
-                  ? `${players.find(p => p.telegram_id === myTelegramId)?.wins || 0} wins`
-                  : `${inviters.find(p => p.telegram_id === myTelegramId)?.invites || 0} invites`}
+                  ? `${players.find(p => p.telegram_id === myTelegramId)?.wins || 0} ${t[language].leaderboard.wins}`
+                  : `${inviters.find(p => p.telegram_id === myTelegramId)?.invites || 0} ${t[language].leaderboard.invites}`}
               </span>
             </div>
           )}
@@ -259,10 +261,10 @@ export default function Leaderboard() {
           <div className="mx-4 bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {/* Header */}
             <div className="flex items-center px-4 py-2.5 bg-slate-50 border-b border-gray-100">
-              <span className="w-8 text-[10px] font-black text-slate-400 uppercase">Rank</span>
-              <span className="flex-1 text-[10px] font-black text-slate-400 uppercase">Player</span>
+              <span className="w-8 text-[10px] font-black text-slate-400 uppercase">{t[language].leaderboard.rank}</span>
+              <span className="flex-1 text-[10px] font-black text-slate-400 uppercase">{t[language].leaderboard.player}</span>
               <span className="text-[10px] font-black text-slate-400 uppercase">
-                {tab === 'players' ? 'Wins' : 'Invites'}
+                {tab === 'players' ? t[language].leaderboard.wins : t[language].leaderboard.invites}
               </span>
             </div>
 
@@ -284,14 +286,14 @@ export default function Leaderboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className={`font-bold text-sm truncate ${isMine ? 'text-yellow-700' : 'text-slate-800'}`}>
-                      {p.first_name} {isMine && <span className="text-[10px] text-yellow-500">(You)</span>}
+                      {p.first_name} {isMine && <span className="text-[10px] text-yellow-500">{t[language].leaderboard.you}</span>}
                     </p>
                   </div>
                   <div className="text-right">
                     <p className={`font-black text-sm ${i === 0 ? 'text-yellow-500' : 'text-slate-600'}`}>
                       {tab === 'players' ? (p as Player).wins : (p as Inviter).invites}
                     </p>
-                    <p className="text-[10px] text-slate-400">{tab === 'players' ? 'wins' : 'invites'}</p>
+                    <p className="text-[10px] text-slate-400">{tab === 'players' ? t[language].leaderboard.wins : t[language].leaderboard.invites}</p>
                   </div>
                 </div>
               );
