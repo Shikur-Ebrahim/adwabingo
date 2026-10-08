@@ -3,6 +3,7 @@ import { MemoryRouter, Routes, Route, Link, useLocation, Navigate, useNavigate }
 import { Gamepad2, Wallet, Trophy, User, Headphones } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 import { useGameStore } from './store/gameStore';
+import { t } from './lib/translations';
 
 import Home from './pages/Home';
 import Deposit from './pages/Deposit';
@@ -54,7 +55,7 @@ function TelegramBackButton() {
 
 function Navigation() {
   const location = useLocation();
-  const { user, isProfileOpen, setProfileOpen } = useGameStore();
+  const { user, isProfileOpen, setProfileOpen, language } = useGameStore();
 
   // Hide the player bottom navigation if the user is an Admin or Worker
   if (user?.role === 'admin' || user?.role === 'worker') {
@@ -62,10 +63,10 @@ function Navigation() {
   }
 
   const navItems = [
-    { path: '/', label: 'Games', icon: Gamepad2 },
-    { path: '/deposit', label: 'Deposit', icon: Wallet },
-    { path: '/leaderboard', label: 'Leaderboard', icon: Trophy },
-    { path: '#', label: 'Profile', icon: User },
+    { path: '/', label: t[language].nav.games, icon: Gamepad2 },
+    { path: '/deposit', label: t[language].nav.deposit, icon: Wallet },
+    { path: '/leaderboard', label: t[language].nav.leaderboard, icon: Trophy },
+    { path: '#', label: t[language].nav.profile, icon: User },
   ];
 
   return (
@@ -73,7 +74,7 @@ function Navigation() {
       <div className="flex justify-around items-center h-16">
         {navItems.map((item) => {
           const Icon = item.icon;
-          const isProfileTab = item.label === 'Profile';
+          const isProfileTab = item.icon === User;
           const isActive = isProfileTab ? isProfileOpen : (!isProfileOpen && location.pathname === item.path);
           
           return (

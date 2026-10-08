@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useGameStore } from '../store/gameStore';
+import { t } from '../lib/translations';
 import ReactMarkdown from 'react-markdown';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -11,22 +12,23 @@ interface Message {
   content: string;
 }
 
-const QUICK_QUESTIONS = [
-  '👋 How do I start playing?',
-  '💰 How do I deposit?',
-  '🏆 How does BINGO work?',
-  '📤 How to withdraw?',
-  '🎯 What is Derash?',
-  '🃏 How many cartelas can I buy?',
-];
+
 
 export default function SupportPage() {
-  const { user } = useGameStore();
+  const { user, language } = useGameStore();
+  const QUICK_QUESTIONS = [
+    t[language].support.quick1,
+    t[language].support.quick2,
+    t[language].support.quick3,
+    t[language].support.quick4,
+    t[language].support.quick5,
+    t[language].support.quick6,
+  ];
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
-      content: `👋 **Hi ${user?.first_name || 'there'}!** Welcome to ADWA Bingo Support.\n\nHow can I help you today? You can ask me about rules, deposits, Derash, or anything else.`,
+      content: t[language].support.welcome.replace('{name}', user?.first_name || 'there'),
     },
   ]);
   const [input, setInput] = useState('');
@@ -99,8 +101,8 @@ export default function SupportPage() {
           <div className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></div>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-slate-900 font-bold text-[17px] leading-tight">ADWA Support</p>
-          <p className="text-emerald-600 text-[13px] font-medium leading-tight">Online</p>
+          <p className="text-slate-900 font-bold text-[17px] leading-tight">{t[language].support.title}</p>
+          <p className="text-emerald-600 text-[13px] font-medium leading-tight">{t[language].support.online}</p>
         </div>
       </div>
 
@@ -138,7 +140,7 @@ export default function SupportPage() {
       {/* Quick Questions */}
       {showQuickQuestions && (
         <div className="fixed left-0 right-0 bg-white border-t border-slate-100 px-3 py-3 flex flex-col gap-2 z-10" style={{ bottom: 'calc(64px + 68px + env(safe-area-inset-bottom, 0px))' }}>
-          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">Quick Questions</p>
+          <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest">{t[language].support.quickQuestions}</p>
           <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
             {QUICK_QUESTIONS.map(q => (
               <button
@@ -160,7 +162,7 @@ export default function SupportPage() {
           value={input}
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type your message..."
+          placeholder={t[language].support.placeholder}
           disabled={loading}
           className="flex-1 bg-slate-100 rounded-full px-4 py-3 text-sm text-slate-800 outline-none placeholder:text-slate-400 disabled:opacity-60 border border-slate-200"
         />

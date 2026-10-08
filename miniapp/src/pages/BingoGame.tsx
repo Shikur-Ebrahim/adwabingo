@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronDown, Gift, RefreshCw, Users, Clock, Trophy, Volume2,
 import WebApp from "@twa-dev/sdk";
 import { supabase } from "../lib/supabase";
 import { useGameStore } from "../store/gameStore";
+import { t } from '../lib/translations';
 
 const API = import.meta.env.VITE_API_URL || "/api";
 
@@ -106,7 +107,7 @@ const getWinningCells = (matrix: number[][], called: number[]) => {
 export default function BingoGame() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, fetchUser: refreshUser, subscribeToBalance } = useGameStore();
+  const { user, fetchUser: refreshUser, subscribeToBalance, language } = useGameStore();
 
   const urlStake = searchParams.get("stake");
   const [selectedStake, setSelectedStake] = useState<number | null>(urlStake ? Number(urlStake) : null);
@@ -751,7 +752,7 @@ export default function BingoGame() {
                       </div>
                       {/* Cartela Label */}
                       <div className="py-1 text-center bg-[#0a0f1e] border-t border-white/10">
-                        <p className="text-white/70 font-black text-[9px] tracking-widest uppercase">CARTELA # {card.cartela_number}</p>
+                        <p className="text-white/70 font-black text-[9px] tracking-widest uppercase">{t[language].bingo.cartelaNum} {card.cartela_number}</p>
                       </div>
                     </div>
                   </div>
@@ -790,7 +791,7 @@ export default function BingoGame() {
                   </div>
                   <h3 className="text-red-400 font-black text-lg uppercase tracking-widest mb-1 shadow-[0_0_10px_rgba(239,68,68,0.5)]">Match is active</h3>
                   <p className="text-white/80 text-[10px] font-bold text-center px-4 leading-relaxed uppercase tracking-wider">
-                    Please wait for<br/>the next match
+                    <span dangerouslySetInnerHTML={{ __html: t[language].bingo.waitNext }} />
                   </p>
                 </div>
               </div>
@@ -898,16 +899,16 @@ export default function BingoGame() {
                 )}
               </div>
               <div className="flex-1 bg-white/5 border border-white/10 rounded-xl h-9 flex flex-col items-center justify-center">
-                <span className="text-[9px] text-white/30 font-bold leading-none">Game ID</span>
+                <span className="text-[9px] text-white/30 font-bold leading-none">{t[language].bingo.gameId}</span>
                 <span className="text-sm font-black text-white leading-tight">{game.game_id}</span>
               </div>
             </div>
             <div className="grid grid-cols-5 gap-1.5">
-              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Stake</p><p className="text-xs font-black text-white">{game.stake} ETB</p></div>
-              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Players</p><p className="text-xs font-black text-emerald-400">{uniquePlayers}</p></div>
-              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Cartelas</p><p className="text-xs font-black text-cyan-400">{taken.length}</p></div>
-              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Derash</p><p className="text-xs font-black text-yellow-400">{game.prize_pool} ETB</p></div>
-              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">Status</p><p className={`text-xs font-black ${statusCls}`}>{statusTxt}</p></div>
+              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">{t[language].bingo.stake}</p><p className="text-xs font-black text-white">{game.stake} ETB</p></div>
+              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">{t[language].bingo.players}</p><p className="text-xs font-black text-emerald-400">{uniquePlayers}</p></div>
+              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">{t[language].bingo.cartelas}</p><p className="text-xs font-black text-cyan-400">{taken.length}</p></div>
+              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">{t[language].bingo.derash}</p><p className="text-xs font-black text-yellow-400">{game.prize_pool} ETB</p></div>
+              <div className="bg-white/5 border border-white/5 rounded-xl py-1.5 text-center"><p className="text-[8px] text-white/30 font-bold uppercase">{t[language].bingo.status}</p><p className={`text-xs font-black ${statusCls}`}>{statusTxt}</p></div>
             </div>
           </div>
         )}
@@ -938,25 +939,25 @@ export default function BingoGame() {
             {/* ── REMATCH ── */}
             {celebration.winner_name === 'REMATCH' ? (<>
               <div className="text-5xl mb-2 animate-spin">🔄</div>
-              <h2 className="text-3xl font-black text-orange-400 mb-2">REMATCH!</h2>
+              <h2 className="text-3xl font-black text-orange-400 mb-2">{t[language].bingo.rematch}</h2>
               <div className="bg-orange-500/10 rounded-2xl p-3 mb-3 w-full border border-orange-500/30">
-                <p className="text-orange-300 font-black text-sm mb-1">3+ Players hit BINGO at once!</p>
-                <p className="text-white/60 text-xs">Your stake has been refunded.</p>
-                <p className="text-white/40 text-xs mt-1">A new game is starting...</p>
+                <p className="text-orange-300 font-black text-sm mb-1">{t[language].bingo.tieDesc}</p>
+                <p className="text-white/60 text-xs">{t[language].bingo.stakeRefunded}</p>
+                <p className="text-white/40 text-xs mt-1">{t[language].bingo.newGameStarts}</p>
               </div>
 
             {/* ── 2-WAY TIE ── */}
             </>) : celebration.winner_name.includes(' & ') ? (<>
               <div className="text-5xl mb-2 animate-bounce">🤝</div>
-              <h2 className="text-3xl font-black text-yellow-400 mb-1">TIE!</h2>
-              <p className="text-white/50 text-[10px] uppercase tracking-widest mb-3">Prize split equally</p>
+              <h2 className="text-3xl font-black text-yellow-400 mb-1">{t[language].bingo.tieTitle}</h2>
+              <p className="text-white/50 text-[10px] uppercase tracking-widest mb-3">{t[language].bingo.prizeSplit}</p>
               <div className="bg-white/5 rounded-2xl p-3 mb-3 w-full border border-white/10">
                 <p className="text-white font-black text-lg">{celebration.winner_name}</p>
                 <div className="mt-2 inline-block bg-emerald-500/20 text-emerald-400 px-4 py-1 rounded-full font-black text-lg border border-emerald-500/30">
                   {celebration.winner_prize} ETB each
                 </div>
               </div>
-              <p className="text-white/30 text-[10px] font-bold animate-pulse">Returning to game...</p>
+              <p className="text-white/30 text-[10px] font-bold animate-pulse">{t[language].bingo.returning}</p>
 
             {/* ── SINGLE WINNER ── */}
             </>) : (<>
@@ -970,9 +971,9 @@ export default function BingoGame() {
 
               {/* Winner info */}
               <div className="w-full bg-white/5 rounded-2xl p-3 mb-3 border border-white/10">
-                <p className="text-white/50 text-[9px] uppercase tracking-widest mb-1">Winner</p>
+                <p className="text-white/50 text-[9px] uppercase tracking-widest mb-1">{t[language].bingo.winner}</p>
                 <p className="text-white font-black text-xl leading-tight">{celebration.winner_name}</p>
-                <p className="text-yellow-400/70 text-xs font-bold mt-0.5">Cartela #{celebration.winner_cartela}</p>
+                <p className="text-yellow-400/70 text-xs font-bold mt-0.5">{t[language].bingo.cartelaNum}{celebration.winner_cartela}</p>
                 <div className="mt-2 inline-block bg-emerald-500 text-white px-5 py-1 rounded-full font-black text-lg shadow-[0_0_15px_rgba(16,185,129,0.4)]">
                   🎉 {celebration.winner_prize} ETB
                 </div>
@@ -1017,7 +1018,7 @@ export default function BingoGame() {
               })()}
 
               {/* Auto-dismiss indicator */}
-              <p className="text-white/30 text-[10px] font-bold animate-pulse">Returning to game...</p>
+              <p className="text-white/30 text-[10px] font-bold animate-pulse">{t[language].bingo.returning}</p>
             </>)}
 
           </div>
@@ -1028,8 +1029,8 @@ export default function BingoGame() {
       {previewCartela && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" onClick={() => setPreviewCartela(null)}>
           <div className="bg-[#0f1829] border border-cyan-400/30 rounded-3xl p-5 w-full max-w-[320px] shadow-2xl" onClick={e => e.stopPropagation()}>
-            <h3 className="text-xl font-black text-white text-center mb-1">CARTELA #{previewCartela.seat}</h3>
-            <p className="text-cyan-300 text-[10px] uppercase font-bold text-center tracking-widest mb-4">Preview Your Numbers</p>
+            <h3 className="text-xl font-black text-white text-center mb-1">{t[language].bingo.cartelaNum}{previewCartela.seat}</h3>
+            <p className="text-cyan-300 text-[10px] uppercase font-bold text-center tracking-widest mb-4">{t[language].bingo.previewNumbers}</p>
             
             <div className="rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_15px_rgba(34,211,238,0.2)] mb-5">
               <div className="grid grid-cols-5">
@@ -1057,7 +1058,7 @@ export default function BingoGame() {
                 CANCEL
               </button>
               <button onClick={() => joinGame(previewCartela.seat, previewCartela.matrix)} className="flex-1 py-3 rounded-xl bg-emerald-500 text-white font-black active:scale-95 transition-transform shadow-[0_0_15px_rgba(16,185,129,0.5)] border border-emerald-400">
-                BUY ({game?.stake} ETB)
+                {t[language].bingo.buy.replace('{stake}', String(game?.stake || 0))}
               </button>
             </div>
           </div>
