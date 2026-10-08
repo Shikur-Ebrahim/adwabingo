@@ -273,7 +273,7 @@ export default function Deposit() {
           <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4">
             <p className="text-xs font-black text-blue-700 mb-2">{t[language].deposit.howToDeposit}</p>
             <ol className="space-y-1.5">
-              {['Send the exact amount to the account above.', 'Take a screenshot of the payment receipt.', 'Enter the amount & upload the screenshot below.', 'Submit and wait for admin approval.'].map((step, i) => (
+              {[t[language].deposit.step1, t[language].deposit.step2, t[language].deposit.step3, t[language].deposit.step4].map((step, i) => (
                 <li key={i} className="flex items-start space-x-2 text-xs text-blue-600 font-semibold">
                   <span className="w-4 h-4 bg-blue-500 text-white rounded-full flex items-center justify-center text-[9px] font-black flex-shrink-0 mt-0.5">{i + 1}</span>
                   <span>{step}</span>

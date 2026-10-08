@@ -148,8 +148,8 @@ export default function Leaderboard() {
             }`}
           >
             <Trophy size={13} />
-            Top Players
-          </button>
+            {t[language].leaderboard.topPlayers}
+            </button>
           <button
             onClick={() => handleTab('inviters')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-bold transition-all ${
@@ -159,8 +159,8 @@ export default function Leaderboard() {
             }`}
           >
             <UserPlus size={13} />
-            Top Inviters
-          </button>
+            {t[language].leaderboard.topInviters}
+            </button>
         </div>
       </div>
 

@@ -35,7 +35,7 @@ export const useGameStore = create<GameStore>()(
       isBlocked: false,
       isProfileOpen: false,
       isDarkMode: false,
-      language: 'en',
+      language: 'am',
       setLanguage: (lang) => set({ language: lang }),
       setProfileOpen: (isOpen: boolean) => set({ isProfileOpen: isOpen }),
       toggleDarkMode: () => set((state) => {
