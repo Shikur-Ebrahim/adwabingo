@@ -15,17 +15,43 @@ interface WithdrawalMethod {
 }
 
 const typeLabels: Record<string, string> = {
-  cbe: 'Commercial Bank of Ethiopia',
+    cbe: 'Commercial Bank of Ethiopia',
   boa: 'Bank of Abyssinia',
   telebirr: 'Telebirr',
   mpesa: 'M-Pesa',
+  cbebirr: 'CBE Birr',
+  ebirr: 'E-Birr',
+  awash: 'Awash Bank',
+  dashen: 'Dashen Bank',
+  amhara: 'Amhara Bank',
+  coop: 'Cooperative Bank of Oromia',
+  amole: 'Amole Wallet',
+  hello_cash: 'HelloCash',
+  nib: 'Nib International Bank',
+  wegagen: 'Wegagen Bank',
+  zemen: 'Zemen Bank',
+  oromia: 'Oromia Bank',
+  hibret: 'Hibret Bank',
 };
 
 const typeColors: Record<string, string> = {
-  cbe: 'from-yellow-400 to-yellow-600',
+    cbe: 'from-yellow-400 to-yellow-600',
   boa: 'from-blue-500 to-blue-700',
   telebirr: 'from-purple-500 to-purple-700',
   mpesa: 'from-green-500 to-green-700',
+  cbebirr: 'from-yellow-500 to-yellow-700',
+  ebirr: 'from-orange-500 to-orange-700',
+  awash: 'from-slate-500 to-slate-700',
+  dashen: 'from-blue-600 to-blue-800',
+  amhara: 'from-teal-500 to-teal-700',
+  coop: 'from-indigo-500 to-indigo-700',
+  amole: 'from-red-500 to-red-700',
+  hello_cash: 'from-green-400 to-green-600',
+  nib: 'from-purple-400 to-purple-600',
+  wegagen: 'from-slate-600 to-slate-800',
+  zemen: 'from-orange-400 to-orange-600',
+  oromia: 'from-teal-400 to-teal-600',
+  hibret: 'from-yellow-500 to-yellow-600',
 };
 
 const typeEmoji: Record<string, string> = {

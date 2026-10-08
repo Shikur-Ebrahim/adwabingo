@@ -15,17 +15,43 @@ interface WithdrawalMethod {
 }
 
 const methodNames = {
-  cbe: 'Commercial Bank of Ethiopia',
+    cbe: 'Commercial Bank of Ethiopia',
   boa: 'Bank of Abyssinia',
   telebirr: 'Telebirr',
   mpesa: 'M-Pesa',
+  cbebirr: 'CBE Birr',
+  ebirr: 'E-Birr',
+  awash: 'Awash Bank',
+  dashen: 'Dashen Bank',
+  amhara: 'Amhara Bank',
+  coop: 'Cooperative Bank of Oromia',
+  amole: 'Amole Wallet',
+  hello_cash: 'HelloCash',
+  nib: 'Nib International Bank',
+  wegagen: 'Wegagen Bank',
+  zemen: 'Zemen Bank',
+  oromia: 'Oromia Bank',
+  hibret: 'Hibret Bank',
 };
 
 const methodColors: Record<string, string> = {
-  cbe: 'bg-yellow-50 text-yellow-700 border-yellow-100',
+    cbe: 'bg-yellow-50 text-yellow-700 border-yellow-100',
   boa: 'bg-blue-50 text-blue-700 border-blue-100',
   telebirr: 'bg-purple-50 text-purple-700 border-purple-100',
   mpesa: 'bg-green-50 text-green-700 border-green-100',
+  cbebirr: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+  ebirr: 'bg-orange-50 text-orange-700 border-orange-100',
+  awash: 'bg-slate-50 text-slate-700 border-slate-100',
+  dashen: 'bg-blue-100 text-blue-800 border-blue-200',
+  amhara: 'bg-teal-50 text-teal-700 border-teal-100',
+  coop: 'bg-indigo-50 text-indigo-700 border-indigo-100',
+  amole: 'bg-red-50 text-red-700 border-red-100',
+  hello_cash: 'bg-green-100 text-green-800 border-green-200',
+  nib: 'bg-purple-100 text-purple-800 border-purple-200',
+  wegagen: 'bg-slate-100 text-slate-800 border-slate-200',
+  zemen: 'bg-orange-100 text-orange-800 border-orange-200',
+  oromia: 'bg-teal-100 text-teal-800 border-teal-200',
+  hibret: 'bg-yellow-50 text-yellow-800 border-yellow-200',
 };
 
 export default function AdminWithdrawalMethods() {

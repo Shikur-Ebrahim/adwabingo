@@ -17,10 +17,23 @@ interface DepositMethod {
 }
 
 const methodNames = {
-  cbe: 'Commercial Bank of Ethiopia',
+    cbe: 'Commercial Bank of Ethiopia',
   boa: 'Bank of Abyssinia',
   telebirr: 'Telebirr',
   mpesa: 'M-Pesa',
+  cbebirr: 'CBE Birr',
+  ebirr: 'E-Birr',
+  awash: 'Awash Bank',
+  dashen: 'Dashen Bank',
+  amhara: 'Amhara Bank',
+  coop: 'Cooperative Bank of Oromia',
+  amole: 'Amole Wallet',
+  hello_cash: 'HelloCash',
+  nib: 'Nib International Bank',
+  wegagen: 'Wegagen Bank',
+  zemen: 'Zemen Bank',
+  oromia: 'Oromia Bank',
+  hibret: 'Hibret Bank',
 };
 
 export default function AdminDepositMethods() {

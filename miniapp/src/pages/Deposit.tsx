@@ -17,17 +17,43 @@ interface DepositMethod {
 }
 
 const typeLabels: Record<string, string> = {
-  cbe: 'Commercial Bank of Ethiopia',
+    cbe: 'Commercial Bank of Ethiopia',
   boa: 'Bank of Abyssinia',
   telebirr: 'Telebirr',
   mpesa: 'M-Pesa',
+  cbebirr: 'CBE Birr',
+  ebirr: 'E-Birr',
+  awash: 'Awash Bank',
+  dashen: 'Dashen Bank',
+  amhara: 'Amhara Bank',
+  coop: 'Cooperative Bank of Oromia',
+  amole: 'Amole Wallet',
+  hello_cash: 'HelloCash',
+  nib: 'Nib International Bank',
+  wegagen: 'Wegagen Bank',
+  zemen: 'Zemen Bank',
+  oromia: 'Oromia Bank',
+  hibret: 'Hibret Bank',
 };
 
 const typeBadge: Record<string, string> = {
-  cbe: 'bg-yellow-100 text-yellow-700',
+    cbe: 'bg-yellow-100 text-yellow-700',
   boa: 'bg-blue-100 text-blue-700',
   telebirr: 'bg-purple-100 text-purple-700',
   mpesa: 'bg-green-100 text-green-700',
+  cbebirr: 'bg-yellow-200 text-yellow-800',
+  ebirr: 'bg-orange-100 text-orange-700',
+  awash: 'bg-slate-100 text-slate-700',
+  dashen: 'bg-blue-200 text-blue-800',
+  amhara: 'bg-teal-100 text-teal-700',
+  coop: 'bg-indigo-100 text-indigo-700',
+  amole: 'bg-red-100 text-red-700',
+  hello_cash: 'bg-green-200 text-green-800',
+  nib: 'bg-purple-200 text-purple-800',
+  wegagen: 'bg-slate-200 text-slate-800',
+  zemen: 'bg-orange-200 text-orange-800',
+  oromia: 'bg-teal-200 text-teal-800',
+  hibret: 'bg-yellow-100 text-yellow-800',
 };
 
 type Step = 'list' | 'form' | 'success' | 'pending_status';
