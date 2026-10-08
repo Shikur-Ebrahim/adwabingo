@@ -482,7 +482,7 @@ export default function BingoGame() {
       </div>
       <div className="flex items-center space-x-4 text-right">
         <div className="flex flex-col items-center"><Gift size={14} className="text-purple-400 mb-0.5" /><p className="text-xs font-bold text-slate-300">{fm(user?.bonus_balance)} ETB</p></div>
-        <div className="flex flex-col items-end"><p className="text-[11px] text-slate-400">Wallet</p><p className="text-sm font-bold text-green-400">{fm(user?.main_balance)} ETB</p></div>
+        <div className="flex flex-col items-end"><p className="text-[11px] text-slate-400">{t[language].bingo.wallet}</p><p className="text-sm font-bold text-green-400">{fm(user?.main_balance)} ETB</p></div>
       </div>
     </div>
   );
@@ -516,7 +516,7 @@ export default function BingoGame() {
             <img src="/hero.png" alt="ADWA Bingo" className="max-w-[340px] h-[90px] object-contain" />
           </div>
 
-          <p className="text-center text-slate-400 text-[10px] uppercase tracking-widest font-bold pt-3 pb-1">Select Stake & Win Big</p>
+          <p className="text-center text-slate-400 text-[10px] uppercase tracking-widest font-bold pt-3 pb-1">{t[language].bingo.selectStakeWinBig}</p>
           
           <div className="flex-1 grid grid-cols-2 gap-3 px-4 pb-2 min-h-0">
             {STAKE_OPTIONS.map(opt => {
@@ -544,7 +544,7 @@ export default function BingoGame() {
                   
                   {/* Top: STAKE */}
                   <div className="flex-1 flex flex-col items-center justify-center w-full relative z-10 pt-2">
-                    <span className="text-slate-500 font-bold text-[8px] uppercase tracking-widest">Stake</span>
+                    <span className="text-slate-500 font-bold text-[8px] uppercase tracking-widest">{t[language].bingo.stake}</span>
                     <span className="text-slate-800 font-black text-4xl leading-none mt-1">{opt.value}</span>
                     <span className="text-slate-500 font-bold text-[8px] uppercase tracking-widest mt-1">ETB</span>
                   </div>
@@ -552,15 +552,15 @@ export default function BingoGame() {
                   {/* Middle: Derash | Players | Status — 3 columns */}
                   <div className="w-full bg-slate-50 border-t border-b border-slate-100 flex h-[35px] shrink-0 relative z-10">
                     <div className="flex-1 flex flex-col items-center justify-center border-r border-slate-100">
-                      <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">Derash</span>
+                      <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">{t[language].bingo.derash}</span>
                       <span className={`text-[10px] font-black text-yellow-600 ${hasGame ? 'animate-pulse' : ''}`}>{pool} ETB</span>
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center border-r border-slate-100">
-                      <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">Players</span>
+                      <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">{t[language].bingo.players}</span>
                       <span className="text-[10px] font-black text-emerald-500">{players}</span>
                     </div>
                     <div className="flex-1 flex flex-col items-center justify-center">
-                      <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">Status</span>
+                      <span className="text-slate-400 text-[7px] font-bold uppercase tracking-wider">{t[language].bingo.status}</span>
                       <span className={`text-[10px] font-black ${statusCls}`}>{statusTxt}</span>
                     </div>
                   </div>
@@ -568,9 +568,9 @@ export default function BingoGame() {
                   {/* Bottom: Action */}
                   <div className="w-full h-[30px] flex items-center justify-center relative z-10 bg-white">
                     {isWaiting ? (
-                      <span className="text-orange-500 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">🔥 Join Now</span>
+                      <span className="text-orange-500 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">🔥 {t[language].bingo.joinNow}</span>
                     ) : (
-                      <span className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">Start Match</span>
+                      <span className="text-slate-400 text-[9px] font-bold uppercase tracking-wider">{t[language].bingo.startMatch}</span>
                     )}
                   </div>
                 </button>
@@ -578,7 +578,7 @@ export default function BingoGame() {
             })}
           </div>
           <div className="pb-3 flex justify-center shrink-0 relative z-10 mt-1">
-            <button onClick={() => navigate(-1)} className="px-6 py-1.5 bg-slate-100 border border-slate-200 rounded-full text-slate-500 text-[10px] font-bold uppercase tracking-widest active:scale-95 shadow-sm">← Back to Games</button>
+            <button onClick={() => navigate(-1)} className="px-6 py-1.5 bg-slate-100 border border-slate-200 rounded-full text-slate-500 text-[10px] font-bold uppercase tracking-widest active:scale-95 shadow-sm">← {t[language].bingo.backToGames}</button>
           </div>
         </div>
       </div>
@@ -591,9 +591,9 @@ export default function BingoGame() {
   if (!game) return (
     <div className="h-[calc(100dvh-80px)] w-full bg-[#05081a] flex flex-col items-center justify-center text-white gap-4">
       <span className="text-5xl">🎱</span>
-      <p className="font-bold text-lg">Preparing next game...</p>
-      <button onClick={fetchState} className="px-6 py-2.5 bg-orange-500 text-black font-black rounded-full text-sm">Refresh</button>
-      <button onClick={() => setSelectedStake(null)} className="text-white/40 text-xs underline mt-2">Change Stake</button>
+      <p className="font-bold text-lg">{t[language].bingo.preparingNext}</p>
+      <button onClick={fetchState} className="px-6 py-2.5 bg-orange-500 text-black font-black rounded-full text-sm">{t[language].bingo.refresh}</button>
+      <button onClick={() => setSelectedStake(null)} className="text-white/40 text-xs underline mt-2">{t[language].bingo.changeStake}</button>
     </div>
   );
 

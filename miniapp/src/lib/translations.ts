@@ -45,8 +45,16 @@ export const t = {
       cartelas: 'Cartelas',
       derash: 'Derash',
       status: 'Status',
-      gameId: 'Game ID',
-      you: '(You)'
+            gameId: 'Game ID',
+      you: '(You)',
+      selectStakeWinBig: 'Select Stake & Win Big',
+      joinNow: 'Join Now',
+      startMatch: 'Start Match',
+      backToGames: 'Back to Games',
+      preparingNext: 'Preparing next game...',
+      refresh: 'Refresh',
+      changeStake: 'Change Stake',
+      wallet: 'Wallet'
     },
     support: {
       quick1: '👋 How do I start playing?',
@@ -415,8 +423,16 @@ export const t = {
       cartelas: 'ካርቴላዎች',
       derash: 'ደራሽ',
       status: 'ሁኔታ',
-      gameId: 'የጨዋታ መለያ',
-      you: '(እርስዎ)'
+            gameId: 'የጨዋታ መለያ',
+      you: '(እርስዎ)',
+      selectStakeWinBig: 'መጠን ይምረጡ እና ያሸንፉ',
+      joinNow: 'አሁኑኑ ይቀላቀሉ',
+      startMatch: 'ጨዋታ ጀምር',
+      backToGames: 'ወደ ጨዋታዎች ተመለስ',
+      preparingNext: 'ቀጣዩን ጨዋታ እያዘጋጀን ነው...',
+      refresh: 'አድስ (Refresh)',
+      changeStake: 'መጠን ቀይር',
+      wallet: 'ዋና ሂሳብ'
     },
     support: {
       quick1: '👋 እንዴት መጫወት እጀምራለሁ?',

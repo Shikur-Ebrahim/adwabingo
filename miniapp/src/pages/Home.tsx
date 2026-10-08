@@ -262,9 +262,7 @@ export default function Home() {
             >
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
               <MessageCircle size={15} className="text-violet-600 flex-shrink-0" />
-              <span className="text-violet-800 font-bold text-[13px] leading-tight">
-                Hello, do you need help? 👋
-              </span>
+              <span className="text-violet-800 font-bold text-[13px] leading-tight">{t[language].home.supportBanner}</span>
             </button>
             {/* Dismiss X */}
             <button
@@ -315,9 +313,7 @@ export default function Home() {
             <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1 flex items-center"><span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-1"></span> {t[language].home.liveBingo}</span>
             <span className="text-yellow-400 font-black text-3xl mb-1">{t[language].home.joinNextGame}</span>
             <span className="text-white/60 text-xs font-semibold mb-4">{t[language].home.pickCartela}</span>
-            <div className="bg-yellow-400 text-yellow-950 px-8 py-2 rounded-full font-black text-sm shadow-[0_0_15px_rgba(250,204,21,0.4)]">
-              OPEN CARTELA →
-            </div>
+            <div className="bg-yellow-400 text-yellow-950 px-8 py-2 rounded-full font-black text-sm shadow-[0_0_15px_rgba(250,204,21,0.4)]">{t[language].home.openCartela}</div>
           </div>
         </Link>
       </div>
