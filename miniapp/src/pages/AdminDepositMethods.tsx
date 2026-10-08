@@ -266,7 +266,7 @@ export default function AdminDepositMethods() {
                 </button>
 
                 {showTypeSelect && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white  rounded-xl shadow-xl border border-gray-100  z-50 overflow-hidden">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 z-50 overflow-y-auto max-h-60">
                     <div className="flex flex-col">
                       {(Object.entries(methodNames)).map(([key, name]) => (
                         <button
