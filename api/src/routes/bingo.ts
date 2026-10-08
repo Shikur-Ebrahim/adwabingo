@@ -213,10 +213,10 @@ router.get('/winners', validateTelegramAuth, async (req, res) => {
   
   const { data: players } = await supabase.from('bingo_players').select('first_name, cartela_number, card_matrix').eq('game_id', game_id);
   
-  const checkWin = (matrix, called) => {
+  const checkWin = (matrix: number[][], called: number[]) => {
     if (!matrix || !called) return false;
     for (let r = 0; r < 5; r++) {
-      if (matrix[r].every(n => n === 0 || called.includes(n))) return true;
+      if (matrix[r].every((n: number) => n === 0 || called.includes(n))) return true;
     }
     for (let c = 0; c < 5; c++) {
       let win = true;
