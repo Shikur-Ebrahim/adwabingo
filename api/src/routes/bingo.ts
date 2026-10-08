@@ -205,6 +205,36 @@ router.get('/card', validateTelegramAuth, async (req, res) => {
   const { data } = await supabase.from('bingo_players').select('card_matrix').eq('game_id', game_id).eq('cartela_number', cartela).maybeSingle();
   res.json({ matrix: data?.card_matrix || null });
 });
+
+router.get('/winners', validateTelegramAuth, async (req, res) => {
+  const { game_id } = req.query;
+  const { data: game } = await supabase.from('bingo_games').select('called_numbers').eq('id', game_id).maybeSingle();
+  if (!game) { res.json({ winners: [] }); return; }
+  
+  const { data: players } = await supabase.from('bingo_players').select('first_name, cartela_number, card_matrix').eq('game_id', game_id);
+  
+  const checkWin = (matrix, called) => {
+    if (!matrix || !called) return false;
+    for (let r = 0; r < 5; r++) {
+      if (matrix[r].every(n => n === 0 || called.includes(n))) return true;
+    }
+    for (let c = 0; c < 5; c++) {
+      let win = true;
+      for (let r = 0; r < 5; r++) { if (matrix[r][c] !== 0 && !called.includes(matrix[r][c])) win = false; }
+      if (win) return true;
+    }
+    let d1 = true, d2 = true;
+    for (let i = 0; i < 5; i++) {
+      if (matrix[i][i] !== 0 && !called.includes(matrix[i][i])) d1 = false;
+      if (matrix[i][4-i] !== 0 && !called.includes(matrix[i][4-i])) d2 = false;
+    }
+    return d1 || d2;
+  };
+
+  const winners = (players || []).filter(p => checkWin(p.card_matrix, game.called_numbers));
+  res.json({ winners });
+});
+
 router.get('/tts', async (req, res) => {
   try {
     const text = req.query.text;
