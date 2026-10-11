@@ -72,6 +72,36 @@ router.get('/support-contact', validateTelegramAuth, async (req: AuthRequest, re
   });
 });
 
+// GET /api/player/transfer/lookup — verify recipient before showing confirmation
+router.get('/transfer/lookup', validateTelegramAuth, async (req: AuthRequest, res) => {
+  const senderTelegramId = req.telegramUser!.id.toString();
+  const recipient_id = (req.query.recipient_id as string || '').trim();
+  if (!recipient_id) {
+    res.status(400).json({ error: 'Recipient Telegram ID is required.' });
+    return;
+  }
+  if (recipient_id === senderTelegramId) {
+    res.status(400).json({ error: 'You cannot transfer to yourself.' });
+    return;
+  }
+  const { data: recipient, error } = await supabase
+    .from('users')
+    .select('telegram_id, first_name, username')
+    .eq('telegram_id', recipient_id)
+    .maybeSingle();
+
+  if (error || !recipient) {
+    res.status(404).json({ error: 'Recipient not found. Please check the Telegram ID.' });
+    return;
+  }
+
+  res.json({
+    recipient_telegram_id: recipient.telegram_id,
+    first_name: recipient.first_name || 'User',
+    username: recipient.username || '',
+  });
+});
+
 // POST /api/player/transfer — transfer main_balance between users
 router.post('/transfer', validateTelegramAuth, async (req: AuthRequest, res) => {
   const senderTelegramId = req.telegramUser!.id.toString();

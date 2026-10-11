@@ -30,8 +30,8 @@ router.get('/players', async (req: AuthRequest, res) => {
     // Use aggregated columns on users table
     const { data } = await supabase
       .from('users')
-      .select('telegram_id, first_name, username, total_wins, total_games')
-      .eq('role', 'user')
+      .select('telegram_id, first_name, username, total_wins')
+      .gt('total_wins', 0)
       .order('total_wins', { ascending: false })
       .limit(50);
     topPlayers = (data || []).map((u, i) => ({
@@ -40,7 +40,7 @@ router.get('/players', async (req: AuthRequest, res) => {
       first_name: u.first_name || 'User',
       username: u.username || '',
       wins: u.total_wins || 0,
-      games: u.total_games || 0,
+      games: 0,
     }));
   } else {
     // Query bingo_games for wins in the period

@@ -61,7 +61,7 @@ export default function Leaderboard() {
     { key: 'all', label: t[language].leaderboard.periodAll },
   ];
   const [tab, setTab] = useState<Tab>('players');
-  const [period, setPeriod] = useState<Period>('all');
+  const [period, setPeriod] = useState<Period>('weekly');
   const [players, setPlayers] = useState<Player[]>([]);
   const [inviters, setInviters] = useState<Inviter[]>([]);
   const [myRank, setMyRank] = useState<number | null>(null);
