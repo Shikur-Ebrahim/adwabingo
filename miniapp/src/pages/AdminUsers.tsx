@@ -15,7 +15,6 @@ interface User {
   status: string;
   main_balance: number;
   bonus_balance: number;
-  total_games: number;
   total_wins: number;
   totalDeposited: number;
   depositCount: number;

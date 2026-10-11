@@ -35,7 +35,7 @@ export const useGameStore = create<GameStore>()(
       isBlocked: false,
       isProfileOpen: false,
       isDarkMode: false,
-      language: 'am',
+      language: 'en',
       setLanguage: (lang) => set({ language: lang }),
       setProfileOpen: (isOpen: boolean) => set({ isProfileOpen: isOpen }),
       toggleDarkMode: () => set((state) => {
@@ -59,7 +59,6 @@ export const useGameStore = create<GameStore>()(
                 main_balance: 0,
                 bonus_balance: 0,
                 role: 'user',
-                total_games: 0,
                 total_wins: 0
               }
             });
