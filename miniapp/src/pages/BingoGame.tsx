@@ -281,90 +281,76 @@ export default function BingoGame() {
     };
   }, [unlockAudio]);
 
-  // Preload celebration win sound into memory and WebAudio cache so it plays with 0ms latency
-  useEffect(() => {
-    try {
-      const preWin = new Audio('/audio/bingo/bingo_win.mp3');
-      preWin.preload = 'auto';
-    } catch(e) {}
+  // ── RAW ARRAYBUFFER CACHE: fetched at startup, no AudioContext needed yet ──────────────────
+  const rawBufferCache = useRef<Map<string, ArrayBuffer>>(new Map());
 
-    try {
-      fetch('/audio/bingo/bingo_win.mp3')
-        .then(r => r.arrayBuffer())
-        .then(ab => {
-          if (!audioCtxRef.current) {
-            const AC = window.AudioContext || (window as any).webkitAudioContext;
-            if (AC) audioCtxRef.current = new AC();
-          }
-          if (audioCtxRef.current) {
-            audioCtxRef.current.decodeAudioData(ab).then(buf => {
-              audioBufferCache.current.set('/audio/bingo/bingo_win.mp3', buf);
-            }).catch(() => {});
-          }
-        }).catch(() => {});
-    } catch(e) {}
-  }, []);
-
-  // Preload all 75 bingo calls in the background so mobile playback has 0ms latency and 0 packet loss
+  // Pre-fetch ALL 75 call files + bingo_win as raw ArrayBuffers immediately on mount.
+  // We do NOT need AudioContext for fetching. Decoding happens on-demand when we need to play.
   useEffect(() => {
     let cancel = false;
-    const preloadCalls = async () => {
-      await new Promise(r => setTimeout(r, 600));
-      for (let i = 1; i <= 75; i++) {
+    const preload = async () => {
+      const allSrcs = [
+        ...Array.from({ length: 75 }, (_, i) => getAudioSrc(i + 1)),
+        '/audio/bingo/bingo_win.mp3',
+      ];
+      // Stagger: 3 files concurrently, small gap between batches
+      for (let i = 0; i < allSrcs.length; i += 3) {
         if (cancel) break;
-        const src = getAudioSrc(i);
-        if (!audioBufferCache.current.has(src)) {
-          try {
-            const res = await fetch(src);
-            if (res.ok) {
-              const ab = await res.arrayBuffer();
-              if (audioCtxRef.current) {
-                const buf = await audioCtxRef.current.decodeAudioData(ab);
-                audioBufferCache.current.set(src, buf);
-              }
-            }
-          } catch(e) {}
-          if (i % 3 === 0) await new Promise(r => setTimeout(r, 60));
-        }
+        await Promise.all(
+          allSrcs.slice(i, i + 3).map(async (src) => {
+            if (rawBufferCache.current.has(src)) return;
+            try {
+              const res = await fetch(src);
+              if (res.ok) rawBufferCache.current.set(src, await res.arrayBuffer());
+            } catch {}
+          })
+        );
+        await new Promise(r => setTimeout(r, 50));
       }
     };
-    preloadCalls();
+    preload();
     return () => { cancel = true; };
   }, []);
 
-  const playViaWebAudio = useCallback(async (src: string, customGain?: number, rate: number = 1.3) => {
+  // ── CORE WEBAUDIO PLAYER: decodes from raw cache or fetches fresh ────────────────────────
+  const playViaWebAudio = useCallback(async (src: string, customGain?: number) => {
     try {
       if (!audioCtxRef.current) {
         const AC = window.AudioContext || (window as any).webkitAudioContext;
         if (AC) audioCtxRef.current = new AC();
       }
-      if (audioCtxRef.current?.state === 'suspended') {
-        await audioCtxRef.current.resume();
-      }
-      if (!audioCtxRef.current) return;
+      const ctx = audioCtxRef.current;
+      if (!ctx) return;
+      if (ctx.state === 'suspended') await ctx.resume();
 
-      let buf = audioBufferCache.current.get(src);
-      if (!buf) {
-        const res = await fetch(src);
-        if (!res.ok) return;
-        buf = await audioCtxRef.current.decodeAudioData(await res.arrayBuffer());
-        audioBufferCache.current.set(src, buf);
+      // Use pre-decoded cache if available
+      let audioBuf = audioBufferCache.current.get(src);
+      if (!audioBuf) {
+        // Try raw buffer cache first (already fetched), else fetch fresh
+        let raw = rawBufferCache.current.get(src);
+        if (!raw) {
+          const res = await fetch(src);
+          if (!res.ok) return;
+          raw = await res.arrayBuffer();
+          rawBufferCache.current.set(src, raw);
+        }
+        audioBuf = await ctx.decodeAudioData(raw.slice(0)); // .slice(0) = copy so buffer is not detached
+        audioBufferCache.current.set(src, audioBuf);
       }
 
-      const source = audioCtxRef.current.createBufferSource();
-      const gainNode = audioCtxRef.current.createGain();
+      const source = ctx.createBufferSource();
+      const gainNode = ctx.createGain();
       gainNode.gain.value = customGain !== undefined ? customGain : Math.min(2.0, volume * 1.5);
-      source.buffer = buf;
-      source.playbackRate.value = rate;
+      source.buffer = audioBuf;
       source.connect(gainNode);
-      gainNode.connect(audioCtxRef.current.destination);
+      gainNode.connect(ctx.destination);
       source.start(0);
     } catch(e) {
-      console.warn('WebAudio fallback error:', e);
+      console.warn('WebAudio error:', e);
     }
   }, [volume]);
 
-  // Dedicated caller sound player: independently manages call audio so it never freezes or clips
+  // ── CALLER SOUND: always creates a FRESH Audio element per call (most reliable on mobile) ──
   const playCallAudio = useCallback((num: number) => {
     if (!soundEnabled) return;
     const cleanNum = Number(num);
@@ -377,74 +363,51 @@ export default function BingoGame() {
     const src = getAudioSrc(cleanNum);
     unlockAudio();
 
-    // Priority 1: If preloaded in Web Audio cache, play immediately (0ms delay, perfectly snappy)
-    if (audioBufferCache.current.has(src) && audioCtxRef.current && audioCtxRef.current.state === 'running') {
-      playViaWebAudio(src, undefined, 1.3);
+    // Stop whatever is currently playing
+    try { callAudioRef.current?.pause(); } catch {}
+
+    // If AudioContext is ready and we have the decoded buffer — instant 0ms play
+    if (audioCtxRef.current?.state === 'running' && audioBufferCache.current.has(src)) {
+      playViaWebAudio(src);
       return;
     }
 
-    // Priority 2: Use reusable HTMLAudioElement with 1.3x speed
+    // Fallback: fresh HTMLAudioElement (most reliable cross-browser)
     try {
-      if (!callAudioRef.current) {
-        callAudioRef.current = new Audio();
-      }
-      const audio = callAudioRef.current;
-      try { audio.pause(); } catch(e) {}
-      audio.src = src;
-      audio.playbackRate = 1.3;
+      const audio = new Audio(src);
       audio.volume = Math.min(1.0, Math.max(0.0, volume));
-      audio.onerror = () => { playViaWebAudio(src, undefined, 1.3); };
-
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          playViaWebAudio(src, undefined, 1.3);
-        });
-      }
+      audio.onerror = () => { playViaWebAudio(src); };
+      callAudioRef.current = audio;
+      const p = audio.play();
+      if (p !== undefined) p.catch(() => { playViaWebAudio(src); });
     } catch {
-      playViaWebAudio(src, undefined, 1.3);
+      playViaWebAudio(src);
     }
   }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
 
-  // Dedicated celebration / special sound player: plays triumphant fanfare + vocal "Bingo!", NEVER off!
-  const playSpecial = useCallback((name: string) => {
-    const src = `/audio/bingo/${name}.mp3`;
-    unlockAudio();
-
-    // 1. Play triumphant Web Audio fanfare (always loud, 0ms latency, plays even if caller sound is off)
-    if (audioCtxRef.current) {
-      if (audioCtxRef.current.state === 'suspended') {
-        audioCtxRef.current.resume().catch(() => {});
-      }
-      playBingoFanfare(audioCtxRef.current);
+  // ── CELEBRATION: synthesized fanfare ALWAYS plays first (needs no pre-loaded files) ────────
+  const playSpecial = useCallback((_name: string) => {
+    // Always create AudioContext if missing (celebration fires after user gesture = safe)
+    if (!audioCtxRef.current) {
+      try {
+        const AC = window.AudioContext || (window as any).webkitAudioContext;
+        if (AC) audioCtxRef.current = new AC();
+      } catch {}
     }
+    const ctx = audioCtxRef.current;
 
-    // 2. Play vocal audio ("Bingo!") at full 100% volume
-    try {
-      if (callAudioRef.current) {
-        try { callAudioRef.current.pause(); } catch(e) {}
-      }
+    // Resume if suspended
+    if (ctx?.state === 'suspended') ctx.resume().catch(() => {});
 
-      if (!specialAudioRef.current) {
-        specialAudioRef.current = new Audio();
-      }
-      const audio = specialAudioRef.current;
-      try { audio.pause(); } catch(e) {}
-      audio.src = src;
-      audio.volume = 1.0; // Celebration is always full 100% volume
-      audio.playbackRate = 1.0;
-      audio.onerror = () => { playViaWebAudio(src, 1.5, 1.0); };
+    // 1. Synthesized fanfare — works 100% offline, zero latency, ignores all mute states
+    if (ctx) playBingoFanfare(ctx);
 
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          playViaWebAudio(src, 1.5, 1.0);
-        });
-      }
-    } catch {
-      playViaWebAudio(src, 1.5, 1.0);
-    }
-  }, [unlockAudio, playViaWebAudio]);
+    // 2. Stop call audio
+    try { callAudioRef.current?.pause(); } catch {}
+
+    // 3. Play bingo_win.mp3 vocal at full volume via WebAudio (uses pre-fetched raw buffer)
+    playViaWebAudio('/audio/bingo/bingo_win.mp3', 1.5);
+  }, [playViaWebAudio]);
 
 
 
