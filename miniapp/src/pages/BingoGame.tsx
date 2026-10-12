@@ -285,7 +285,7 @@ export default function BingoGame() {
   }, []);
 
   // ── CORE WEBAUDIO PLAYER: decodes from raw cache or fetches fresh ────────────────────────
-  const playViaWebAudio = useCallback(async (src: string, customGain?: number, rate: number = 1.35) => {
+  const playViaWebAudio = useCallback(async (src: string, customGain?: number) => {
     try {
       if (!audioCtxRef.current) {
         const AC = window.AudioContext || (window as any).webkitAudioContext;
@@ -315,7 +315,6 @@ export default function BingoGame() {
       const gainNode = ctx.createGain();
       gainNode.gain.value = customGain !== undefined ? customGain : Math.min(2.0, volume * 1.5);
       source.buffer = audioBuf;
-      source.playbackRate.value = rate;
       source.connect(gainNode);
       gainNode.connect(ctx.destination);
       source.start(0);
@@ -325,8 +324,11 @@ export default function BingoGame() {
   }, [volume]);
 
   // ── CALLER SOUND ─────────────────────────────────────────────────────────────────────────
-  // Instantaneous 0ms WebAudio playback synchronous with the visual mark!
-  // Plays at 1.35x speed so the caller announces letter & number rapidly and crisply without lagging behind the mark.
+  // Uses ONE reusable <audio> element. Sets .src then calls .load() before .play().
+  // This is the ONLY reliable pattern on Android WebView / Telegram:
+  //   - .load() resets the media pipeline fully when src changes
+  //   - prevents silent "media session not acquired" failures
+  //   - WebAudio is the fallback if HTMLAudio errors
   const callAudioElRef = useRef<HTMLAudioElement | null>(null);
 
   const playCallAudio = useCallback((num: number) => {
@@ -341,38 +343,35 @@ export default function BingoGame() {
     const src = getAudioSrc(cleanNum);
     unlockAudio();
 
-    // Priority 1: Instant Web Audio (0ms hardware latency, perfectly in sync with visual mark)
-    if (audioCtxRef.current && (audioCtxRef.current.state === 'running' || audioCtxRef.current.state === 'suspended')) {
-      playViaWebAudio(src, undefined, 1.35);
-      return;
+    // Create the shared audio element once, reuse it every call
+    if (!callAudioElRef.current) {
+      callAudioElRef.current = new Audio();
+    }
+    const audio = callAudioElRef.current;
+
+    // Stop and reset — pause() then clear src so browser fully releases media session
+    try { audio.pause(); } catch {}
+    audio.currentTime = 0;
+
+    // Set new source and LOAD before play (required on Android when changing src)
+    audio.src = src;
+    audio.volume = Math.min(1.0, Math.max(0.0, volume));
+
+    // onerror → fall back to WebAudio engine (uses pre-fetched rawBufferCache)
+    audio.onerror = () => { playViaWebAudio(src); };
+
+    // .load() must be called explicitly when src changes on a reused element
+    audio.load();
+
+    const p = audio.play();
+    if (p !== undefined) {
+      p.catch(() => {
+        // Play was blocked (autoplay policy) → use WebAudio which bypasses this
+        playViaWebAudio(src);
+      });
     }
 
-    // Priority 2: HTMLAudioElement with 1.35x speed as reliable mobile fallback
-    try {
-      if (!callAudioElRef.current) {
-        callAudioElRef.current = new Audio();
-      }
-      const audio = callAudioElRef.current;
-
-      try { audio.pause(); } catch {}
-      audio.currentTime = 0;
-      audio.src = src;
-      audio.playbackRate = 1.35;
-      audio.volume = Math.min(1.0, Math.max(0.0, volume));
-      audio.onerror = () => { playViaWebAudio(src, undefined, 1.35); };
-      audio.load();
-
-      const p = audio.play();
-      if (p !== undefined) {
-        p.catch(() => {
-          playViaWebAudio(src, undefined, 1.35);
-        });
-      }
-
-      callAudioRef.current = audio;
-    } catch {
-      playViaWebAudio(src, undefined, 1.35);
-    }
+    callAudioRef.current = audio; // keep ref in sync
   }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
 
   // ── CELEBRATION ──────────────────────────────────────────────────────────────────────────
@@ -824,9 +823,9 @@ export default function BingoGame() {
 
         {/* Caller Row + Card — scrollable */}
         <div className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
-        <div className={`w-full ${myCartelas.length > 1 ? 'max-w-[420px]' : 'max-w-[290px]'} mx-auto flex flex-col gap-1.5 pb-2`}>
+        <div className="w-full max-w-[290px] mx-auto flex flex-col gap-1 pb-2">
           {/* Caller Row */}
-          <div className="shrink-0 bg-[#0a0f1e] rounded-xl border border-white/5 px-2 py-1.5 w-full max-w-[320px] mx-auto">
+          <div className="shrink-0 bg-[#0a0f1e] rounded-xl border border-white/5 px-2 py-1.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {recent.length === 0 ? (
@@ -862,6 +861,7 @@ export default function BingoGame() {
                     setSoundEnabled(next);
                     unlockAudio();
                     if (next) {
+                      // Immediately play current number audio so user hears confirmation!
                       playCallAudio(lastNum || 1);
                     }
                   }}
@@ -872,124 +872,84 @@ export default function BingoGame() {
             </div>
           </div>
 
-          {/* My Cards — dynamic layout: 1 card = centered; 2+ cards = all visible side-by-side grid */}
+          {/* My Cards — tabbed view */}
           {myCartelas.length > 0 ? (
-            myCartelas.length === 1 ? (
-              /* Single Card — exact same classic layout */
-              <div key={myCartelas[0].cartela_number} className="w-full max-w-[250px] mx-auto">
-                <div className="rounded-2xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
-                  {/* BINGO Header */}
-                  <div className="grid grid-cols-5">
-                    {BINGO_LETTERS.map(l => (
-                      <div key={l} className="flex items-center justify-center py-1 font-black text-white text-xs" style={{ background: LETTER_BG[l] }}>{l}</div>
-                    ))}
-                  </div>
-                  {/* Card Grid */}
-                  <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0f1e]">
-                    {Array.from({ length: 5 }).flatMap((_, r) =>
-                      Array.from({ length: 5 }, (_, c) => {
-                        const num = myCartelas[0].card_matrix[r][c];
-                        const isFree = num === 0;
-                        const isCalled = called.includes(num);
-                        const isManualMarked = manuallyMarked.has(num);
-                        const marked = isFree || (autoMark ? isCalled : isManualMarked);
-                        const isLast = num === lastNum;
-                        const canTap = !autoMark && isCalled && !isFree;
-                        return (
-                          <div
-                            key={`${r}-${c}`}
-                            onClick={() => {
-                              if (!canTap) return;
-                              setManuallyMarked(prev => {
-                                const next = new Set(prev);
-                                if (next.has(num)) next.delete(num); else next.add(num);
-                                return next;
-                              });
-                              if (WebApp?.HapticFeedback) WebApp.HapticFeedback.selectionChanged();
-                            }}
-                            className={`aspect-square flex items-center justify-center font-black text-sm rounded-lg transition-all duration-200 select-none ${
-                              isFree ? 'bg-yellow-400 text-yellow-900' :
-                              isLast && autoMark ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
-                              marked ? 'bg-emerald-500 text-white' :
-                              canTap ? 'bg-white text-[#1a2540] active:scale-95 cursor-pointer ring-1 ring-blue-400/50' :
-                              'bg-white text-[#1a2540]'
-                            }`}
-                          >{isFree ? '★' : num}</div>
-                        );
-                      })
-                    )}
-                  </div>
-                  {/* Cartela Label */}
-                  <div className="py-1 text-center bg-[#0a0f1e] border-t border-white/10">
-                    <p className="text-white/70 font-black text-[9px] tracking-widest uppercase">{t[language].bingo.cartelaNum} {myCartelas[0].cartela_number}</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* 2 or More Cards — Side-by-side grid, ALL visible without any hidden tabs! */
-              <div className="w-full flex flex-col gap-1 px-1">
-                <div className="flex items-center justify-between px-0.5">
-                  <span className="text-white/60 text-[10px] font-bold tracking-wider uppercase">CARTELAS ({myCartelas.length})</span>
-                  <span className="text-emerald-400 text-[8px] font-black uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">All Active</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2 w-full">
-                  {myCartelas.map((card) => (
-                    <div key={card.cartela_number} className="w-full">
-                      <div className="rounded-xl overflow-hidden border border-white/10 shadow-md" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
-                        {/* BINGO Header */}
-                        <div className="grid grid-cols-5">
-                          {BINGO_LETTERS.map(l => (
-                            <div key={l} className="flex items-center justify-center py-0.5 font-black text-white text-[10px]" style={{ background: LETTER_BG[l] }}>{l}</div>
-                          ))}
-                        </div>
-                        {/* Card Grid */}
-                        <div className="grid grid-cols-5 gap-[2px] p-[2px] bg-[#0a0f1e]">
-                          {Array.from({ length: 5 }).flatMap((_, r) =>
-                            Array.from({ length: 5 }, (_, c) => {
-                              const num = card.card_matrix[r][c];
-                              const isFree = num === 0;
-                              const isCalled = called.includes(num);
-                              const isManualMarked = manuallyMarked.has(num);
-                              const marked = isFree || (autoMark ? isCalled : isManualMarked);
-                              const isLast = num === lastNum;
-                              const canTap = !autoMark && isCalled && !isFree;
-                              return (
-                                <div
-                                  key={`${r}-${c}`}
-                                  onClick={() => {
-                                    if (!canTap) return;
-                                    setManuallyMarked(prev => {
-                                      const next = new Set(prev);
-                                      if (next.has(num)) next.delete(num); else next.add(num);
-                                      return next;
-                                    });
-                                    if (WebApp?.HapticFeedback) WebApp.HapticFeedback.selectionChanged();
-                                  }}
-                                  className={`aspect-square flex items-center justify-center font-black text-[11px] rounded transition-all duration-200 select-none ${
-                                    isFree ? 'bg-yellow-400 text-yellow-900 font-black' :
-                                    isLast && autoMark ? 'bg-orange-500 text-white shadow-[0_0_6px_rgba(249,115,22,0.8)]' :
-                                    marked ? 'bg-emerald-500 text-white' :
-                                    canTap ? 'bg-white text-[#1a2540] active:scale-95 cursor-pointer ring-1 ring-blue-400/50' :
-                                    'bg-white text-[#1a2540]'
-                                  }`}
-                                >
-                                  {isFree ? '★' : num}
-                                </div>
-                              );
-                            })
-                          )}
-                        </div>
-                        {/* Cartela Label */}
-                        <div className="py-0.5 px-2 flex items-center justify-between bg-[#0a0f1e] border-t border-white/10">
-                          <p className="text-yellow-400 font-black text-[8px] tracking-wider uppercase">#{card.cartela_number}</p>
-                          <span className="text-white/40 text-[7px] font-bold uppercase">{t[language].bingo.cartelaNum.trim()}</span>
-                        </div>
-                      </div>
-                    </div>
+            <div className="flex flex-col gap-2">
+              {/* Tab Switcher */}
+              {myCartelas.length > 1 && (
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
+                  {myCartelas.map((card, idx) => (
+                    <button
+                      key={card.cartela_number}
+                      onClick={() => setActiveCartelaIdx(idx)}
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black whitespace-nowrap flex-shrink-0 transition-all ${
+                        activeCartelaIdx === idx
+                          ? 'bg-emerald-500 text-white ring-1 ring-yellow-300 shadow-[0_0_6px_rgba(16,185,129,0.5)]'
+                          : 'bg-white/10 text-white/50 border border-white/10 active:scale-95'
+                      }`}
+                    >
+                      #{card.cartela_number}
+                    </button>
                   ))}
                 </div>
-              </div>
-            )
+              )}
+              
+              {/* Active Card */}
+              {(() => {
+                const card = myCartelas[Math.min(activeCartelaIdx, myCartelas.length - 1)];
+                return (
+                  <div key={card.cartela_number} className="w-full max-w-[250px] mx-auto">
+                    <div className="rounded-2xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
+                      {/* BINGO Header */}
+                      <div className="grid grid-cols-5">
+                        {BINGO_LETTERS.map(l => (
+                          <div key={l} className="flex items-center justify-center py-1 font-black text-white text-xs" style={{ background: LETTER_BG[l] }}>{l}</div>
+                        ))}
+                      </div>
+                      {/* Card Grid */}
+                      <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0f1e]">
+                        {Array.from({ length: 5 }).flatMap((_, r) =>
+                          Array.from({ length: 5 }, (_, c) => {
+                            const num = card.card_matrix[r][c];
+                            const isFree = num === 0;
+                            const isCalled = called.includes(num);
+                            const isManualMarked = manuallyMarked.has(num);
+                            const marked = isFree || (autoMark ? isCalled : isManualMarked);
+                            const isLast = num === lastNum;
+                            const canTap = !autoMark && isCalled && !isFree;
+                            return (
+                              <div
+                                key={`${r}-${c}`}
+                                onClick={() => {
+                                  if (!canTap) return;
+                                  setManuallyMarked(prev => {
+                                    const next = new Set(prev);
+                                    if (next.has(num)) next.delete(num); else next.add(num);
+                                    return next;
+                                  });
+                                  if (WebApp?.HapticFeedback) WebApp.HapticFeedback.selectionChanged();
+                                }}
+                                className={`aspect-square flex items-center justify-center font-black text-sm rounded-lg transition-all duration-200 select-none ${
+                                  isFree ? 'bg-yellow-400 text-yellow-900' :
+                                  isLast && autoMark ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
+                                  marked ? 'bg-emerald-500 text-white' :
+                                  canTap ? 'bg-white text-[#1a2540] active:scale-95 cursor-pointer ring-1 ring-blue-400/50' :
+                                  'bg-white text-[#1a2540]'
+                                }`}
+                              >{isFree ? '★' : num}</div>
+                            );
+                          })
+                        )}
+                      </div>
+                      {/* Cartela Label */}
+                      <div className="py-1 text-center bg-[#0a0f1e] border-t border-white/10">
+                        <p className="text-white/70 font-black text-[9px] tracking-widest uppercase">{t[language].bingo.cartelaNum} {card.cartela_number}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
           ) : (
             <div className="w-full max-w-[250px] mx-auto relative mt-1 pointer-events-none">
               <div className="rounded-2xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
