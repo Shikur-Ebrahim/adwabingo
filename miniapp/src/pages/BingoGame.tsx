@@ -136,6 +136,34 @@ const getWinningPatternTitle = (matrix: number[][], called: number[]): string =>
   return 'BINGO!';
 };
 
+// Triumphant victory fanfare using Web Audio oscillators (100% offline, 0ms latency, always audible)
+function playBingoFanfare(ctx: AudioContext) {
+  try {
+    const now = ctx.currentTime;
+    // Celebratory chords with rich harmonics
+    const chords = [
+      { start: 0.00, dur: 0.18, freqs: [523.25, 659.25] },          // C5 + E5
+      { start: 0.18, dur: 0.18, freqs: [587.33, 739.99] },          // D5 + F#5
+      { start: 0.36, dur: 0.22, freqs: [659.25, 783.99] },          // E5 + G5
+      { start: 0.58, dur: 1.10, freqs: [783.99, 1046.50, 1318.51] },// G5 + C6 + E6 (grand triumphant finale!)
+    ];
+    chords.forEach(({ start, dur, freqs }) => {
+      freqs.forEach(freq => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + start);
+        gain.gain.setValueAtTime(0.28, now + start);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + start);
+        osc.stop(now + start + dur);
+      });
+    });
+  } catch(e) {}
+}
+
 export default function BingoGame() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -277,7 +305,34 @@ export default function BingoGame() {
     } catch(e) {}
   }, []);
 
-  const playViaWebAudio = useCallback(async (src: string) => {
+  // Preload all 75 bingo calls in the background so mobile playback has 0ms latency and 0 packet loss
+  useEffect(() => {
+    let cancel = false;
+    const preloadCalls = async () => {
+      await new Promise(r => setTimeout(r, 600));
+      for (let i = 1; i <= 75; i++) {
+        if (cancel) break;
+        const src = getAudioSrc(i);
+        if (!audioBufferCache.current.has(src)) {
+          try {
+            const res = await fetch(src);
+            if (res.ok) {
+              const ab = await res.arrayBuffer();
+              if (audioCtxRef.current) {
+                const buf = await audioCtxRef.current.decodeAudioData(ab);
+                audioBufferCache.current.set(src, buf);
+              }
+            }
+          } catch(e) {}
+          if (i % 3 === 0) await new Promise(r => setTimeout(r, 60));
+        }
+      }
+    };
+    preloadCalls();
+    return () => { cancel = true; };
+  }, []);
+
+  const playViaWebAudio = useCallback(async (src: string, customGain?: number, rate: number = 1.3) => {
     try {
       if (!audioCtxRef.current) {
         const AC = window.AudioContext || (window as any).webkitAudioContext;
@@ -298,8 +353,9 @@ export default function BingoGame() {
 
       const source = audioCtxRef.current.createBufferSource();
       const gainNode = audioCtxRef.current.createGain();
-      gainNode.gain.value = Math.min(2.0, volume * 1.5);
+      gainNode.gain.value = customGain !== undefined ? customGain : Math.min(2.0, volume * 1.5);
       source.buffer = buf;
+      source.playbackRate.value = rate;
       source.connect(gainNode);
       gainNode.connect(audioCtxRef.current.destination);
       source.start(0);
@@ -308,7 +364,7 @@ export default function BingoGame() {
     }
   }, [volume]);
 
-  // Dedicated caller sound player: independently manages call audio so it never freezes
+  // Dedicated caller sound player: independently manages call audio so it never freezes or clips
   const playCallAudio = useCallback((num: number) => {
     if (!soundEnabled) return;
     const cleanNum = Number(num);
@@ -321,65 +377,72 @@ export default function BingoGame() {
     const src = getAudioSrc(cleanNum);
     unlockAudio();
 
-    try {
-      // Safely stop previous call if still active
-      if (callAudioRef.current) {
-        try {
-          callAudioRef.current.pause();
-          callAudioRef.current.currentTime = 0;
-        } catch(e) {}
-      }
+    // Priority 1: If preloaded in Web Audio cache, play immediately (0ms delay, perfectly snappy)
+    if (audioBufferCache.current.has(src) && audioCtxRef.current && audioCtxRef.current.state === 'running') {
+      playViaWebAudio(src, undefined, 1.3);
+      return;
+    }
 
-      const audio = new Audio(src);
-      audio.preload = 'auto';
-      audio.onerror = () => { playViaWebAudio(src); };
-      callAudioRef.current = audio;
+    // Priority 2: Use reusable HTMLAudioElement with 1.3x speed
+    try {
+      if (!callAudioRef.current) {
+        callAudioRef.current = new Audio();
+      }
+      const audio = callAudioRef.current;
+      try { audio.pause(); } catch(e) {}
+      audio.src = src;
+      audio.playbackRate = 1.3;
       audio.volume = Math.min(1.0, Math.max(0.0, volume));
+      audio.onerror = () => { playViaWebAudio(src, undefined, 1.3); };
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          playViaWebAudio(src);
+          playViaWebAudio(src, undefined, 1.3);
         });
       }
     } catch {
-      playViaWebAudio(src);
+      playViaWebAudio(src, undefined, 1.3);
     }
   }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
 
-  // Dedicated celebration / special sound player: runs on separate audio channel, NEVER interrupted by calls, NEVER off!
+  // Dedicated celebration / special sound player: plays triumphant fanfare + vocal "Bingo!", NEVER off!
   const playSpecial = useCallback((name: string) => {
-    // Celebration sound ALWAYS plays — even if user turned caller voice off
     const src = `/audio/bingo/${name}.mp3`;
     unlockAudio();
 
+    // 1. Play triumphant Web Audio fanfare (always loud, 0ms latency, plays even if caller sound is off)
+    if (audioCtxRef.current) {
+      if (audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+      playBingoFanfare(audioCtxRef.current);
+    }
+
+    // 2. Play vocal audio ("Bingo!") at full 100% volume
     try {
-      // Fade out any pending call audio so celebration is loud and clear
       if (callAudioRef.current) {
         try { callAudioRef.current.pause(); } catch(e) {}
       }
 
-      if (specialAudioRef.current) {
-        try {
-          specialAudioRef.current.pause();
-          specialAudioRef.current.currentTime = 0;
-        } catch(e) {}
+      if (!specialAudioRef.current) {
+        specialAudioRef.current = new Audio();
       }
-
-      const audio = new Audio(src);
-      audio.preload = 'auto';
-      audio.onerror = () => { playViaWebAudio(src); };
-      specialAudioRef.current = audio;
+      const audio = specialAudioRef.current;
+      try { audio.pause(); } catch(e) {}
+      audio.src = src;
       audio.volume = 1.0; // Celebration is always full 100% volume
+      audio.playbackRate = 1.0;
+      audio.onerror = () => { playViaWebAudio(src, 1.5, 1.0); };
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          playViaWebAudio(src);
+          playViaWebAudio(src, 1.5, 1.0);
         });
       }
     } catch {
-      playViaWebAudio(src);
+      playViaWebAudio(src, 1.5, 1.0);
     }
   }, [unlockAudio, playViaWebAudio]);
 
@@ -543,7 +606,7 @@ export default function BingoGame() {
       return () => { isMounted = false; };
   }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name]);
 
-  // Auto-dismiss celebration after 7 seconds
+  // Auto-dismiss celebration after 2 seconds
   useEffect(() => {
     if (!celebration) return;
     const timer = setTimeout(() => {
@@ -552,9 +615,10 @@ export default function BingoGame() {
       setMyCartelas([]);
       setActiveCartelaIdx(0);
       setTaken([]);
+      hasCelebratedRef.current = null; // Reset so subsequent games celebrate cleanly
       fetchState();
       refreshUser();
-    }, 7000);
+    }, 2000);
     return () => clearTimeout(timer);
   }, [celebration]);
 
