@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Clock, Trash2, Plus, Image as ImageIcon, Edit2, CheckCircle, Loader2, AlertCircle, Radio, MessageSquare, X, Video, Film } from 'lucide-react';
+import { Send, Clock, Trash2, Plus, Image as ImageIcon, Edit2, CheckCircle, Loader2, AlertCircle, Radio, MessageSquare, X, Video, Film, AtSign } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -16,11 +16,13 @@ interface BroadcastPost {
   media_key: string | null;
   media_type: MediaType;
   send_to: SendTo;
+  channel_id: string | null;
   status: PostStatus;
   scheduled_at: string | null;
   sent_at: string | null;
   sent_count: number;
   failed_count: number;
+  error_message: string | null;
   created_at: string;
 }
 
@@ -34,22 +36,24 @@ const STATUS_BADGE: Record<PostStatus, { label: string; cls: string }> = {
   failed:    { label: 'Failed',    cls: 'bg-red-100 text-red-700' },
 };
 
-const SEND_TO_OPTIONS: { value: SendTo; label: string; icon: string }[] = [
-  { value: 'bot',     label: 'Bot Only (All Users)',    icon: '🤖' },
-  { value: 'channel', label: 'Channel Only',            icon: '📢' },
-  { value: 'both',    label: 'Bot + Channel',           icon: '📡' },
+const SEND_TO_OPTIONS: { value: SendTo; label: string; desc: string; icon: string }[] = [
+  { value: 'bot',     label: 'Bot Only',      desc: 'All players via Telegram Bot',   icon: '🤖' },
+  { value: 'channel', label: 'Channel Only',  desc: 'Official Telegram Channel only', icon: '📢' },
+  { value: 'both',    label: 'Bot + Channel', desc: 'Both all players & channel',     icon: '📡' },
 ];
 
 export default function AdminBroadcast() {
   const [posts, setPosts] = useState<BroadcastPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [defaultChannel, setDefaultChannel] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editPost, setEditPost] = useState<BroadcastPost | null>(null);
 
   // Form state
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
-  const [sendTo, setSendTo] = useState<SendTo>('bot');
+  const [sendTo, setSendTo] = useState<SendTo>('both');
+  const [channelId, setChannelId] = useState('');
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState('');
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
@@ -77,7 +81,18 @@ export default function AdminBroadcast() {
     }
   };
 
-  useEffect(() => { fetchPosts(); }, []);
+  const fetchDefaultChannel = async () => {
+    try {
+      const r = await fetch(`${API_URL}/broadcast/channel-default`, { headers: { 'x-telegram-init-data': initData } });
+      const d = await r.json();
+      if (d.defaultChannel) setDefaultChannel(d.defaultChannel);
+    } catch {}
+  };
+
+  useEffect(() => {
+    fetchPosts();
+    fetchDefaultChannel();
+  }, []);
 
   // Auto-refresh every 10s if any post is 'sending'
   useEffect(() => {
@@ -88,10 +103,16 @@ export default function AdminBroadcast() {
   }, [posts]);
 
   const resetForm = () => {
-    setTitle(''); setBody(''); setSendTo('bot');
-    setScheduleEnabled(false); setScheduledAt('');
-    setMediaPreview(null); setMediaType(null);
-    setUploadedMediaUrl(null); setUploadedMediaKey(null);
+    setTitle('');
+    setBody('');
+    setSendTo('both');
+    setChannelId(defaultChannel);
+    setScheduleEnabled(false);
+    setScheduledAt('');
+    setMediaPreview(null);
+    setMediaType(null);
+    setUploadedMediaUrl(null);
+    setUploadedMediaKey(null);
     setUploadProgress(0);
     setError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
@@ -108,6 +129,7 @@ export default function AdminBroadcast() {
     setTitle(post.title || '');
     setBody(post.body);
     setSendTo(post.send_to);
+    setChannelId(post.channel_id || defaultChannel);
     setScheduleEnabled(!!post.scheduled_at);
     setScheduledAt(post.scheduled_at ? post.scheduled_at.slice(0, 16) : '');
     setMediaPreview(post.media_url || null);
@@ -130,7 +152,6 @@ export default function AdminBroadcast() {
       return;
     }
 
-    // Preview
     if (isImage) {
       setMediaPreview(URL.createObjectURL(file));
       setMediaType('image');
@@ -144,7 +165,6 @@ export default function AdminBroadcast() {
     setError('');
 
     try {
-      // 1. Get presigned URL from server
       const pr = await fetch(`${API_URL}/broadcast/presign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData },
@@ -156,7 +176,6 @@ export default function AdminBroadcast() {
       }
       const { uploadUrl, publicUrl, key } = await pr.json();
 
-      // 2. Upload to R2 with XHR so we can track progress
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open('PUT', uploadUrl);
@@ -208,6 +227,7 @@ export default function AdminBroadcast() {
         media_key: uploadedMediaKey,
         media_type: mediaType,
         send_to: sendTo,
+        channel_id: (sendTo === 'channel' || sendTo === 'both') ? (channelId || defaultChannel) : null,
         scheduled_at: scheduleEnabled ? new Date(scheduledAt).toISOString() : null,
       };
       const url = editPost ? `${API_URL}/broadcast/${editPost.id}` : `${API_URL}/broadcast`;
@@ -264,6 +284,10 @@ export default function AdminBroadcast() {
 
   // ── FORM VIEW ──────────────────────────────────────────────────────────────
   if (showForm) {
+    const isMedia = !!mediaPreview;
+    const maxChars = isMedia ? 1024 : 4096;
+    const isOverLimit = body.length > maxChars;
+
     return (
       <div className="min-h-screen bg-slate-50 p-4 pb-10">
         <div className="flex items-center justify-between mb-5">
@@ -280,12 +304,12 @@ export default function AdminBroadcast() {
 
           {/* Title */}
           <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <label className="block text-xs font-bold text-slate-500 mb-2">Title (optional)</label>
+            <label className="block text-xs font-bold text-slate-500 mb-2">Title (optional header)</label>
             <input
               type="text"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              placeholder="e.g. Weekend Bonus!"
+              placeholder="e.g. 🎁 Weekend Deposit Bonus!"
               className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
             />
           </div>
@@ -370,31 +394,64 @@ export default function AdminBroadcast() {
               onChange={e => setBody(e.target.value)}
               placeholder="Write your announcement here…"
               rows={5}
-              className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400 resize-none"
+              className={`w-full border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 resize-none ${
+                isOverLimit ? 'border-red-400 focus:ring-red-400' : 'border-slate-200 focus:ring-yellow-400'
+              }`}
             />
-            <div className="text-right text-xs text-slate-400 mt-1">{body.length} chars</div>
+            <div className="flex justify-between items-center text-xs mt-1">
+              <span className="text-slate-400">
+                {isMedia ? '📷 Caption limit: 1024 chars' : '💬 Text message'}
+              </span>
+              <span className={isOverLimit ? 'font-bold text-red-500' : 'text-slate-400'}>
+                {body.length} / {maxChars}
+              </span>
+            </div>
           </div>
 
           {/* Send To */}
           <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <label className="block text-xs font-bold text-slate-500 mb-3">Send To</label>
+            <label className="block text-xs font-bold text-slate-500 mb-3">Target Audience</label>
             <div className="space-y-2">
               {SEND_TO_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
+                  type="button"
                   onClick={() => setSendTo(opt.value)}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl border-2 transition-all text-sm font-semibold ${
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl border-2 transition-all text-left ${
                     sendTo === opt.value
-                      ? 'border-yellow-400 bg-yellow-50 text-yellow-800'
+                      ? 'border-yellow-400 bg-yellow-50 text-yellow-900 shadow-sm'
                       : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-slate-200'
                   }`}
                 >
-                  <span className="text-xl">{opt.icon}</span>
-                  <span>{opt.label}</span>
-                  {sendTo === opt.value && <CheckCircle size={16} className="ml-auto text-yellow-500" />}
+                  <span className="text-2xl">{opt.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-black">{opt.label}</p>
+                    <p className="text-xs text-slate-500">{opt.desc}</p>
+                  </div>
+                  {sendTo === opt.value && <CheckCircle size={18} className="text-yellow-600 shrink-0" />}
                 </button>
               ))}
             </div>
+
+            {/* Target Channel input if channel or both selected */}
+            {(sendTo === 'channel' || sendTo === 'both') && (
+              <div className="mt-3 pt-3 border-t border-slate-100">
+                <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center space-x-1">
+                  <AtSign size={13} />
+                  <span>Channel Username / ID</span>
+                </label>
+                <input
+                  type="text"
+                  value={channelId}
+                  onChange={e => setChannelId(e.target.value)}
+                  placeholder={defaultChannel || '@adwabingo'}
+                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Make sure your bot is added as an <strong>Administrator</strong> in this channel.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Schedule */}
@@ -405,6 +462,7 @@ export default function AdminBroadcast() {
                 <span>Schedule Post</span>
               </label>
               <button
+                type="button"
                 onClick={() => setScheduleEnabled(!scheduleEnabled)}
                 className={`relative w-12 h-6 rounded-full transition-colors ${scheduleEnabled ? 'bg-yellow-400' : 'bg-slate-200'}`}
               >
@@ -434,15 +492,17 @@ export default function AdminBroadcast() {
           {/* Actions */}
           <div className="flex space-x-3">
             <button
+              type="button"
               onClick={() => { setShowForm(false); resetForm(); }}
-              className="flex-1 py-3.5 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-sm"
+              className="flex-1 py-3.5 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-sm active:scale-95 transition-all"
             >
               Cancel
             </button>
             <button
+              type="button"
               onClick={handleSave}
               disabled={saving || uploading}
-              className="flex-1 py-3.5 rounded-xl bg-yellow-400 text-slate-900 font-black text-sm flex items-center justify-center space-x-2 disabled:opacity-60"
+              className="flex-1 py-3.5 rounded-xl bg-yellow-400 text-slate-900 font-black text-sm flex items-center justify-center space-x-2 disabled:opacity-60 active:scale-95 transition-all shadow-sm"
             >
               {saving && <Loader2 size={16} className="animate-spin" />}
               <span>{scheduleEnabled ? '📅 Schedule' : '💾 Save Draft'}</span>
@@ -463,7 +523,7 @@ export default function AdminBroadcast() {
             <Radio className="text-yellow-500" size={22} />
             <span>Broadcast</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">Send posts to all users &amp; channel</p>
+          <p className="text-xs text-slate-400 mt-0.5">Send posts to all players &amp; channel</p>
         </div>
         <button
           onClick={openCreateForm}
@@ -476,9 +536,9 @@ export default function AdminBroadcast() {
 
       {error && (
         <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm mb-4">
-          <AlertCircle size={16} />
-          <span>{error}</span>
-          <button onClick={() => setError('')} className="ml-auto"><X size={14} /></button>
+          <AlertCircle size={16} className="shrink-0" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError('')}><X size={14} /></button>
         </div>
       )}
 
@@ -501,6 +561,7 @@ export default function AdminBroadcast() {
             const isSendable = post.status === 'draft' || post.status === 'scheduled' || post.status === 'failed';
             const isEditable = post.status === 'draft' || post.status === 'scheduled' || post.status === 'failed';
             const isSending = sending === post.id;
+            const targetChannelName = post.channel_id || defaultChannel || '@channel';
 
             return (
               <div key={post.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -533,17 +594,30 @@ export default function AdminBroadcast() {
                     </span>
                   </div>
 
-                  {/* Meta row */}
-                  <div className="flex flex-wrap gap-2 text-[11px] text-slate-400 mb-3">
-                    <span>
-                      {post.send_to === 'bot' ? '🤖 Bot' : post.send_to === 'channel' ? '📢 Channel' : '📡 Bot+Channel'}
+                  {/* Target audience badge */}
+                  <div className="flex flex-wrap gap-1.5 text-[11px] mb-2">
+                    <span className="bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded-md">
+                      {post.send_to === 'bot' && '🤖 Bot (All Players)'}
+                      {post.send_to === 'channel' && `📢 Channel (${targetChannelName})`}
+                      {post.send_to === 'both' && `📡 Bot + Channel (${targetChannelName})`}
                     </span>
                     {post.scheduled_at && post.status === 'scheduled' && (
-                      <span>📅 {fmtDate(post.scheduled_at)}</span>
+                      <span className="bg-blue-50 text-blue-700 font-medium px-2 py-0.5 rounded-md">
+                        📅 {fmtDate(post.scheduled_at)}
+                      </span>
                     )}
+                  </div>
+
+                  {/* Delivery status */}
+                  <div className="flex flex-wrap gap-2 text-[11px] text-slate-400 mb-3">
                     {post.status === 'sent' && (
-                      <span className="text-green-600 font-semibold">
-                        ✅ {post.sent_count} sent · {post.failed_count} failed · {fmtDate(post.sent_at)}
+                      <span className="text-green-600 font-bold">
+                        ✅ {post.sent_count} delivered {post.failed_count > 0 ? `· ${post.failed_count} failed` : ''} · {fmtDate(post.sent_at)}
+                      </span>
+                    )}
+                    {post.status === 'failed' && (
+                      <span className="text-red-600 font-bold">
+                        ❌ Failed ({post.failed_count} errors)
                       </span>
                     )}
                     {!post.scheduled_at && post.status === 'draft' && (
@@ -551,13 +625,20 @@ export default function AdminBroadcast() {
                     )}
                   </div>
 
+                  {/* Error warning if any */}
+                  {post.error_message && (
+                    <div className="text-[11px] text-red-600 bg-red-50 p-2 rounded-lg mb-3">
+                      ⚠️ {post.error_message}
+                    </div>
+                  )}
+
                   {/* Action buttons */}
                   <div className="flex space-x-2">
                     {isSendable && (
                       <button
                         onClick={() => handleSend(post.id)}
                         disabled={isSending}
-                        className="flex-1 flex items-center justify-center space-x-1.5 bg-green-500 text-white font-bold text-xs py-2.5 rounded-xl active:scale-95 transition-all disabled:opacity-60"
+                        className="flex-1 flex items-center justify-center space-x-1.5 bg-green-500 hover:bg-green-600 text-white font-bold text-xs py-2.5 rounded-xl active:scale-95 transition-all disabled:opacity-60 shadow-sm"
                       >
                         {isSending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                         <span>{isSending ? 'Sending…' : 'Send Now'}</span>
@@ -566,7 +647,7 @@ export default function AdminBroadcast() {
                     {isEditable && (
                       <button
                         onClick={() => openEditForm(post)}
-                        className="flex items-center justify-center space-x-1.5 bg-slate-100 text-slate-600 font-bold text-xs px-3 py-2.5 rounded-xl active:scale-95"
+                        className="flex items-center justify-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs px-3 py-2.5 rounded-xl active:scale-95 transition-all"
                       >
                         <Edit2 size={13} />
                         <span>Edit</span>
@@ -574,7 +655,7 @@ export default function AdminBroadcast() {
                     )}
                     <button
                       onClick={() => handleDelete(post.id)}
-                      className="flex items-center justify-center bg-red-50 text-red-500 px-3 py-2.5 rounded-xl active:scale-95"
+                      className="flex items-center justify-center bg-red-50 hover:bg-red-100 text-red-500 px-3 py-2.5 rounded-xl active:scale-95 transition-all"
                     >
                       <Trash2 size={13} />
                     </button>
