@@ -84,6 +84,7 @@ async function checkAudioAvailable() {
 
 const getWinningCells = (matrix: number[][], called: number[]) => {
   const winCells = new Set<string>();
+  if (!matrix || !called) return winCells;
   for (let r = 0; r < 5; r++) {
     if (matrix[r].every(n => n === 0 || called.includes(n))) {
       for (let c = 0; c < 5; c++) winCells.add(`${r}-${c}`);
@@ -101,6 +102,16 @@ const getWinningCells = (matrix: number[][], called: number[]) => {
   }
   if (d1) for (let i = 0; i < 5; i++) winCells.add(`${i}-${i}`);
   if (d2) for (let i = 0; i < 5; i++) winCells.add(`${i}-${4-i}`);
+
+  const m = (r: number, c: number) => matrix[r]?.[c] === 0 || called.includes(matrix[r]?.[c]);
+  // Outer 4 corners
+  if (m(0, 0) && m(0, 4) && m(4, 0) && m(4, 4)) {
+    winCells.add('0-0'); winCells.add('0-4'); winCells.add('4-0'); winCells.add('4-4');
+  }
+  // Inner 4 corners (2nd frame / inner corners)
+  if (m(1, 1) && m(1, 3) && m(3, 1) && m(3, 3)) {
+    winCells.add('1-1'); winCells.add('1-3'); winCells.add('3-1'); winCells.add('3-3');
+  }
   return winCells;
 };
 
@@ -975,7 +986,9 @@ export default function BingoGame() {
                 
                 {celebration.winners_list && celebration.winners_list.length > 0 ? (
                   <div className="flex gap-2 w-full justify-center overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-                    {celebration.winners_list.map((w, idx) => (
+                    {celebration.winners_list.map((w, idx) => {
+                      const winCells = getWinningCells(w.card_matrix, celebration.called);
+                      return (
                       <div key={idx} className="flex-shrink-0 w-[140px] bg-white/5 rounded-2xl p-2 border border-white/10 flex flex-col items-center">
                         <p className="text-white font-black text-sm truncate w-full">{w.first_name}</p>
                         <p className="text-yellow-400/70 text-[9px] font-bold mb-1">{t[language].bingo.cartelaNum}{w.cartela_number}</p>
@@ -988,7 +1001,7 @@ export default function BingoGame() {
                           <div className="grid grid-cols-5 gap-[1px] p-[1px] bg-[#0a0f1e]">
                             {w.card_matrix.map((row, r) => row.map((num, c) => {
                               const isFree = num === 0;
-                              const isWin = isFree || celebration.called.includes(num);
+                              const isWin = isFree || winCells.has(`${r}-${c}`);
                               return (
                                 <div key={c} className={`aspect-square flex items-center justify-center text-[8px] font-black ${isFree ? 'bg-yellow-400 text-yellow-900' : isWin ? 'bg-emerald-500 text-white shadow-[0_0_4px_rgba(16,185,129,0.5)]' : 'bg-white text-slate-700'}`}>
                                   {isFree ? '★' : num}
@@ -998,7 +1011,7 @@ export default function BingoGame() {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    );})}
                   </div>
                 ) : (
                   <div className="bg-white/5 rounded-2xl p-3 mb-3 w-full border border-white/10">

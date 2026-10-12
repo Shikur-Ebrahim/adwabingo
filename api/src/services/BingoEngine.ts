@@ -19,11 +19,16 @@ export function generateBingoCard(): number[][] {
 }
 
 export function checkBingo(card: number[][], called: number[]): boolean {
-  const m = (r: number, c: number) => card[r][c] === 0 || called.includes(card[r][c]);
+  if (!card || !called) return false;
+  const m = (r: number, c: number) => card[r]?.[c] === 0 || called.includes(card[r]?.[c]);
   for (let r = 0; r < 5; r++) if ([0,1,2,3,4].every(c => m(r,c))) return true;
   for (let c = 0; c < 5; c++) if ([0,1,2,3,4].every(r => m(r,c))) return true;
   if ([0,1,2,3,4].every(i => m(i,i))) return true;
   if ([0,1,2,3,4].every(i => m(i,4-i))) return true;
+  // Outer 4 corners
+  if (m(0, 0) && m(0, 4) && m(4, 0) && m(4, 4)) return true;
+  // Inner 4 corners (2nd frame / inner corners)
+  if (m(1, 1) && m(1, 3) && m(3, 1) && m(3, 3)) return true;
   return false;
 }
 
