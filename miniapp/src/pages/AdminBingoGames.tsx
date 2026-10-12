@@ -31,7 +31,7 @@ interface GameSettings {
   early_call_10_rewards?: Record<number, number>;
 }
 const DEFAULT: GameSettings = { 
-  call_interval_ms: 5000, 
+  call_interval_ms: 3000, 
   waiting_period_s: 60, 
   release_time_s: 60,
   min_players: 2, 

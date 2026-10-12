@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { getSettings } from '../routes/adminSettings';
 
-const TICK_MS = 2000;
+const TICK_MS = 500; // 500ms tick for exact call_interval_ms execution
 const STAKES  = [10, 20, 50, 100];
 
 export function generateBingoCard(): number[][] {
@@ -221,16 +221,17 @@ class BingoEngine {
     // Guard: re-fetch to confirm the game is still calling (prevents stale reads)
     const { data: freshGame } = await supabase
       .from('bingo_games')
-      .select('status')
+      .select('status, updated_at, called_numbers')
       .eq('id', game.id)
       .single();
     if (!freshGame || freshGame.status !== 'calling') return;
 
     const cfg = await getSettings();
-    const lastUpdate = new Date(game.updated_at).getTime();
-    if (Date.now() - lastUpdate < cfg.call_interval_ms) return;
+    const intervalMs = Math.max(1000, Number(cfg.call_interval_ms) || 3000);
+    const lastUpdate = new Date(freshGame.updated_at || game.updated_at).getTime();
+    if (Date.now() - lastUpdate < intervalMs) return;
 
-    const called: number[] = game.called_numbers || [];
+    const called: number[] = (freshGame.called_numbers || game.called_numbers || []).map(Number);
     const pool = Array.from({ length: 75 }, (_, i) => i + 1).filter(n => !called.includes(n));
 
     if (pool.length === 0) {

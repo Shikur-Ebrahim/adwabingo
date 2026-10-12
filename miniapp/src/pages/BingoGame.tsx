@@ -295,11 +295,14 @@ export default function BingoGame() {
   // Dedicated caller sound player: independently manages call audio so it never freezes
   const playCallAudio = useCallback((num: number) => {
     if (!soundEnabled) return;
-    setLastCallNum(num);
+    const cleanNum = Number(num);
+    if (!cleanNum || isNaN(cleanNum) || cleanNum < 1 || cleanNum > 75) return;
+
+    setLastCallNum(cleanNum);
     setCallAnim(false);
     setTimeout(() => setCallAnim(true), 20);
 
-    const src = getAudioSrc(num);
+    const src = getAudioSrc(cleanNum);
     unlockAudio();
 
     try {
@@ -312,6 +315,8 @@ export default function BingoGame() {
       }
 
       const audio = new Audio(src);
+      audio.preload = 'auto';
+      audio.onerror = () => { playViaWebAudio(src); };
       callAudioRef.current = audio;
       audio.volume = Math.min(1.0, Math.max(0.0, volume));
 
@@ -346,6 +351,8 @@ export default function BingoGame() {
       }
 
       const audio = new Audio(src);
+      audio.preload = 'auto';
+      audio.onerror = () => { playViaWebAudio(src); };
       specialAudioRef.current = audio;
       audio.volume = Math.min(1.0, Math.max(0.0, volume));
 
@@ -434,7 +441,7 @@ export default function BingoGame() {
   }, [game?.status, game?.start_at]);
 
   const called = game?.called_numbers ?? [];
-  const lastNum = called.length > 0 ? called[called.length - 1] : null;
+  const lastNum = called.length > 0 ? Number(called[called.length - 1]) : null;
 
   useEffect(() => {
     if (game?.status === 'calling' && called.length > prevCalledLenRef.current) {
