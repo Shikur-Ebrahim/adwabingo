@@ -253,11 +253,27 @@ export default function BingoGame() {
     };
   }, [unlockAudio]);
 
-  // Preload celebration win sound and common sounds so they play with 0ms latency
+  // Preload celebration win sound into memory and WebAudio cache so it plays with 0ms latency
   useEffect(() => {
     try {
       const preWin = new Audio('/audio/bingo/bingo_win.mp3');
       preWin.preload = 'auto';
+    } catch(e) {}
+
+    try {
+      fetch('/audio/bingo/bingo_win.mp3')
+        .then(r => r.arrayBuffer())
+        .then(ab => {
+          if (!audioCtxRef.current) {
+            const AC = window.AudioContext || (window as any).webkitAudioContext;
+            if (AC) audioCtxRef.current = new AC();
+          }
+          if (audioCtxRef.current) {
+            audioCtxRef.current.decodeAudioData(ab).then(buf => {
+              audioBufferCache.current.set('/audio/bingo/bingo_win.mp3', buf);
+            }).catch(() => {});
+          }
+        }).catch(() => {});
     } catch(e) {}
   }, []);
 
@@ -331,14 +347,14 @@ export default function BingoGame() {
     }
   }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
 
-  // Dedicated celebration / special sound player: runs on separate audio channel, NEVER interrupted by calls
+  // Dedicated celebration / special sound player: runs on separate audio channel, NEVER interrupted by calls, NEVER off!
   const playSpecial = useCallback((name: string) => {
-    if (!soundEnabled) return;
+    // Celebration sound ALWAYS plays — even if user turned caller voice off
     const src = `/audio/bingo/${name}.mp3`;
     unlockAudio();
 
     try {
-      // Fade out any pending call audio so the celebration announcement is loud and clear
+      // Fade out any pending call audio so celebration is loud and clear
       if (callAudioRef.current) {
         try { callAudioRef.current.pause(); } catch(e) {}
       }
@@ -354,7 +370,7 @@ export default function BingoGame() {
       audio.preload = 'auto';
       audio.onerror = () => { playViaWebAudio(src); };
       specialAudioRef.current = audio;
-      audio.volume = Math.min(1.0, Math.max(0.0, volume));
+      audio.volume = 1.0; // Celebration is always full 100% volume
 
       const playPromise = audio.play();
       if (playPromise !== undefined) {
@@ -365,7 +381,7 @@ export default function BingoGame() {
     } catch {
       playViaWebAudio(src);
     }
-  }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
+  }, [unlockAudio, playViaWebAudio]);
 
 
 
