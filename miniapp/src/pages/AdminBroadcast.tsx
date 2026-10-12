@@ -1,18 +1,20 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, Clock, Trash2, Plus, Image as ImageIcon, Edit2, CheckCircle, Loader2, AlertCircle, Radio, MessageSquare, X } from 'lucide-react';
+import { Send, Clock, Trash2, Plus, Image as ImageIcon, Edit2, CheckCircle, Loader2, AlertCircle, Radio, MessageSquare, X, Video, Film } from 'lucide-react';
 import WebApp from '@twa-dev/sdk';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 type SendTo = 'bot' | 'channel' | 'both';
 type PostStatus = 'draft' | 'scheduled' | 'sending' | 'sent' | 'failed';
+type MediaType = 'image' | 'video' | null;
 
 interface BroadcastPost {
   id: string;
   title: string;
   body: string;
-  image_url: string | null;
-  image_key: string | null;
+  media_url: string | null;
+  media_key: string | null;
+  media_type: MediaType;
   send_to: SendTo;
   status: PostStatus;
   scheduled_at: string | null;
@@ -50,11 +52,12 @@ export default function AdminBroadcast() {
   const [sendTo, setSendTo] = useState<SendTo>('bot');
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
-  const [uploadedImageKey, setUploadedImageKey] = useState<string | null>(null);
+  const [mediaPreview, setMediaPreview] = useState<string | null>(null);
+  const [mediaType, setMediaType] = useState<MediaType>(null);
+  const [uploadedMediaUrl, setUploadedMediaUrl] = useState<string | null>(null);
+  const [uploadedMediaKey, setUploadedMediaKey] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [error, setError] = useState('');
@@ -84,13 +87,19 @@ export default function AdminBroadcast() {
     return () => clearTimeout(t);
   }, [posts]);
 
-  const openCreateForm = () => {
-    setEditPost(null);
+  const resetForm = () => {
     setTitle(''); setBody(''); setSendTo('bot');
     setScheduleEnabled(false); setScheduledAt('');
-    setImageFile(null); setImagePreview(null);
-    setUploadedImageUrl(null); setUploadedImageKey(null);
+    setMediaPreview(null); setMediaType(null);
+    setUploadedMediaUrl(null); setUploadedMediaKey(null);
+    setUploadProgress(0);
     setError('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const openCreateForm = () => {
+    setEditPost(null);
+    resetForm();
     setShowForm(true);
   };
 
@@ -101,59 +110,103 @@ export default function AdminBroadcast() {
     setSendTo(post.send_to);
     setScheduleEnabled(!!post.scheduled_at);
     setScheduledAt(post.scheduled_at ? post.scheduled_at.slice(0, 16) : '');
-    setImagePreview(post.image_url || null);
-    setUploadedImageUrl(post.image_url || null);
-    setUploadedImageKey(post.image_key || null);
-    setImageFile(null);
+    setMediaPreview(post.media_url || null);
+    setMediaType(post.media_type || null);
+    setUploadedMediaUrl(post.media_url || null);
+    setUploadedMediaKey(post.media_key || null);
+    setUploadProgress(0);
     setError('');
     setShowForm(true);
   };
 
-  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+
+    const isVideo = file.type.startsWith('video/');
+    const isImage = file.type.startsWith('image/');
+    if (!isVideo && !isImage) {
+      setError('Only image or video files are allowed');
+      return;
+    }
+
+    // Preview
+    if (isImage) {
+      setMediaPreview(URL.createObjectURL(file));
+      setMediaType('image');
+    } else {
+      setMediaPreview(URL.createObjectURL(file));
+      setMediaType('video');
+    }
+
     setUploading(true);
+    setUploadProgress(0);
     setError('');
+
     try {
-      // 1. Get presigned URL
+      // 1. Get presigned URL from server
       const pr = await fetch(`${API_URL}/broadcast/presign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData },
         body: JSON.stringify({ filename: file.name, contentType: file.type }),
       });
-      if (!pr.ok) throw new Error('Presign failed');
+      if (!pr.ok) {
+        const d = await pr.json();
+        throw new Error(d.error || 'Presign failed');
+      }
       const { uploadUrl, publicUrl, key } = await pr.json();
-      // 2. Upload directly to R2
-      const up = await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!up.ok) throw new Error('Upload to R2 failed');
-      setUploadedImageUrl(publicUrl);
-      setUploadedImageKey(key);
+
+      // 2. Upload to R2 with XHR so we can track progress
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', uploadUrl);
+        xhr.setRequestHeader('Content-Type', file.type);
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) {
+            setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
+          }
+        };
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) resolve();
+          else reject(new Error(`Upload failed: ${xhr.status}`));
+        };
+        xhr.onerror = () => reject(new Error('Upload error'));
+        xhr.send(file);
+      });
+
+      setUploadedMediaUrl(publicUrl);
+      setUploadedMediaKey(key);
+      setUploadProgress(100);
     } catch (err: any) {
-      setError('Image upload failed: ' + err.message);
+      setError('Upload failed: ' + err.message);
+      setMediaPreview(null);
+      setMediaType(null);
     } finally {
       setUploading(false);
     }
   };
 
-  const removeImage = () => {
-    setImageFile(null);
-    setImagePreview(null);
-    setUploadedImageUrl(null);
-    setUploadedImageKey(null);
+  const removeMedia = () => {
+    setMediaPreview(null);
+    setMediaType(null);
+    setUploadedMediaUrl(null);
+    setUploadedMediaKey(null);
+    setUploadProgress(0);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSave = async () => {
     if (!body.trim()) { setError('Post message is required'); return; }
+    if (uploading) { setError('Please wait for upload to finish'); return; }
     if (scheduleEnabled && !scheduledAt) { setError('Please pick a scheduled date/time'); return; }
     setSaving(true); setError('');
     try {
       const payload = {
-        title, body,
-        image_url: uploadedImageUrl,
-        image_key: uploadedImageKey,
+        title,
+        body,
+        media_url: uploadedMediaUrl,
+        media_key: uploadedMediaKey,
+        media_type: mediaType,
         send_to: sendTo,
         scheduled_at: scheduleEnabled ? new Date(scheduledAt).toISOString() : null,
       };
@@ -184,7 +237,6 @@ export default function AdminBroadcast() {
       });
       const d = await r.json();
       if (!r.ok) { setError(d.error || 'Send failed'); return; }
-      // Optimistically update status
       setPosts(prev => prev.map(p => p.id === postId ? { ...p, status: 'sending' } : p));
       setTimeout(() => fetchPosts(), 3000);
     } catch (err: any) {
@@ -207,7 +259,8 @@ export default function AdminBroadcast() {
     }
   };
 
-  const fmtDate = (d: string | null) => d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
+  const fmtDate = (d: string | null) =>
+    d ? new Date(d).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—';
 
   // ── FORM VIEW ──────────────────────────────────────────────────────────────
   if (showForm) {
@@ -217,7 +270,8 @@ export default function AdminBroadcast() {
           <h2 className="text-lg font-black text-slate-800">
             {editPost ? '✏️ Edit Post' : '📢 New Broadcast'}
           </h2>
-          <button onClick={() => setShowForm(false)} className="p-2 rounded-xl bg-white border border-slate-200 text-slate-500">
+          <button onClick={() => { setShowForm(false); resetForm(); }}
+            className="p-2 rounded-xl bg-white border border-slate-200 text-slate-500">
             <X size={18} />
           </button>
         </div>
@@ -236,35 +290,73 @@ export default function AdminBroadcast() {
             />
           </div>
 
-          {/* Image Upload */}
+          {/* Media Upload */}
           <div className="bg-white rounded-2xl p-4 border border-slate-100 shadow-sm">
-            <label className="block text-xs font-bold text-slate-500 mb-2">Image (optional)</label>
-            {imagePreview ? (
+            <label className="block text-xs font-bold text-slate-500 mb-2">
+              Image or Video (optional)
+            </label>
+
+            {mediaPreview ? (
               <div className="relative">
-                <img src={imagePreview} alt="preview" className="w-full h-44 object-cover rounded-xl" />
+                {mediaType === 'video' ? (
+                  <div className="relative w-full h-44 bg-slate-900 rounded-xl flex items-center justify-center overflow-hidden">
+                    <video src={mediaPreview} className="h-full w-full object-cover rounded-xl" muted playsInline />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-black/60 rounded-full p-3">
+                        <Film size={28} className="text-white" />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <img src={mediaPreview} alt="preview" className="w-full h-44 object-cover rounded-xl" />
+                )}
+
+                {/* Upload progress overlay */}
                 {uploading && (
-                  <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/50 rounded-xl flex flex-col items-center justify-center space-y-2">
                     <Loader2 size={28} className="text-white animate-spin" />
+                    <span className="text-white text-sm font-bold">{uploadProgress}%</span>
+                    <div className="w-3/4 h-2 bg-white/30 rounded-full overflow-hidden">
+                      <div className="h-full bg-yellow-400 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
+                    </div>
                   </div>
                 )}
-                <button
-                  onClick={removeImage}
-                  className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1"
-                >
-                  <X size={14} />
-                </button>
+
+                {!uploading && (
+                  <button onClick={removeMedia}
+                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 shadow-lg">
+                    <X size={14} />
+                  </button>
+                )}
+
+                {/* Type badge */}
+                <div className="absolute bottom-2 left-2">
+                  <span className={`text-[11px] font-bold px-2 py-1 rounded-lg shadow ${mediaType === 'video' ? 'bg-purple-600 text-white' : 'bg-blue-600 text-white'}`}>
+                    {mediaType === 'video' ? '🎬 Video' : '🖼️ Image'}
+                  </span>
+                </div>
               </div>
             ) : (
               <button
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full h-32 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-yellow-400 hover:text-yellow-500 transition-colors"
+                className="w-full h-36 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center text-slate-400 hover:border-yellow-400 hover:text-yellow-500 transition-colors"
               >
-                <ImageIcon size={28} className="mb-2" />
-                <span className="text-sm font-semibold">Tap to upload image</span>
-                <span className="text-xs">JPG, PNG, WebP, GIF</span>
+                <div className="flex space-x-3 mb-2">
+                  <ImageIcon size={24} />
+                  <Video size={24} />
+                </div>
+                <span className="text-sm font-semibold">Tap to upload Image or Video</span>
+                <span className="text-xs mt-1">JPG, PNG, GIF · MP4, MOV, WebM</span>
               </button>
             )}
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageSelect} />
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
           </div>
 
           {/* Message Body */}
@@ -319,7 +411,7 @@ export default function AdminBroadcast() {
                 <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${scheduleEnabled ? 'translate-x-6' : ''}`} />
               </button>
             </div>
-            {scheduleEnabled && (
+            {scheduleEnabled ? (
               <input
                 type="datetime-local"
                 value={scheduledAt}
@@ -327,15 +419,14 @@ export default function AdminBroadcast() {
                 min={new Date().toISOString().slice(0, 16)}
                 className="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
               />
-            )}
-            {!scheduleEnabled && (
-              <p className="text-xs text-slate-400">Post will be saved as draft. Press "Send Now" to broadcast.</p>
+            ) : (
+              <p className="text-xs text-slate-400">Post saved as draft. Press "Send Now" to broadcast immediately.</p>
             )}
           </div>
 
           {error && (
             <div className="flex items-center space-x-2 bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm">
-              <AlertCircle size={16} />
+              <AlertCircle size={16} className="shrink-0" />
               <span>{error}</span>
             </div>
           )}
@@ -343,7 +434,7 @@ export default function AdminBroadcast() {
           {/* Actions */}
           <div className="flex space-x-3">
             <button
-              onClick={() => setShowForm(false)}
+              onClick={() => { setShowForm(false); resetForm(); }}
               className="flex-1 py-3.5 rounded-xl border border-slate-200 bg-white text-slate-600 font-bold text-sm"
             >
               Cancel
@@ -353,7 +444,7 @@ export default function AdminBroadcast() {
               disabled={saving || uploading}
               className="flex-1 py-3.5 rounded-xl bg-yellow-400 text-slate-900 font-black text-sm flex items-center justify-center space-x-2 disabled:opacity-60"
             >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : null}
+              {saving && <Loader2 size={16} className="animate-spin" />}
               <span>{scheduleEnabled ? '📅 Schedule' : '💾 Save Draft'}</span>
             </button>
           </div>
@@ -399,7 +490,9 @@ export default function AdminBroadcast() {
         <div className="flex flex-col items-center justify-center pt-20 text-slate-400 space-y-3">
           <MessageSquare size={48} strokeWidth={1.5} />
           <p className="font-semibold text-sm">No posts yet</p>
-          <button onClick={openCreateForm} className="text-yellow-600 font-bold text-sm underline">Create your first post →</button>
+          <button onClick={openCreateForm} className="text-yellow-600 font-bold text-sm underline">
+            Create your first post →
+          </button>
         </div>
       ) : (
         <div className="space-y-3">
@@ -411,10 +504,22 @@ export default function AdminBroadcast() {
 
             return (
               <div key={post.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                {/* Post image preview */}
-                {post.image_url && (
-                  <img src={post.image_url} alt="post" className="w-full h-36 object-cover" />
+                {/* Media preview */}
+                {post.media_url && post.media_type === 'image' && (
+                  <img src={post.media_url} alt="post" className="w-full h-36 object-cover" />
                 )}
+                {post.media_url && post.media_type === 'video' && (
+                  <div className="relative w-full h-36 bg-slate-900 flex items-center justify-center overflow-hidden">
+                    <video src={post.media_url} className="h-full w-full object-cover" muted playsInline />
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <div className="bg-black/70 rounded-full p-3">
+                        <Film size={24} className="text-white" />
+                      </div>
+                    </div>
+                    <span className="absolute bottom-2 left-2 text-[11px] font-bold px-2 py-0.5 rounded-lg bg-purple-600 text-white">🎬 Video</span>
+                  </div>
+                )}
+
                 <div className="p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex-1 min-w-0">
@@ -437,7 +542,9 @@ export default function AdminBroadcast() {
                       <span>📅 {fmtDate(post.scheduled_at)}</span>
                     )}
                     {post.status === 'sent' && (
-                      <span className="text-green-600">✅ {post.sent_count} sent · {post.failed_count} failed · {fmtDate(post.sent_at)}</span>
+                      <span className="text-green-600 font-semibold">
+                        ✅ {post.sent_count} sent · {post.failed_count} failed · {fmtDate(post.sent_at)}
+                      </span>
                     )}
                     {!post.scheduled_at && post.status === 'draft' && (
                       <span>Created {fmtDate(post.created_at)}</span>

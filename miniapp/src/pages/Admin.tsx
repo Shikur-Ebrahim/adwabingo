@@ -132,6 +132,7 @@ export default function Admin() {
             user_audit: '/admin/user-audit',
             tx_report: '/admin/tx-report',
             settings: '/admin/settings',
+            broadcast: '/admin/broadcast',
           };
           if (routeMap[mod.id]) {
             return (

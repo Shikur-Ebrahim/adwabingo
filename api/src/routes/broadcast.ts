@@ -6,9 +6,9 @@
  *  GET    /api/broadcast            – list all posts (admin)
  *  POST   /api/broadcast            – create post (draft or scheduled)
  *  PUT    /api/broadcast/:id        – update post
- *  DELETE /api/broadcast/:id        – delete post (also deletes R2 image)
+ *  DELETE /api/broadcast/:id        – delete post (also deletes R2 image/video)
  *  POST   /api/broadcast/:id/send   – immediately send/publish a post
- *  POST   /api/broadcast/presign    – get R2 presigned URL for image upload
+ *  POST   /api/broadcast/presign    – get R2 presigned URL for image/video upload
  */
 
 import { Router, Response, NextFunction } from 'express';
@@ -35,17 +35,32 @@ async function sendTelegramMessage(
   botToken: string,
   chatId: string,
   body: string,
-  imageUrl?: string | null
+  mediaUrl?: string | null,
+  mediaType?: string | null   // 'image' | 'video' | null
 ): Promise<boolean> {
   try {
     const base = `https://api.telegram.org/bot${botToken}`;
-    if (imageUrl) {
+
+    if (mediaUrl && mediaType === 'video') {
+      const r = await fetch(`${base}/sendVideo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: chatId,
+          video: mediaUrl,
+          caption: body,
+          parse_mode: 'Markdown',
+          supports_streaming: true,
+        }),
+      });
+      return r.ok;
+    } else if (mediaUrl && mediaType === 'image') {
       const r = await fetch(`${base}/sendPhoto`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           chat_id: chatId,
-          photo: imageUrl,
+          photo: mediaUrl,
           caption: body,
           parse_mode: 'Markdown',
         }),
@@ -79,7 +94,7 @@ async function executeBroadcast(postId: string): Promise<void> {
   if (!post) return;
 
   const botToken = process.env.BOT_TOKEN;
-  const channelId = process.env.TELEGRAM_CHANNEL_ID; // e.g. "@mychannel" or "-1001234567890"
+  const channelId = process.env.TELEGRAM_CHANNEL_ID;
 
   if (!botToken) {
     await supabase.from('broadcast_posts').update({
@@ -99,17 +114,19 @@ async function executeBroadcast(postId: string): Promise<void> {
   let sentCount = 0;
   let failedCount = 0;
 
+  const mediaUrl = post.media_url || null;
+  const mediaType = post.media_type || null;
+
   // ── Send to channel if requested ────────────────────────────────────────────
   const sendToChannel = (post.send_to === 'channel' || post.send_to === 'both') && channelId;
   if (sendToChannel) {
-    const ok = await sendTelegramMessage(botToken, channelId!, post.body, post.image_url);
+    const ok = await sendTelegramMessage(botToken, channelId!, post.body, mediaUrl, mediaType);
     if (ok) sentCount++; else failedCount++;
   }
 
   // ── Send to all users (role = 'user' only) ──────────────────────────────────
   const sendToBot = post.send_to === 'bot' || post.send_to === 'both';
   if (sendToBot) {
-    // Fetch in batches of 100
     let page = 0;
     const pageSize = 100;
 
@@ -124,9 +141,8 @@ async function executeBroadcast(postId: string): Promise<void> {
       if (!users || users.length === 0) break;
 
       for (const u of users) {
-        // Throttle: Telegram allows ~30 msg/sec to different chats
-        await new Promise(r => setTimeout(r, 35));
-        const ok = await sendTelegramMessage(botToken, u.telegram_id, post.body, post.image_url);
+        await new Promise(r => setTimeout(r, 35)); // ~28 msg/sec Telegram rate limit
+        const ok = await sendTelegramMessage(botToken, u.telegram_id, post.body, mediaUrl, mediaType);
         if (ok) sentCount++; else failedCount++;
       }
 
@@ -147,7 +163,7 @@ async function executeBroadcast(postId: string): Promise<void> {
   console.log(`[Broadcast] Post ${postId} sent: ${sentCount} ok, ${failedCount} failed`);
 }
 
-// ── Background scheduler: check every 30 seconds for due scheduled posts ─────
+// ── Background scheduler ──────────────────────────────────────────────────────
 let schedulerRunning = false;
 export function startBroadcastScheduler() {
   if (schedulerRunning) return;
@@ -188,32 +204,37 @@ router.get('/', validateTelegramAuth, requireAdmin, async (_req, res) => {
 });
 
 // ── POST /api/broadcast/presign ───────────────────────────────────────────────
-// Get a presigned URL to upload a post image to R2
 router.post('/presign', validateTelegramAuth, requireAdmin, async (req: AuthRequest, res) => {
   const { filename, contentType } = req.body;
   if (!filename || !contentType) {
     res.status(400).json({ error: 'filename and contentType required' }); return;
   }
-  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  const allowedImages = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+  const allowedVideos = ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'];
+  const allowed = [...allowedImages, ...allowedVideos];
+
   if (!allowed.includes(contentType)) {
-    res.status(400).json({ error: 'Only image files allowed' }); return;
+    res.status(400).json({ error: 'Only image/video files allowed' }); return;
   }
-  const ext = filename.split('.').pop() || 'jpg';
-  const key = `posts/${crypto.randomBytes(10).toString('hex')}.${ext}`;
+
+  const isVideo = allowedVideos.includes(contentType);
+  const ext = filename.split('.').pop() || (isVideo ? 'mp4' : 'jpg');
+  const folder = isVideo ? 'post-videos' : 'post-images';
+  const key = `${folder}/${crypto.randomBytes(10).toString('hex')}.${ext}`;
+
   try {
-    const uploadUrl = await getPresignedUploadUrl(key, contentType);
+    const uploadUrl = await getPresignedUploadUrl(key, contentType, 600); // 10-min window for videos
     const publicUrl = `${process.env.R2_PUBLIC_URL}/${key}`;
-    res.json({ uploadUrl, publicUrl, key });
+    res.json({ uploadUrl, publicUrl, key, mediaType: isVideo ? 'video' : 'image' });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // ── POST /api/broadcast ───────────────────────────────────────────────────────
-// Create a new post (draft or scheduled). Does NOT send immediately.
 router.post('/', validateTelegramAuth, requireAdmin, async (req: AuthRequest, res) => {
   const telegramId = req.telegramUser!.id.toString();
-  const { title, body, image_url, image_key, send_to, scheduled_at } = req.body;
+  const { title, body, media_url, media_key, media_type, send_to, scheduled_at } = req.body;
 
   if (!body || !body.trim()) {
     res.status(400).json({ error: 'Post body is required' }); return;
@@ -226,8 +247,9 @@ router.post('/', validateTelegramAuth, requireAdmin, async (req: AuthRequest, re
     .insert({
       title: title || '',
       body: body.trim(),
-      image_url: image_url || null,
-      image_key: image_key || null,
+      media_url: media_url || null,
+      media_key: media_key || null,
+      media_type: media_type || null,
       send_to: sendTo,
       status,
       scheduled_at: scheduled_at || null,
@@ -243,17 +265,16 @@ router.post('/', validateTelegramAuth, requireAdmin, async (req: AuthRequest, re
 // ── PUT /api/broadcast/:id ────────────────────────────────────────────────────
 router.put('/:id', validateTelegramAuth, requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const { title, body, image_url, image_key, send_to, scheduled_at } = req.body;
+  const { title, body, media_url, media_key, media_type, send_to, scheduled_at } = req.body;
 
-  const { data: existing } = await supabase.from('broadcast_posts').select('status, image_key').eq('id', id).single();
+  const { data: existing } = await supabase.from('broadcast_posts').select('status, media_key').eq('id', id).single();
   if (!existing) { res.status(404).json({ error: 'Post not found' }); return; }
   if (existing.status === 'sent' || existing.status === 'sending') {
     res.status(400).json({ error: 'Cannot edit a post that is already sent or sending' }); return;
   }
 
-  // If image changed, clean up old R2 object
-  if (image_key && existing.image_key && image_key !== existing.image_key) {
-    deleteFromR2(existing.image_key).catch(() => {});
+  if (media_key && existing.media_key && media_key !== existing.media_key) {
+    deleteFromR2(existing.media_key).catch(() => {});
   }
 
   const sendTo = ['bot', 'channel', 'both'].includes(send_to) ? send_to : 'bot';
@@ -264,8 +285,9 @@ router.put('/:id', validateTelegramAuth, requireAdmin, async (req, res) => {
     .update({
       title: title || '',
       body: body?.trim(),
-      image_url: image_url || null,
-      image_key: image_key || null,
+      media_url: media_url || null,
+      media_key: media_key || null,
+      media_type: media_type || null,
       send_to: sendTo,
       status,
       scheduled_at: scheduled_at || null,
@@ -282,11 +304,11 @@ router.put('/:id', validateTelegramAuth, requireAdmin, async (req, res) => {
 // ── DELETE /api/broadcast/:id ─────────────────────────────────────────────────
 router.delete('/:id', validateTelegramAuth, requireAdmin, async (req, res) => {
   const { id } = req.params;
-  const { data: existing } = await supabase.from('broadcast_posts').select('image_key').eq('id', id).single();
+  const { data: existing } = await supabase.from('broadcast_posts').select('media_key').eq('id', id).single();
   if (!existing) { res.status(404).json({ error: 'Not found' }); return; }
 
-  if (existing.image_key) {
-    deleteFromR2(existing.image_key).catch(() => {});
+  if (existing.media_key) {
+    deleteFromR2(existing.media_key).catch(() => {});
   }
 
   const { error } = await supabase.from('broadcast_posts').delete().eq('id', id);
@@ -295,7 +317,6 @@ router.delete('/:id', validateTelegramAuth, requireAdmin, async (req, res) => {
 });
 
 // ── POST /api/broadcast/:id/send ─────────────────────────────────────────────
-// Immediately publish/send a post (regardless of scheduled_at)
 router.post('/:id/send', validateTelegramAuth, requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { data: post } = await supabase.from('broadcast_posts').select('status').eq('id', id).single();
@@ -303,7 +324,6 @@ router.post('/:id/send', validateTelegramAuth, requireAdmin, async (req, res) =>
   if (post.status === 'sending') { res.status(400).json({ error: 'Already sending' }); return; }
   if (post.status === 'sent') { res.status(400).json({ error: 'Already sent' }); return; }
 
-  // Fire and forget — respond immediately so admin sees spinner feedback
   res.json({ success: true, message: 'Broadcast started' });
   executeBroadcast(id).catch(e => console.error('[Broadcast Send]', e));
 });
