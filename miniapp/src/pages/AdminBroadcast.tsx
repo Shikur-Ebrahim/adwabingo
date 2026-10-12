@@ -37,15 +37,15 @@ const STATUS_BADGE: Record<PostStatus, { label: string; cls: string }> = {
 };
 
 const SEND_TO_OPTIONS: { value: SendTo; label: string; desc: string; icon: string }[] = [
-  { value: 'bot',     label: 'Bot Only',      desc: 'All players via Telegram Bot',   icon: '🤖' },
-  { value: 'channel', label: 'Channel Only',  desc: 'Official Telegram Channel only', icon: '📢' },
-  { value: 'both',    label: 'Bot + Channel', desc: 'Both all players & channel',     icon: '📡' },
+  { value: 'bot',     label: 'Bot Only',      desc: 'All players via Telegram Bot',       icon: '🤖' },
+  { value: 'channel', label: 'Channel Only',  desc: 'ADWA Bingo Channel (@adwabingo)',    icon: '📢' },
+  { value: 'both',    label: 'Bot + Channel', desc: 'Both all players & @adwabingo',      icon: '📡' },
 ];
 
 export default function AdminBroadcast() {
   const [posts, setPosts] = useState<BroadcastPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [defaultChannel, setDefaultChannel] = useState('');
+  const [defaultChannel, setDefaultChannel] = useState('@adwabingo');
   const [showForm, setShowForm] = useState(false);
   const [editPost, setEditPost] = useState<BroadcastPost | null>(null);
 
@@ -53,7 +53,7 @@ export default function AdminBroadcast() {
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [sendTo, setSendTo] = useState<SendTo>('both');
-  const [channelId, setChannelId] = useState('');
+  const [channelId, setChannelId] = useState('@adwabingo');
   const [scheduleEnabled, setScheduleEnabled] = useState(false);
   const [scheduledAt, setScheduledAt] = useState('');
   const [mediaPreview, setMediaPreview] = useState<string | null>(null);
@@ -85,7 +85,10 @@ export default function AdminBroadcast() {
     try {
       const r = await fetch(`${API_URL}/broadcast/channel-default`, { headers: { 'x-telegram-init-data': initData } });
       const d = await r.json();
-      if (d.defaultChannel) setDefaultChannel(d.defaultChannel);
+      if (d.defaultChannel) {
+        setDefaultChannel(d.defaultChannel);
+        setChannelId(d.defaultChannel);
+      }
     } catch {}
   };
 
@@ -106,7 +109,7 @@ export default function AdminBroadcast() {
     setTitle('');
     setBody('');
     setSendTo('both');
-    setChannelId(defaultChannel);
+    setChannelId(defaultChannel || '@adwabingo');
     setScheduleEnabled(false);
     setScheduledAt('');
     setMediaPreview(null);
@@ -129,7 +132,7 @@ export default function AdminBroadcast() {
     setTitle(post.title || '');
     setBody(post.body);
     setSendTo(post.send_to);
-    setChannelId(post.channel_id || defaultChannel);
+    setChannelId(post.channel_id || defaultChannel || '@adwabingo');
     setScheduleEnabled(!!post.scheduled_at);
     setScheduledAt(post.scheduled_at ? post.scheduled_at.slice(0, 16) : '');
     setMediaPreview(post.media_url || null);
@@ -220,6 +223,10 @@ export default function AdminBroadcast() {
     if (scheduleEnabled && !scheduledAt) { setError('Please pick a scheduled date/time'); return; }
     setSaving(true); setError('');
     try {
+      const targetChannel = (sendTo === 'channel' || sendTo === 'both')
+        ? (channelId.trim() || defaultChannel || '@adwabingo')
+        : null;
+
       const payload = {
         title,
         body,
@@ -227,7 +234,7 @@ export default function AdminBroadcast() {
         media_key: uploadedMediaKey,
         media_type: mediaType,
         send_to: sendTo,
-        channel_id: (sendTo === 'channel' || sendTo === 'both') ? (channelId || defaultChannel) : null,
+        channel_id: targetChannel,
         scheduled_at: scheduleEnabled ? new Date(scheduledAt).toISOString() : null,
       };
       const url = editPost ? `${API_URL}/broadcast/${editPost.id}` : `${API_URL}/broadcast`;
@@ -435,20 +442,21 @@ export default function AdminBroadcast() {
 
             {/* Target Channel input if channel or both selected */}
             {(sendTo === 'channel' || sendTo === 'both') && (
-              <div className="mt-3 pt-3 border-t border-slate-100">
-                <label className="block text-xs font-bold text-slate-500 mb-1.5 flex items-center space-x-1">
-                  <AtSign size={13} />
-                  <span>Channel Username / ID</span>
+              <div className="mt-3 pt-3 border-t border-slate-100 bg-yellow-50/50 p-3 rounded-xl border border-yellow-100">
+                <label className="block text-xs font-black text-slate-700 mb-1.5 flex items-center space-x-1.5">
+                  <AtSign size={14} className="text-yellow-600" />
+                  <span>Target Telegram Channel</span>
                 </label>
                 <input
                   type="text"
                   value={channelId}
                   onChange={e => setChannelId(e.target.value)}
-                  placeholder={defaultChannel || '@adwabingo'}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  placeholder="@adwabingo"
+                  className="w-full border border-slate-200 bg-white rounded-xl px-3 py-2.5 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-yellow-400"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Make sure your bot is added as an <strong>Administrator</strong> in this channel.
+                <p className="text-[11px] text-slate-500 mt-1.5">
+                  Default channel: <strong>@adwabingo</strong> (<a href="https://t.me/adwabingo" target="_blank" rel="noreferrer" className="text-yellow-600 font-bold underline">https://t.me/adwabingo</a>).
+                  <br />Ensure your Telegram bot is added as an <strong>Administrator</strong> in @adwabingo.
                 </p>
               </div>
             )}
@@ -523,7 +531,7 @@ export default function AdminBroadcast() {
             <Radio className="text-yellow-500" size={22} />
             <span>Broadcast</span>
           </h1>
-          <p className="text-xs text-slate-400 mt-0.5">Send posts to all players &amp; channel</p>
+          <p className="text-xs text-slate-400 mt-0.5">Send posts to all players &amp; channel @adwabingo</p>
         </div>
         <button
           onClick={openCreateForm}
@@ -561,7 +569,7 @@ export default function AdminBroadcast() {
             const isSendable = post.status === 'draft' || post.status === 'scheduled' || post.status === 'failed';
             const isEditable = post.status === 'draft' || post.status === 'scheduled' || post.status === 'failed';
             const isSending = sending === post.id;
-            const targetChannelName = post.channel_id || defaultChannel || '@channel';
+            const targetChannelName = post.channel_id || defaultChannel || '@adwabingo';
 
             return (
               <div key={post.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -627,7 +635,7 @@ export default function AdminBroadcast() {
 
                   {/* Error warning if any */}
                   {post.error_message && (
-                    <div className="text-[11px] text-red-600 bg-red-50 p-2 rounded-lg mb-3">
+                    <div className="text-[11px] text-red-600 bg-red-50 p-2.5 rounded-lg mb-3 border border-red-100 leading-relaxed">
                       ⚠️ {post.error_message}
                     </div>
                   )}

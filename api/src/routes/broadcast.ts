@@ -4,7 +4,7 @@
  *
  * Endpoints:
  *  GET    /api/broadcast                 – list all posts (admin)
- *  GET    /api/broadcast/channel-default – get default configured channel
+ *  GET    /api/broadcast/channel-default – get default configured channel (@adwabingo)
  *  POST   /api/broadcast                 – create post (draft or scheduled)
  *  PUT    /api/broadcast/:id             – update post
  *  DELETE /api/broadcast/:id             – delete post (also deletes R2 media)
@@ -20,6 +20,9 @@ import crypto from 'crypto';
 
 const router = Router();
 
+// Default Telegram Channel
+export const DEFAULT_CHANNEL = '@adwabingo';
+
 // ── Middleware: admin only ────────────────────────────────────────────────────
 const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   const telegramId = req.telegramUser!.id.toString();
@@ -31,19 +34,42 @@ const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction)
   next();
 };
 
+/**
+ * Normalizes any channel link or username into a valid Telegram chat_id:
+ * - "https://t.me/adwabingo" -> "@adwabingo"
+ * - "t.me/adwabingo"        -> "@adwabingo"
+ * - "@adwabingo"            -> "@adwabingo"
+ * - "adwabingo"             -> "@adwabingo"
+ * - "-100123456789"         -> "-100123456789"
+ * - empty / null            -> "@adwabingo"
+ */
+export function normalizeTelegramChannel(input?: string | null): string {
+  if (!input || !input.trim()) return DEFAULT_CHANNEL;
+  let ch = input.trim();
+  // Strip http://, https://, www., t.me/, telegram.me/
+  ch = ch.replace(/^https?:\/\//i, '');
+  ch = ch.replace(/^www\./i, '');
+  ch = ch.replace(/^(t\.me|telegram\.me)\//i, '');
+  ch = ch.replace(/\/.*$/, ''); // strip any trailing slash or path parts
+  ch = ch.trim();
+  if (!ch) return DEFAULT_CHANNEL;
+  // If numeric channel/group ID (e.g. -100123456789 or 100123456789)
+  if (ch.startsWith('-') || /^\d+$/.test(ch)) {
+    return ch.startsWith('-') ? ch : `-${ch}`;
+  }
+  // Otherwise it's a username handle
+  ch = ch.replace(/^@/, '');
+  return `@${ch}`;
+}
+
 // ── Helper: resolve Telegram Channel username or chat ID ────────────────────
-async function resolveChannelId(customChannel?: string | null): Promise<string | null> {
+async function resolveChannelId(customChannel?: string | null): Promise<string> {
   if (customChannel && customChannel.trim()) {
-    let ch = customChannel.trim();
-    if (ch.startsWith('http')) {
-      ch = ch.replace(/^https?:\/\/t\.me\//i, '').replace(/\/$/, '');
-    }
-    return ch.startsWith('@') || ch.startsWith('-') ? ch : `@${ch}`;
+    return normalizeTelegramChannel(customChannel);
   }
 
   if (process.env.TELEGRAM_CHANNEL_ID && process.env.TELEGRAM_CHANNEL_ID.trim()) {
-    let ch = process.env.TELEGRAM_CHANNEL_ID.trim();
-    return ch.startsWith('@') || ch.startsWith('-') ? ch : `@${ch}`;
+    return normalizeTelegramChannel(process.env.TELEGRAM_CHANNEL_ID);
   }
 
   try {
@@ -56,13 +82,7 @@ async function resolveChannelId(customChannel?: string | null): Promise<string |
       for (const k of ['channel_id', 'telegram_channel_id', 'channel_link']) {
         const found = rows.find(r => r.key === k && r.value);
         if (found && found.value.trim()) {
-          let val = found.value.trim();
-          if (val.startsWith('http')) {
-            val = val.replace(/^https?:\/\/t\.me\//i, '').replace(/\/$/, '');
-          }
-          if (val) {
-            return val.startsWith('@') || val.startsWith('-') ? val : `@${val}`;
-          }
+          return normalizeTelegramChannel(found.value);
         }
       }
     }
@@ -70,7 +90,7 @@ async function resolveChannelId(customChannel?: string | null): Promise<string |
     console.error('[Broadcast] Failed to read channel from settings:', err);
   }
 
-  return null;
+  return DEFAULT_CHANNEL;
 }
 
 // ── Helper: send one Telegram request with fallback for markdown parse errors ─
@@ -155,7 +175,7 @@ async function sendTelegramMessage(
     });
   }
 
-  // If caption was too long, send the remainder as a follow-up text message
+  // If caption was too long, send the full body as follow-up text message
   if (result.ok && isCaptionTooLong) {
     await sendTelegramRequest(base, 'sendMessage', {
       chat_id: chatId,
@@ -210,21 +230,24 @@ async function executeBroadcast(postId: string): Promise<void> {
   const sendToChannel = post.send_to === 'channel' || post.send_to === 'both';
   if (sendToChannel) {
     const channelId = await resolveChannelId(post.channel_id);
-    if (!channelId) {
-      console.warn('[Broadcast] No channel ID or channel_link found in settings or post');
-      lastError = 'Channel target not found. Please provide a channel username or set channel_link in settings.';
-      failedCount++;
+    console.log(`[Broadcast] Sending to Telegram channel: ${channelId} (post.id: ${postId})`);
+    const res = await sendTelegramMessage(botToken, channelId, messageText, mediaUrl, mediaType);
+    if (res.ok) {
+      sentCount++;
+      console.log(`[Broadcast] ✅ Successfully posted to channel ${channelId}`);
     } else {
-      console.log(`[Broadcast] Sending to channel: ${channelId}`);
-      const res = await sendTelegramMessage(botToken, channelId, messageText, mediaUrl, mediaType);
-      if (res.ok) {
-        sentCount++;
-        console.log(`[Broadcast] Successfully posted to channel ${channelId}`);
-      } else {
-        failedCount++;
-        lastError = `Channel (${channelId}) error: ${res.error || 'Unknown'}`;
-        console.warn(`[Broadcast] Failed to send to channel ${channelId}:`, res.error);
+      failedCount++;
+      let friendlyError = res.error || 'Failed to send to channel';
+      if (
+        friendlyError.includes('chat not found') ||
+        friendlyError.includes('not a member') ||
+        friendlyError.includes('administrator') ||
+        friendlyError.includes('CHAT_ADMIN')
+      ) {
+        friendlyError = `Channel (${channelId}): Bot is not an Administrator in the channel. Please add your Telegram Bot as an Admin in ${channelId} with "Post Messages" permission.`;
       }
+      lastError = friendlyError;
+      console.warn(`[Broadcast] ❌ Channel error: ${friendlyError}`);
     }
   }
 
@@ -242,7 +265,7 @@ async function executeBroadcast(postId: string): Promise<void> {
 
       if (uErr) {
         console.error('[Broadcast] Error fetching users page', page, uErr);
-        lastError = `DB error: ${uErr.message}`;
+        if (!lastError) lastError = `DB error: ${uErr.message}`;
         break;
       }
 
@@ -317,7 +340,7 @@ export function startBroadcastScheduler() {
 // ── GET /api/broadcast/channel-default ────────────────────────────────────────
 router.get('/channel-default', validateTelegramAuth, requireAdmin, async (_req, res) => {
   const channel = await resolveChannelId();
-  res.json({ defaultChannel: channel || '' });
+  res.json({ defaultChannel: channel || DEFAULT_CHANNEL });
 });
 
 // ── GET /api/broadcast ────────────────────────────────────────────────────────
@@ -370,6 +393,9 @@ router.post('/', validateTelegramAuth, requireAdmin, async (req: AuthRequest, re
   }
   const sendTo = ['bot', 'channel', 'both'].includes(send_to) ? send_to : 'bot';
   const status = scheduled_at ? 'scheduled' : 'draft';
+  const resolvedChannel = (sendTo === 'channel' || sendTo === 'both')
+    ? normalizeTelegramChannel(channel_id)
+    : null;
 
   const { data, error } = await supabase
     .from('broadcast_posts')
@@ -380,7 +406,7 @@ router.post('/', validateTelegramAuth, requireAdmin, async (req: AuthRequest, re
       media_key: media_key || null,
       media_type: media_type || null,
       send_to: sendTo,
-      channel_id: channel_id ? channel_id.trim() : null,
+      channel_id: resolvedChannel,
       status,
       scheduled_at: scheduled_at || null,
       created_by: telegramId,
@@ -409,6 +435,9 @@ router.put('/:id', validateTelegramAuth, requireAdmin, async (req, res) => {
 
   const sendTo = ['bot', 'channel', 'both'].includes(send_to) ? send_to : 'bot';
   const status = scheduled_at ? 'scheduled' : 'draft';
+  const resolvedChannel = (sendTo === 'channel' || sendTo === 'both')
+    ? normalizeTelegramChannel(channel_id)
+    : null;
 
   const { data, error } = await supabase
     .from('broadcast_posts')
@@ -419,7 +448,7 @@ router.put('/:id', validateTelegramAuth, requireAdmin, async (req, res) => {
       media_key: media_key || null,
       media_type: media_type || null,
       send_to: sendTo,
-      channel_id: channel_id ? channel_id.trim() : null,
+      channel_id: resolvedChannel,
       status,
       scheduled_at: scheduled_at || null,
       updated_at: new Date().toISOString(),
