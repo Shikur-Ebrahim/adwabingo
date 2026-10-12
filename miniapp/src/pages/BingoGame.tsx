@@ -136,34 +136,6 @@ const getWinningPatternTitle = (matrix: number[][], called: number[]): string =>
   return 'BINGO!';
 };
 
-// Triumphant victory fanfare using Web Audio oscillators (100% offline, 0ms latency, always audible)
-function playBingoFanfare(ctx: AudioContext) {
-  try {
-    const now = ctx.currentTime;
-    // Celebratory chords with rich harmonics
-    const chords = [
-      { start: 0.00, dur: 0.18, freqs: [523.25, 659.25] },          // C5 + E5
-      { start: 0.18, dur: 0.18, freqs: [587.33, 739.99] },          // D5 + F#5
-      { start: 0.36, dur: 0.22, freqs: [659.25, 783.99] },          // E5 + G5
-      { start: 0.58, dur: 1.10, freqs: [783.99, 1046.50, 1318.51] },// G5 + C6 + E6 (grand triumphant finale!)
-    ];
-    chords.forEach(({ start, dur, freqs }) => {
-      freqs.forEach(freq => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, now + start);
-        gain.gain.setValueAtTime(0.28, now + start);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + start + dur);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now + start);
-        osc.stop(now + start + dur);
-      });
-    });
-  } catch(e) {}
-}
-
 export default function BingoGame() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -403,29 +375,45 @@ export default function BingoGame() {
   }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
 
   // ── CELEBRATION ──────────────────────────────────────────────────────────────────────────
-  // Plays ONLY the synthesized Web Audio fanfare — no TTS voice, no bingo_win.mp3.
-  // This is the "BINGO!" celebration sound the user hears. It always works because:
-  //   - Web Audio oscillators require zero network, zero cache, zero user gesture
-  //   - AudioContext is created here if it doesn't exist yet
-  const playSpecial = useCallback((_name: string) => {
-    // Create AudioContext if missing — celebration always fires after a user gesture (button tap)
-    if (!audioCtxRef.current) {
-      try {
-        const AC = window.AudioContext || (window as any).webkitAudioContext;
-        if (AC) audioCtxRef.current = new AC();
-      } catch {}
-    }
-    const ctx = audioCtxRef.current;
-    if (!ctx) return;
+  // Plays ONLY the "Bingo!" announcement voice (/audio/bingo/bingo_win.mp3) — no synth, no fanfare.
+  // Plays at full volume, always on.
+  const specialAudioElRef = useRef<HTMLAudioElement | null>(null);
 
-    // Resume if suspended
-    if (ctx.state === 'suspended') {
-      ctx.resume().then(() => playBingoFanfare(ctx)).catch(() => {});
-      return;
-    }
+  const playSpecial = useCallback((name: string = 'bingo_win') => {
+    const src = `/audio/bingo/${name}.mp3`;
+    unlockAudio();
 
-    playBingoFanfare(ctx);
-  }, []);
+    // Stop caller voice immediately so "Bingo!" is loud and clear
+    try {
+      if (callAudioElRef.current) {
+        callAudioElRef.current.pause();
+        callAudioElRef.current.currentTime = 0;
+      }
+    } catch {}
+
+    // Dedicated celebration audio element with explicit .load()
+    try {
+      if (!specialAudioElRef.current) {
+        specialAudioElRef.current = new Audio();
+      }
+      const audio = specialAudioElRef.current;
+      try { audio.pause(); } catch {}
+      audio.currentTime = 0;
+      audio.src = src;
+      audio.volume = 1.0; // Celebration is always full 100% volume
+      audio.onerror = () => { playViaWebAudio(src, 1.5); };
+      audio.load();
+
+      const p = audio.play();
+      if (p !== undefined) {
+        p.catch(() => {
+          playViaWebAudio(src, 1.5);
+        });
+      }
+    } catch {
+      playViaWebAudio(src, 1.5);
+    }
+  }, [unlockAudio, playViaWebAudio]);
 
 
 
