@@ -20,7 +20,11 @@ export function generateBingoCard(): number[][] {
 
 export function checkBingo(card: number[][], called: number[]): boolean {
   if (!card || !called) return false;
-  const m = (r: number, c: number) => card[r]?.[c] === 0 || called.includes(card[r]?.[c]);
+  const calledSet = new Set((called || []).map(Number));
+  const m = (r: number, c: number) => {
+    const val = Number(card[r]?.[c] ?? -1);
+    return val === 0 || calledSet.has(val);
+  };
   for (let r = 0; r < 5; r++) if ([0,1,2,3,4].every(c => m(r,c))) return true;
   for (let c = 0; c < 5; c++) if ([0,1,2,3,4].every(r => m(r,c))) return true;
   if ([0,1,2,3,4].every(i => m(i,i))) return true;

@@ -209,18 +209,25 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   res.json({ success: true, cartela_number: seat, card_matrix, unique_players });
 });
 
-router.get('/card', validateTelegramAuth, async (req, res) => {
+router.get('/card', async (req, res) => {
   const { game_id, cartela } = req.query;
-  const { data } = await supabase.from('bingo_players').select('card_matrix').eq('game_id', game_id).eq('cartela_number', cartela).maybeSingle();
+  if (!game_id || !cartela) { res.json({ matrix: null }); return; }
+  const cNum = Number(cartela);
+  const { data } = await supabase.from('bingo_players')
+    .select('card_matrix')
+    .eq('game_id', String(game_id))
+    .eq('cartela_number', isNaN(cNum) ? cartela : cNum)
+    .maybeSingle();
   res.json({ matrix: data?.card_matrix || null });
 });
 
-router.get('/winners', validateTelegramAuth, async (req, res) => {
+router.get('/winners', async (req, res) => {
   const { game_id } = req.query;
-  const { data: game } = await supabase.from('bingo_games').select('called_numbers').eq('id', game_id).maybeSingle();
+  if (!game_id) { res.status(400).json({ error: 'game_id required' }); return; }
+  const { data: game } = await supabase.from('bingo_games').select('called_numbers').eq('id', String(game_id)).maybeSingle();
   if (!game) { res.json({ winners: [] }); return; }
   
-  const { data: players } = await supabase.from('bingo_players').select('first_name, cartela_number, card_matrix').eq('game_id', game_id);
+  const { data: players } = await supabase.from('bingo_players').select('first_name, cartela_number, card_matrix').eq('game_id', String(game_id));
   
   const winners = (players || []).filter(p => checkBingo(p.card_matrix as number[][], game.called_numbers));
   res.json({ winners });

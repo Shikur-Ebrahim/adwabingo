@@ -85,34 +85,66 @@ async function checkAudioAvailable() {
 const getWinningCells = (matrix: number[][], called: number[]) => {
   const winCells = new Set<string>();
   if (!matrix || !called) return winCells;
+
+  const calledSet = new Set((called || []).map(Number));
+  const m = (r: number, c: number) => {
+    const val = Number(matrix[r]?.[c] ?? -1);
+    return val === 0 || calledSet.has(val);
+  };
+
+  // Rows
   for (let r = 0; r < 5; r++) {
-    if (matrix[r].every(n => n === 0 || called.includes(n))) {
+    if ([0, 1, 2, 3, 4].every(c => m(r, c))) {
       for (let c = 0; c < 5; c++) winCells.add(`${r}-${c}`);
     }
   }
-  for (let c = 0; c < 5; c++) {
-    let win = true;
-    for (let r = 0; r < 5; r++) { if (matrix[r][c] !== 0 && !called.includes(matrix[r][c])) win = false; }
-    if (win) { for (let r = 0; r < 5; r++) winCells.add(`${r}-${c}`); }
-  }
-  let d1 = true, d2 = true;
-  for (let i = 0; i < 5; i++) {
-    if (matrix[i][i] !== 0 && !called.includes(matrix[i][i])) d1 = false;
-    if (matrix[i][4-i] !== 0 && !called.includes(matrix[i][4-i])) d2 = false;
-  }
-  if (d1) for (let i = 0; i < 5; i++) winCells.add(`${i}-${i}`);
-  if (d2) for (let i = 0; i < 5; i++) winCells.add(`${i}-${4-i}`);
 
-  const m = (r: number, c: number) => matrix[r]?.[c] === 0 || called.includes(matrix[r]?.[c]);
-  // Outer 4 corners
+  // Columns
+  for (let c = 0; c < 5; c++) {
+    if ([0, 1, 2, 3, 4].every(r => m(r, c))) {
+      for (let r = 0; r < 5; r++) winCells.add(`${r}-${c}`);
+    }
+  }
+
+  // Diagonals
+  if ([0, 1, 2, 3, 4].every(i => m(i, i))) {
+    for (let i = 0; i < 5; i++) winCells.add(`${i}-${i}`);
+  }
+  if ([0, 1, 2, 3, 4].every(i => m(i, 4 - i))) {
+    for (let i = 0; i < 5; i++) winCells.add(`${i}-${4 - i}`);
+  }
+
+  // Outer 4 corners (4 corner rule)
   if (m(0, 0) && m(0, 4) && m(4, 0) && m(4, 4)) {
     winCells.add('0-0'); winCells.add('0-4'); winCells.add('4-0'); winCells.add('4-4');
   }
-  // Inner 4 corners (2nd frame / inner corners)
+
+  // Inner 4 corners (2nd corner rule / 2nd frame)
   if (m(1, 1) && m(1, 3) && m(3, 1) && m(3, 3)) {
     winCells.add('1-1'); winCells.add('1-3'); winCells.add('3-1'); winCells.add('3-3');
   }
+
   return winCells;
+};
+
+const getWinningPatternTitle = (matrix: number[][], called: number[]): string => {
+  if (!matrix || !called) return 'BINGO!';
+  const calledSet = new Set((called || []).map(Number));
+  const m = (r: number, c: number) => {
+    const val = Number(matrix[r]?.[c] ?? -1);
+    return val === 0 || calledSet.has(val);
+  };
+
+  const isOuterCorners = m(0, 0) && m(0, 4) && m(4, 0) && m(4, 4);
+  const isInnerCorners = m(1, 1) && m(1, 3) && m(3, 1) && m(3, 3);
+  const isRow = [0, 1, 2, 3, 4].some(r => [0, 1, 2, 3, 4].every(c => m(r, c)));
+  const isCol = [0, 1, 2, 3, 4].some(c => [0, 1, 2, 3, 4].every(r => m(r, c)));
+  const isDiag = [0, 1, 2, 3, 4].every(i => m(i, i)) || [0, 1, 2, 3, 4].every(i => m(i, 4 - i));
+
+  if (isInnerCorners && !isRow && !isCol && !isDiag) return '🎯 2ND CORNER BINGO!';
+  if (isOuterCorners && !isRow && !isCol && !isDiag) return '🎯 4 CORNERS BINGO!';
+  if (isInnerCorners || isOuterCorners) return '🎯 CORNER BINGO!';
+  return 'BINGO!';
 };
 
 export default function BingoGame() {
@@ -406,25 +438,36 @@ export default function BingoGame() {
             if (isMounted) setCelebration({ winner_name: game.winner_first_name || 'Player', winner_cartela: 0, winner_prize: game.winner_prize!, winner_matrix: null, iWon, called: [...game.called_numbers] });
           });
       } else {
-        fetch(`${API}/bingo/card?game_id=${game.id}&cartela=${game.winner_cartela}`, { headers: hdrs() })
-          .then(r => r.json())
-          .then(data => {
-            if (!isMounted) return;
-            setCelebration({
-              winner_name: game.winner_first_name || 'Player',
-              winner_cartela: game.winner_cartela!,
-              winner_prize: game.winner_prize!,
-              winner_matrix: data.matrix || null,
-              iWon, called: [...game.called_numbers]
-            });
-          }).catch(() => {
-            if (isMounted) setCelebration({ winner_name: game.winner_first_name || 'Player', winner_cartela: game.winner_cartela!, winner_prize: game.winner_prize!, winner_matrix: null, iWon, called: [...game.called_numbers] });
+        const localCard = myCartelas.find(c => c.cartela_number === game.winner_cartela)?.card_matrix;
+        if (localCard) {
+          setCelebration({
+            winner_name: game.winner_first_name || 'Player',
+            winner_cartela: game.winner_cartela!,
+            winner_prize: game.winner_prize!,
+            winner_matrix: localCard,
+            iWon, called: [...(game.called_numbers || [])]
           });
+        } else {
+          fetch(`${API}/bingo/card?game_id=${game.id}&cartela=${game.winner_cartela}`, { headers: hdrs() })
+            .then(r => r.json())
+            .then(data => {
+              if (!isMounted) return;
+              setCelebration({
+                winner_name: game.winner_first_name || 'Player',
+                winner_cartela: game.winner_cartela!,
+                winner_prize: game.winner_prize!,
+                winner_matrix: data.matrix || null,
+                iWon, called: [...(game.called_numbers || [])]
+              });
+            }).catch(() => {
+              if (isMounted) setCelebration({ winner_name: game.winner_first_name || 'Player', winner_cartela: game.winner_cartela!, winner_prize: game.winner_prize!, winner_matrix: null, iWon, called: [...(game.called_numbers || [])] });
+            });
+        }
       }
       return () => { isMounted = false; };
   }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name]);
 
-  // Auto-dismiss celebration after 3 seconds
+  // Auto-dismiss celebration after 7 seconds
   useEffect(() => {
     if (!celebration) return;
     const timer = setTimeout(() => {
@@ -435,7 +478,7 @@ export default function BingoGame() {
       setTaken([]);
       fetchState();
       refreshUser();
-    }, 3000);
+    }, 7000);
     return () => clearTimeout(timer);
   }, [celebration]);
 
@@ -988,10 +1031,14 @@ export default function BingoGame() {
                   <div className="flex gap-2 w-full justify-center overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
                     {celebration.winners_list.map((w, idx) => {
                       const winCells = getWinningCells(w.card_matrix, celebration.called);
+                      const winTitle = getWinningPatternTitle(w.card_matrix, celebration.called);
                       return (
                       <div key={idx} className="flex-shrink-0 w-[140px] bg-white/5 rounded-2xl p-2 border border-white/10 flex flex-col items-center">
                         <p className="text-white font-black text-sm truncate w-full">{w.first_name}</p>
-                        <p className="text-yellow-400/70 text-[9px] font-bold mb-1">{t[language].bingo.cartelaNum}{w.cartela_number}</p>
+                        <div className="flex items-center justify-between w-full mb-1">
+                          <p className="text-yellow-400/70 text-[9px] font-bold">{t[language].bingo.cartelaNum}{w.cartela_number}</p>
+                          <span className="text-emerald-400 text-[7px] font-black">{winTitle.replace(' BINGO!', '')}</span>
+                        </div>
                         <div className="w-full">
                           <div className="grid grid-cols-5">
                             {['B','I','N','G','O'].map(l => (
@@ -1001,9 +1048,18 @@ export default function BingoGame() {
                           <div className="grid grid-cols-5 gap-[1px] p-[1px] bg-[#0a0f1e]">
                             {w.card_matrix.map((row, r) => row.map((num, c) => {
                               const isFree = num === 0;
-                              const isWin = isFree || winCells.has(`${r}-${c}`);
+                              const isWin = winCells.has(`${r}-${c}`);
+                              const isCalled = celebration.called?.map(Number).includes(Number(num));
                               return (
-                                <div key={c} className={`aspect-square flex items-center justify-center text-[8px] font-black ${isFree ? 'bg-yellow-400 text-yellow-900' : isWin ? 'bg-emerald-500 text-white shadow-[0_0_4px_rgba(16,185,129,0.5)]' : 'bg-white text-slate-700'}`}>
+                                <div key={c} className={`aspect-square flex items-center justify-center text-[8px] font-black ${
+                                  isFree
+                                    ? 'bg-yellow-400 text-yellow-900 font-black'
+                                    : isWin
+                                    ? 'bg-emerald-500 text-white shadow-[0_0_4px_rgba(16,185,129,0.9)] ring-1 ring-yellow-300 font-black'
+                                    : isCalled
+                                    ? 'bg-amber-100 text-slate-700'
+                                    : 'bg-white text-slate-700'
+                                }`}>
                                   {isFree ? '★' : num}
                                 </div>
                               )
@@ -1041,11 +1097,12 @@ export default function BingoGame() {
                 </div>
               </div>
 
-              {/* Winner Card — green win cells, white other cells */}
-              {celebration.winner_matrix && (() => {
+              {/* Winner Card — green win cells, gold ring, pattern badge */}
+              {celebration.winner_matrix ? (() => {
                 const winCells = getWinningCells(celebration.winner_matrix, celebration.called);
+                const winTitle = getWinningPatternTitle(celebration.winner_matrix, celebration.called);
                 return (
-                  <div className="w-full rounded-2xl overflow-hidden border-2 border-yellow-400/40 mb-3 shadow-[0_0_20px_rgba(250,204,21,0.15)]">
+                  <div className="w-full rounded-2xl overflow-hidden border-2 border-yellow-400/50 mb-3 shadow-[0_0_25px_rgba(250,204,21,0.25)]">
                     {/* BINGO header */}
                     <div className="grid grid-cols-5">
                       {BINGO_LETTERS.map(l => (
@@ -1058,12 +1115,15 @@ export default function BingoGame() {
                         const num = celebration.winner_matrix![r][c];
                         const isFree = num === 0;
                         const isWin = winCells.has(`${r}-${c}`);
+                        const isCalled = celebration.called?.map(Number).includes(Number(num));
                         return (
                           <div key={`${r}-${c}`} className={`aspect-square flex items-center justify-center font-black text-xs rounded transition-all ${
                             isFree
-                              ? 'bg-yellow-400 text-yellow-900'
+                              ? 'bg-yellow-400 text-yellow-900 font-black'
                               : isWin
-                              ? 'bg-emerald-500 text-white shadow-[0_0_6px_rgba(16,185,129,0.6)]'
+                              ? 'bg-emerald-500 text-white font-black shadow-[0_0_8px_rgba(16,185,129,0.9)] ring-2 ring-yellow-300 scale-105 z-10'
+                              : isCalled
+                              ? 'bg-amber-100 text-slate-700'
                               : 'bg-white text-slate-700'
                           }`}>
                             {isFree ? '★' : num}
@@ -1071,13 +1131,21 @@ export default function BingoGame() {
                         );
                       }))}
                     </div>
-                    {/* Cartela label */}
-                    <div className="py-1.5 text-center bg-[#0a0f1e]">
-                      <p className="text-yellow-400/60 text-[9px] font-black tracking-widest uppercase">CARTELA # {celebration.winner_cartela}</p>
+                    {/* Cartela label + Winning Rule Tag */}
+                    <div className="py-2 px-3 flex items-center justify-between bg-[#0a0f1e] border-t border-white/10">
+                      <p className="text-yellow-400 font-black text-[11px] tracking-wider uppercase">CARTELA # {celebration.winner_cartela}</p>
+                      <span className="text-emerald-400 text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 px-2.5 py-0.5 rounded-full border border-emerald-500/40 shadow-[0_0_6px_rgba(16,185,129,0.3)]">
+                        {winTitle}
+                      </span>
                     </div>
                   </div>
                 );
-              })()}
+              })() : (
+                <div className="w-full bg-white/5 rounded-2xl p-4 mb-3 border border-white/10 flex flex-col items-center">
+                  <div className="animate-spin text-2xl mb-1">⏳</div>
+                  <p className="text-white/60 text-xs font-bold">Loading winning cartela...</p>
+                </div>
+              )}
 
               {/* Auto-dismiss indicator */}
               <p className="text-white/30 text-[10px] font-bold animate-pulse">{t[language].bingo.returning}</p>
