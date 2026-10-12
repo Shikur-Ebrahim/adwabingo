@@ -69,18 +69,7 @@ const getAudioSrc = (num: number) => {
   return `/audio/bingo/bingo_${String(num).padStart(2, '0')}.mp3`;
 };
 
-// Check if pre-generated audio files exist
-let _audioCacheChecked = false;
-let _audioFilesAvailable = false;
-async function checkAudioAvailable() {
-  if (_audioCacheChecked) return _audioFilesAvailable;
-  _audioCacheChecked = true;
-  try {
-    const r = await fetch('/audio/bingo/bingo_01.mp3', { method: 'HEAD' });
-    _audioFilesAvailable = r.ok;
-  } catch { _audioFilesAvailable = false; }
-  return _audioFilesAvailable;
-}
+// Pre-generated static Amharic MP3 files in /audio/bingo/
 
 const getWinningCells = (matrix: number[][], called: number[]) => {
   const winCells = new Set<string>();
@@ -223,112 +212,112 @@ export default function BingoGame() {
     const id = setInterval(update, 1000);
     return () => clearInterval(id);
   }, [selectedStake, homeGames]);
-  const [audioAvailable, setAudioAvailable] = useState(false);
   const [lastCallNum, setLastCallNum] = useState<number | null>(null);
   const [callAnim, setCallAnim] = useState(false);
   const currentAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
 
-  // Check if pre-generated MP3s exist
-  useEffect(() => {
-    checkAudioAvailable().then(ok => setAudioAvailable(ok));
-  }, []);
-
-  const initWebAudio = () => {
+  // Unlocks both HTML5 Audio and Web Audio on any touch or click gesture
+  const unlockAudio = useCallback(() => {
     try {
       if (!audioCtxRef.current) {
         const AC = window.AudioContext || (window as any).webkitAudioContext;
         if (AC) audioCtxRef.current = new AC();
       }
-      audioCtxRef.current?.resume();
-    } catch(e) {}
-  };
-
-  const playSpecial = useCallback(async (name: string) => {
-    if (!soundEnabled) return;
-    // Auto-init AudioContext
-    if (!audioCtxRef.current) {
-      try {
-        const AC = window.AudioContext || (window as any).webkitAudioContext;
-        if (AC) { audioCtxRef.current = new AC(); }
-      } catch(e) {}
-    }
-    if (!audioCtxRef.current) return;
-    if (audioCtxRef.current.state === 'suspended') {
-      try { await audioCtxRef.current.resume(); } catch(e) {}
-    }
-    try {
-      let res: Response;
-      if (audioAvailable) {
-        res = await fetch(`/audio/bingo/${name}.mp3`);
-      } else {
-        const texts: Record<string, string> = {
-          bingo_win: 'ቢንጎ! ቢንጎ! እንኳን ደስ አለዎ!',
-          game_start: 'ጨዋታ ጀምሯል!',
-          good_luck: 'መልካም ዕድል!',
-        };
-        const t = texts[name];
-        if (!t) return;
-        res = await fetch(`${API}/bingo/tts?text=` + encodeURIComponent(t));
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
       }
+    } catch(e) {}
+
+    try {
+      if (!currentAudioRef.current) {
+        currentAudioRef.current = new Audio();
+      }
+      // Play a tiny silent sound to unlock mobile browser autoplay restrictions
+      currentAudioRef.current.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+      currentAudioRef.current.play().catch(() => {});
+    } catch(e) {}
+  }, []);
+
+  const initWebAudio = unlockAudio;
+
+  // Listen for the very first interaction anywhere on window to unlock audio
+  useEffect(() => {
+    const handleGesture = () => unlockAudio();
+    window.addEventListener('touchstart', handleGesture, { passive: true, once: true });
+    window.addEventListener('touchend', handleGesture, { passive: true, once: true });
+    window.addEventListener('click', handleGesture, { passive: true, once: true });
+    return () => {
+      window.removeEventListener('touchstart', handleGesture);
+      window.removeEventListener('touchend', handleGesture);
+      window.removeEventListener('click', handleGesture);
+    };
+  }, [unlockAudio]);
+
+  const playViaWebAudio = useCallback(async (src: string) => {
+    try {
+      if (!audioCtxRef.current) {
+        const AC = window.AudioContext || (window as any).webkitAudioContext;
+        if (AC) audioCtxRef.current = new AC();
+      }
+      if (audioCtxRef.current?.state === 'suspended') {
+        await audioCtxRef.current.resume();
+      }
+      if (!audioCtxRef.current) return;
+
+      const res = await fetch(src);
       if (!res.ok) return;
       const buf = await audioCtxRef.current.decodeAudioData(await res.arrayBuffer());
-      const src = audioCtxRef.current.createBufferSource();
-      const gn = audioCtxRef.current.createGain();
-      gn.gain.value = volume * 2;
-      src.buffer = buf;
-      src.connect(gn);
-      gn.connect(audioCtxRef.current.destination);
-      src.start(0);
-    } catch(e) {}
-  }, [soundEnabled, volume, audioAvailable]);
+      const source = audioCtxRef.current.createBufferSource();
+      const gainNode = audioCtxRef.current.createGain();
+      gainNode.gain.value = Math.min(2.0, volume * 1.5);
+      source.buffer = buf;
+      source.connect(gainNode);
+      gainNode.connect(audioCtxRef.current.destination);
+      source.start(0);
+    } catch(e) {
+      console.warn('WebAudio fallback error:', e);
+    }
+  }, [volume]);
 
-  const activeAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
-
-  const playCallAudio = useCallback(async (num: number) => {
+  // Robust dual-engine audio player: HTML5 Audio primary (instant on mobile), Web Audio fallback
+  const playAudioFile = useCallback((src: string) => {
     if (!soundEnabled) return;
-    // Auto-init AudioContext on first call (browser requires user interaction)
-    if (!audioCtxRef.current) {
-      try {
-        const AC = window.AudioContext || (window as any).webkitAudioContext;
-        if (AC) { audioCtxRef.current = new AC(); }
-      } catch(e) {}
+    unlockAudio();
+
+    try {
+      if (!currentAudioRef.current) {
+        currentAudioRef.current = new Audio();
+      }
+      const audio = currentAudioRef.current;
+      audio.pause();
+      audio.currentTime = 0;
+      audio.src = src;
+      audio.volume = Math.min(1.0, Math.max(0.0, volume));
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // If HTML5 Audio was blocked by autoplay policy, fallback to Web Audio API
+          playViaWebAudio(src);
+        });
+      }
+    } catch {
+      playViaWebAudio(src);
     }
-    if (!audioCtxRef.current) return;
-    // Resume if suspended (common on mobile browsers)
-    if (audioCtxRef.current.state === 'suspended') {
-      try { await audioCtxRef.current.resume(); } catch(e) {}
-    }
-    // Stop any currently playing call
-    if (activeAudioSourceRef.current) {
-      try { activeAudioSourceRef.current.stop(); } catch(e) {}
-      activeAudioSourceRef.current = null;
-    }
+  }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
+
+  const playCallAudio = useCallback((num: number) => {
+    if (!soundEnabled) return;
     setLastCallNum(num);
     setCallAnim(false);
     setTimeout(() => setCallAnim(true), 20);
+    playAudioFile(getAudioSrc(num));
+  }, [soundEnabled, playAudioFile]);
 
-    try {
-      let res: Response;
-      if (audioAvailable) {
-        res = await fetch(getAudioSrc(num));
-      } else {
-        const letter = getLetter(num);
-        const text = `${letter}... ${AMHARIC_NUM[num]}`;
-        res = await fetch(`${API}/bingo/tts?text=` + encodeURIComponent(text));
-      }
-      if (!res.ok) return;
-      const buf = await audioCtxRef.current.decodeAudioData(await res.arrayBuffer());
-      const src = audioCtxRef.current.createBufferSource();
-      activeAudioSourceRef.current = src;
-      const gn = audioCtxRef.current.createGain();
-      gn.gain.value = volume * (audioAvailable ? 1 : 2); // Pro audio is already normalized
-      src.buffer = buf;
-      src.connect(gn);
-      gn.connect(audioCtxRef.current.destination);
-      src.start(0);
-    } catch(e) {}
-  }, [soundEnabled, volume, audioAvailable]);
+  const playSpecial = useCallback((name: string) => {
+    if (!soundEnabled) return;
+    playAudioFile(`/audio/bingo/${name}.mp3`);
+  }, [soundEnabled, playAudioFile]);
 
 
 
@@ -773,23 +762,10 @@ export default function BingoGame() {
                 <button onClick={() => {
                     const next = !soundEnabled;
                     setSoundEnabled(next);
-                    initWebAudio();
-                    // Play a test beep when turning sound ON so user knows it works
+                    unlockAudio();
                     if (next) {
-                      setTimeout(() => {
-                        if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
-                          try {
-                            const osc = audioCtxRef.current.createOscillator();
-                            const g = audioCtxRef.current.createGain();
-                            g.gain.setValueAtTime(0.15, audioCtxRef.current.currentTime);
-                            g.gain.exponentialRampToValueAtTime(0.001, audioCtxRef.current.currentTime + 0.25);
-                            osc.connect(g);
-                            g.connect(audioCtxRef.current.destination);
-                            osc.start();
-                            osc.stop(audioCtxRef.current.currentTime + 0.25);
-                          } catch(e) {}
-                        }
-                      }, 100);
+                      // Immediately play current number audio so user hears confirmation!
+                      playAudioFile(getAudioSrc(lastNum || 1));
                     }
                   }}
                   className={`w-8 h-8 rounded-lg border flex items-center justify-center active:scale-90 ${soundEnabled ? 'bg-blue-500/20 border-blue-500/50' : 'bg-slate-800 border-slate-700'}`}>
