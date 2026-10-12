@@ -188,7 +188,7 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   let newStartAt = game.start_at;
   // Trigger countdown from settings waiting_period_s when first player joins
   if (new Date(game.start_at).getTime() > Date.now() + 86400000) {
-    newStartAt = new Date(Date.now() + cfg.waiting_period_s * 1000).toISOString();
+    newStartAt = new Date(Date.now() + Math.min(30, cfg.waiting_period_s || 30) * 1000).toISOString();
   }
 
   await supabase.from('bingo_games').update({

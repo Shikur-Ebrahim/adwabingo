@@ -282,6 +282,7 @@ export default function BingoGame() {
   const [celebration, setCelebration] = useState<Celebration | null>(null);
   const gameIdRef = useRef<string | null>(null);
   const prevCalledLenRef = useRef(0);
+  const hadCartelasRef = useRef(false);
 
   const fetchState = useCallback(async () => {
     if (!selectedStake) return;

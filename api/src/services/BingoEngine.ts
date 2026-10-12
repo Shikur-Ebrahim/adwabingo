@@ -89,26 +89,108 @@ class BingoEngine {
 
     const { data: pRows } = await supabase
       .from('bingo_players')
-      .select('telegram_id')
-      .eq('game_id', game.id);
+      .select('id, telegram_id, cartela_number, created_at')
+      .eq('game_id', game.id)
+      .order('created_at', { ascending: true });
     
-    const uniquePlayers = new Set((pRows || []).map(r => r.telegram_id)).size;
+    const players = pRows || [];
+    const uniquePlayers = new Set(players.map((r: any) => r.telegram_id)).size;
 
     if (uniquePlayers < cfg.min_players) {
+      if (players.length === 0) {
+        // No players at all — reset timer to far future
+        await supabase.from('bingo_games').update({
+          start_at: new Date(Date.now() + 86400000 * 365).toISOString(),
+          prize_pool: 0,
+          updated_at: new Date().toISOString(),
+        }).eq('id', game.id);
+        return;
+      }
+
+      const firstJoinedTime = new Date(players[0].created_at).getTime();
+      const waitingDurationSec = (Date.now() - firstJoinedTime) / 1000;
+      const releaseTimeoutSec = cfg.release_time_s || 60;
+
+      // Has the release time (default 60s) expired?
+      if (waitingDurationSec >= releaseTimeoutSec) {
+        console.log(`⏰ Game #${game.game_id} (Stake: ${game.stake}): Release time reached (${Math.round(waitingDurationSec)}s >= ${releaseTimeoutSec}s). Refunding ${players.length} cartelas and releasing player.`);
+        await this.refundAndResetGame(game, players);
+        return;
+      }
+
+      // Still within release time: extend timer by 15s (or remaining time until releaseTimeoutSec)
+      const remainingSec = Math.max(5, Math.min(15, Math.ceil(releaseTimeoutSec - waitingDurationSec)));
       await supabase.from('bingo_games').update({
-        start_at: new Date(Date.now() + cfg.waiting_period_s * 1000 / 2).toISOString(),
+        start_at: new Date(Date.now() + remainingSec * 1000).toISOString(),
         updated_at: new Date().toISOString(),
       }).eq('id', game.id);
-      console.log(`🎰 Game #${game.game_id} extended (only ${uniquePlayers} unique player, need ${cfg.min_players})`);
+      console.log(`🎰 Game #${game.game_id} extended by ${remainingSec}s (${Math.round(waitingDurationSec)}s elapsed / ${releaseTimeoutSec}s total release limit)`);
       return;
     }
 
+    // 2+ unique players: START GAME!
     await supabase.from('bingo_games').update({
       status: 'calling',
       called_numbers: [],
       updated_at: new Date().toISOString(),
     }).eq('id', game.id);
     console.log(`🎰 Game #${game.game_id} started with ${uniquePlayers} unique players!`);
+  }
+
+  private async refundAndResetGame(game: any, players: any[]) {
+    const stake = Number(game.stake);
+    const botToken = process.env.BOT_TOKEN;
+
+    // Group players by telegram_id to calculate total refund per user
+    const userCartelas: Record<string, number> = {};
+    for (const p of players) {
+      userCartelas[p.telegram_id] = (userCartelas[p.telegram_id] || 0) + 1;
+    }
+
+    // Refund each user
+    for (const [telegramId, count] of Object.entries(userCartelas)) {
+      const refundAmt = count * stake;
+      const { data: u } = await supabase
+        .from('users')
+        .select('main_balance')
+        .eq('telegram_id', telegramId)
+        .single();
+      
+      if (u) {
+        await supabase
+          .from('users')
+          .update({ main_balance: Number(u.main_balance || 0) + refundAmt })
+          .eq('telegram_id', telegramId);
+      }
+
+      // Notify user via Telegram bot if configured
+      if (botToken) {
+        try {
+          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: telegramId,
+              text: `⏳ *ቢንጎ ጨዋታ ተሰርዟል*\n\nሌላ ተጫዋች በጊዜው ስላልገባ የ ${count} ካርቴላ ክፍያ (*${refundAmt} ETB*) ወደ ዋና ሂሳብዎ ተመላሽ ተደርጓል።\n\n✅ ገንዘቡ ወደ Main Balance ተመልሷል።`,
+              parse_mode: 'Markdown',
+            }),
+          });
+        } catch (e) { console.error('Refund notify error:', e); }
+      }
+    }
+
+    // Delete players from bingo_players
+    await supabase.from('bingo_players').delete().eq('game_id', game.id);
+
+    // Reset game state to fresh waiting (waiting for new players)
+    await supabase.from('bingo_games').update({
+      prize_pool: 0,
+      called_numbers: [],
+      start_at: new Date(Date.now() + 86400000 * 365).toISOString(),
+      updated_at: new Date().toISOString(),
+    }).eq('id', game.id);
+
+    console.log(`✅ Game #${game.game_id} successfully reset and refunded.`);
   }
 
   private async handleCalling(game: any) {

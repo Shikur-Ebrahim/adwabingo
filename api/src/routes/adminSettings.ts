@@ -9,6 +9,7 @@ router.use(validateTelegramAuth);
 export const DEFAULT_SETTINGS = {
   call_interval_ms:  5000,
   waiting_period_s:  60,
+  release_time_s:    60,   // seconds before solo player's cartela is released and refunded
   min_players:       2,
   max_players:       150,
   prize_percent:     80,   // % of total stakes (for 3+ players)
@@ -31,6 +32,7 @@ export async function getSettings(): Promise<typeof DEFAULT_SETTINGS> {
     _cached = {
       call_interval_ms: data.call_interval_ms ?? DEFAULT_SETTINGS.call_interval_ms,
       waiting_period_s: data.waiting_period_s ?? DEFAULT_SETTINGS.waiting_period_s,
+      release_time_s:   data.release_time_s   ?? DEFAULT_SETTINGS.release_time_s,
       min_players:      data.min_players      ?? DEFAULT_SETTINGS.min_players,
       max_players:      data.max_players      ?? DEFAULT_SETTINGS.max_players,
       prize_percent:    data.prize_percent     ?? DEFAULT_SETTINGS.prize_percent,
@@ -69,7 +71,7 @@ router.put('/', async (req: AuthRequest, res) => {
   if (!(await isAdmin(telegramId))) return res.status(403).json({ error: 'Forbidden' });
 
   const { 
-    call_interval_ms, waiting_period_s, min_players, max_players, prize_percent,
+    call_interval_ms, waiting_period_s, release_time_s, min_players, max_players, prize_percent,
     early_call_8_enabled, early_call_8_rewards,
     early_call_10_enabled, early_call_10_rewards
   } = req.body;
@@ -77,13 +79,15 @@ router.put('/', async (req: AuthRequest, res) => {
   // Validate ranges
   const ci  = Math.max(1000,  Math.min(30000, Number(call_interval_ms)  || DEFAULT_SETTINGS.call_interval_ms));
   const wp  = Math.max(10,    Math.min(3600,  Number(waiting_period_s)  || DEFAULT_SETTINGS.waiting_period_s));
+  const rt  = Math.max(15,    Math.min(600,   Number(release_time_s)    || DEFAULT_SETTINGS.release_time_s));
   const mnp = Math.max(2,     Math.min(50,    Number(min_players)       || DEFAULT_SETTINGS.min_players));
   const mxp = Math.max(10,    Math.min(500,   Number(max_players)       || DEFAULT_SETTINGS.max_players));
   const pp  = Math.max(50,    Math.min(100,   Number(prize_percent)     || DEFAULT_SETTINGS.prize_percent));
 
-  const payload = {
+  const payload: any = {
     call_interval_ms: ci,
     waiting_period_s: wp,
+    release_time_s:   rt,
     min_players:      mnp,
     max_players:      mxp,
     prize_percent:    pp,
@@ -102,6 +106,16 @@ router.put('/', async (req: AuthRequest, res) => {
     ({ error } = await supabase.from('game_settings').update(payload).eq('id', 1));
   } else {
     ({ error } = await supabase.from('game_settings').insert({ id: 1, ...payload }));
+  }
+
+  // Fallback: if release_time_s column doesn't exist yet in Supabase table
+  if (error && error.message?.includes('release_time_s')) {
+    const { release_time_s: _, ...fallbackPayload } = payload;
+    if (existing) {
+      ({ error } = await supabase.from('game_settings').update(fallbackPayload).eq('id', 1));
+    } else {
+      ({ error } = await supabase.from('game_settings').insert({ id: 1, ...fallbackPayload }));
+    }
   }
 
   if (error) return res.status(500).json({ error: error.message });

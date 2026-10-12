@@ -20,6 +20,7 @@ interface BGame {
 interface GameSettings {
   call_interval_ms: number;
   waiting_period_s: number;
+  release_time_s: number;
   min_players: number;
   max_players: number;
   prize_percent: number;
@@ -32,6 +33,7 @@ interface GameSettings {
 const DEFAULT: GameSettings = { 
   call_interval_ms: 5000, 
   waiting_period_s: 60, 
+  release_time_s: 60,
   min_players: 2, 
   max_players: 150, 
   prize_percent: 80,
@@ -107,6 +109,7 @@ export default function AdminBingoGames() {
         const s: GameSettings = {
           call_interval_ms: Number(raw.call_interval_ms) || DEFAULT.call_interval_ms,
           waiting_period_s: Number(raw.waiting_period_s) || DEFAULT.waiting_period_s,
+          release_time_s:   Number(raw.release_time_s)   || DEFAULT.release_time_s,
           min_players:      Number(raw.min_players)      || DEFAULT.min_players,
           max_players:      Number(raw.max_players)      || DEFAULT.max_players,
           prize_percent:    Number(raw.prize_percent)    || DEFAULT.prize_percent,
@@ -136,6 +139,7 @@ export default function AdminBingoGames() {
         const saved: GameSettings = {
           call_interval_ms: Number(body.settings?.call_interval_ms) || draft.call_interval_ms,
           waiting_period_s: Number(body.settings?.waiting_period_s) || draft.waiting_period_s,
+          release_time_s:   Number(body.settings?.release_time_s)   || draft.release_time_s,
           min_players:      Number(body.settings?.min_players)      || draft.min_players,
           max_players:      Number(body.settings?.max_players)      || draft.max_players,
           prize_percent:    Number(body.settings?.prize_percent)    || draft.prize_percent,
@@ -179,6 +183,7 @@ export default function AdminBingoGames() {
   const FIELDS: { key: FieldKey; label: string; unit: string; Icon: any; min: number; max: number; step: number; hint: string }[] = [
     { key: "call_interval_ms",      label: "Call Interval",       unit: "ms", Icon: Zap,       min: 1000, max: 30000, step: 500, hint: "1000-30000ms" },
     { key: "waiting_period_s",      label: "Waiting Period",      unit: "s",  Icon: Clock,     min: 10,   max: 3600,  step: 5,   hint: "10-3600s" },
+    { key: "release_time_s",        label: "Release Time",        unit: "s",  Icon: Clock,     min: 15,   max: 600,   step: 5,   hint: "15-600s (Auto-refund solo player)" },
     { key: "min_players",           label: "Min Players",         unit: "",   Icon: UserCheck, min: 2,    max: 50,    step: 1,   hint: "2-50" },
     { key: "max_players",           label: "Max Players",         unit: "",   Icon: Users,     min: 10,   max: 500,   step: 10,  hint: "10-500" },
     { key: "prize_percent",         label: "Prize %",             unit: "%",  Icon: Percent,   min: 50,   max: 100,   step: 5,   hint: "50-100%" },
