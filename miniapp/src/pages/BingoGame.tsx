@@ -163,7 +163,7 @@ export default function BingoGame() {
   const [previewCartela, setPreviewCartela] = useState<{ seat: number; matrix: number[][] } | null>(null);
   const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string; players: number }>>({});
   const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
-  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true); // default ON
   const [volume, setVolume] = useState(1.0);
   const [autoMark, setAutoMark] = useState(true); // default: auto-mark called numbers
   const [manuallyMarked, setManuallyMarked] = useState<Set<number>>(new Set());
@@ -245,7 +245,18 @@ export default function BingoGame() {
   };
 
   const playSpecial = useCallback(async (name: string) => {
-    if (!soundEnabled || !audioCtxRef.current) return;
+    if (!soundEnabled) return;
+    // Auto-init AudioContext
+    if (!audioCtxRef.current) {
+      try {
+        const AC = window.AudioContext || (window as any).webkitAudioContext;
+        if (AC) { audioCtxRef.current = new AC(); }
+      } catch(e) {}
+    }
+    if (!audioCtxRef.current) return;
+    if (audioCtxRef.current.state === 'suspended') {
+      try { await audioCtxRef.current.resume(); } catch(e) {}
+    }
     try {
       let res: Response;
       if (audioAvailable) {
@@ -275,7 +286,19 @@ export default function BingoGame() {
   const activeAudioSourceRef = useRef<AudioBufferSourceNode | null>(null);
 
   const playCallAudio = useCallback(async (num: number) => {
-    if (!soundEnabled || !audioCtxRef.current) return;
+    if (!soundEnabled) return;
+    // Auto-init AudioContext on first call (browser requires user interaction)
+    if (!audioCtxRef.current) {
+      try {
+        const AC = window.AudioContext || (window as any).webkitAudioContext;
+        if (AC) { audioCtxRef.current = new AC(); }
+      } catch(e) {}
+    }
+    if (!audioCtxRef.current) return;
+    // Resume if suspended (common on mobile browsers)
+    if (audioCtxRef.current.state === 'suspended') {
+      try { await audioCtxRef.current.resume(); } catch(e) {}
+    }
     // Stop any currently playing call
     if (activeAudioSourceRef.current) {
       try { activeAudioSourceRef.current.stop(); } catch(e) {}
@@ -747,7 +770,28 @@ export default function BingoGame() {
                 <button onClick={() => setAutoMark(a => !a)} className={`w-8 h-8 rounded-lg border flex items-center justify-center active:scale-90 ${autoMark ? 'bg-amber-500/20 border-amber-500/50' : 'bg-slate-800 border-slate-700'}`}>
                   {autoMark ? <Wand2 size={13} className="text-amber-400" /> : <Hand size={13} className="text-slate-400" />}
                 </button>
-                <button onClick={() => { setSoundEnabled(s => !s); initWebAudio(); }}
+                <button onClick={() => {
+                    const next = !soundEnabled;
+                    setSoundEnabled(next);
+                    initWebAudio();
+                    // Play a test beep when turning sound ON so user knows it works
+                    if (next) {
+                      setTimeout(() => {
+                        if (audioCtxRef.current && audioCtxRef.current.state !== 'closed') {
+                          try {
+                            const osc = audioCtxRef.current.createOscillator();
+                            const g = audioCtxRef.current.createGain();
+                            g.gain.setValueAtTime(0.15, audioCtxRef.current.currentTime);
+                            g.gain.exponentialRampToValueAtTime(0.001, audioCtxRef.current.currentTime + 0.25);
+                            osc.connect(g);
+                            g.connect(audioCtxRef.current.destination);
+                            osc.start();
+                            osc.stop(audioCtxRef.current.currentTime + 0.25);
+                          } catch(e) {}
+                        }
+                      }, 100);
+                    }
+                  }}
                   className={`w-8 h-8 rounded-lg border flex items-center justify-center active:scale-90 ${soundEnabled ? 'bg-blue-500/20 border-blue-500/50' : 'bg-slate-800 border-slate-700'}`}>
                   {soundEnabled ? <Volume2 size={13} className="text-blue-400" /> : <VolumeX size={13} className="text-red-400" />}
                 </button>
