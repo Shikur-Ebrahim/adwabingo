@@ -823,9 +823,9 @@ export default function BingoGame() {
 
         {/* Caller Row + Card — scrollable */}
         <div className="flex-1 min-h-0 overflow-y-auto" style={{ scrollbarWidth: 'none' }}>
-        <div className="w-full max-w-[290px] mx-auto flex flex-col gap-1 pb-2">
+        <div className={`w-full ${myCartelas.length > 1 ? 'max-w-[420px]' : 'max-w-[290px]'} mx-auto flex flex-col gap-1.5 pb-2`}>
           {/* Caller Row */}
-          <div className="shrink-0 bg-[#0a0f1e] rounded-xl border border-white/5 px-2 py-1.5">
+          <div className="shrink-0 bg-[#0a0f1e] rounded-xl border border-white/5 px-2 py-1.5 w-full max-w-[320px] mx-auto">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 {recent.length === 0 ? (
@@ -872,84 +872,124 @@ export default function BingoGame() {
             </div>
           </div>
 
-          {/* My Cards — tabbed view */}
+          {/* My Cards — dynamic layout: 1 card = centered classic; 2+ cards = all visible side-by-side grid */}
           {myCartelas.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {/* Tab Switcher */}
-              {myCartelas.length > 1 && (
-                <div className="flex gap-1.5 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
-                  {myCartelas.map((card, idx) => (
-                    <button
-                      key={card.cartela_number}
-                      onClick={() => setActiveCartelaIdx(idx)}
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-black whitespace-nowrap flex-shrink-0 transition-all ${
-                        activeCartelaIdx === idx
-                          ? 'bg-emerald-500 text-white ring-1 ring-yellow-300 shadow-[0_0_6px_rgba(16,185,129,0.5)]'
-                          : 'bg-white/10 text-white/50 border border-white/10 active:scale-95'
-                      }`}
-                    >
-                      #{card.cartela_number}
-                    </button>
-                  ))}
+            myCartelas.length === 1 ? (
+              /* Single Cartela — exact same classic centered layout as preset */
+              <div key={myCartelas[0].cartela_number} className="w-full max-w-[250px] mx-auto">
+                <div className="rounded-2xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
+                  {/* BINGO Header */}
+                  <div className="grid grid-cols-5">
+                    {BINGO_LETTERS.map(l => (
+                      <div key={l} className="flex items-center justify-center py-1 font-black text-white text-xs" style={{ background: LETTER_BG[l] }}>{l}</div>
+                    ))}
+                  </div>
+                  {/* Card Grid */}
+                  <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0f1e]">
+                    {Array.from({ length: 5 }).flatMap((_, r) =>
+                      Array.from({ length: 5 }, (_, c) => {
+                        const num = myCartelas[0].card_matrix[r][c];
+                        const isFree = num === 0;
+                        const isCalled = called.includes(num);
+                        const isManualMarked = manuallyMarked.has(num);
+                        const marked = isFree || (autoMark ? isCalled : isManualMarked);
+                        const isLast = num === lastNum;
+                        const canTap = !autoMark && isCalled && !isFree;
+                        return (
+                          <div
+                            key={`${r}-${c}`}
+                            onClick={() => {
+                              if (!canTap) return;
+                              setManuallyMarked(prev => {
+                                const next = new Set(prev);
+                                if (next.has(num)) next.delete(num); else next.add(num);
+                                return next;
+                              });
+                              if (WebApp?.HapticFeedback) WebApp.HapticFeedback.selectionChanged();
+                            }}
+                            className={`aspect-square flex items-center justify-center font-black text-sm rounded-lg transition-all duration-200 select-none ${
+                              isFree ? 'bg-yellow-400 text-yellow-900' :
+                              isLast && autoMark ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
+                              marked ? 'bg-emerald-500 text-white' :
+                              canTap ? 'bg-white text-[#1a2540] active:scale-95 cursor-pointer ring-1 ring-blue-400/50' :
+                              'bg-white text-[#1a2540]'
+                            }`}
+                          >{isFree ? '★' : num}</div>
+                        );
+                      })
+                    )}
+                  </div>
+                  {/* Cartela Label */}
+                  <div className="py-1 text-center bg-[#0a0f1e] border-t border-white/10">
+                    <p className="text-white/70 font-black text-[9px] tracking-widest uppercase">{t[language].bingo.cartelaNum} {myCartelas[0].cartela_number}</p>
+                  </div>
                 </div>
-              )}
-              
-              {/* Active Card */}
-              {(() => {
-                const card = myCartelas[Math.min(activeCartelaIdx, myCartelas.length - 1)];
-                return (
-                  <div key={card.cartela_number} className="w-full max-w-[250px] mx-auto">
-                    <div className="rounded-2xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
-                      {/* BINGO Header */}
-                      <div className="grid grid-cols-5">
-                        {BINGO_LETTERS.map(l => (
-                          <div key={l} className="flex items-center justify-center py-1 font-black text-white text-xs" style={{ background: LETTER_BG[l] }}>{l}</div>
-                        ))}
-                      </div>
-                      {/* Card Grid */}
-                      <div className="grid grid-cols-5 gap-[3px] p-[3px] bg-[#0a0f1e]">
-                        {Array.from({ length: 5 }).flatMap((_, r) =>
-                          Array.from({ length: 5 }, (_, c) => {
-                            const num = card.card_matrix[r][c];
-                            const isFree = num === 0;
-                            const isCalled = called.includes(num);
-                            const isManualMarked = manuallyMarked.has(num);
-                            const marked = isFree || (autoMark ? isCalled : isManualMarked);
-                            const isLast = num === lastNum;
-                            const canTap = !autoMark && isCalled && !isFree;
-                            return (
-                              <div
-                                key={`${r}-${c}`}
-                                onClick={() => {
-                                  if (!canTap) return;
-                                  setManuallyMarked(prev => {
-                                    const next = new Set(prev);
-                                    if (next.has(num)) next.delete(num); else next.add(num);
-                                    return next;
-                                  });
-                                  if (WebApp?.HapticFeedback) WebApp.HapticFeedback.selectionChanged();
-                                }}
-                                className={`aspect-square flex items-center justify-center font-black text-sm rounded-lg transition-all duration-200 select-none ${
-                                  isFree ? 'bg-yellow-400 text-yellow-900' :
-                                  isLast && autoMark ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
-                                  marked ? 'bg-emerald-500 text-white' :
-                                  canTap ? 'bg-white text-[#1a2540] active:scale-95 cursor-pointer ring-1 ring-blue-400/50' :
-                                  'bg-white text-[#1a2540]'
-                                }`}
-                              >{isFree ? '★' : num}</div>
-                            );
-                          })
-                        )}
-                      </div>
-                      {/* Cartela Label */}
-                      <div className="py-1 text-center bg-[#0a0f1e] border-t border-white/10">
-                        <p className="text-white/70 font-black text-[9px] tracking-widest uppercase">{t[language].bingo.cartelaNum} {card.cartela_number}</p>
+              </div>
+            ) : (
+              /* 2 or More Cartelas — Side-by-side grid, ALL visible without any hidden tabs! */
+              <div className="w-full flex flex-col gap-1 px-1">
+                <div className="flex items-center justify-between px-0.5">
+                  <span className="text-white/60 text-[10px] font-bold tracking-wider uppercase">CARTELAS ({myCartelas.length})</span>
+                  <span className="text-emerald-400 text-[8px] font-black uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">All Active</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2 w-full">
+                  {myCartelas.map((card) => (
+                    <div key={card.cartela_number} className="w-full">
+                      <div className="rounded-xl overflow-hidden border border-white/10 shadow-md" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
+                        {/* BINGO Header */}
+                        <div className="grid grid-cols-5">
+                          {BINGO_LETTERS.map(l => (
+                            <div key={l} className="flex items-center justify-center py-0.5 font-black text-white text-[10px]" style={{ background: LETTER_BG[l] }}>{l}</div>
+                          ))}
+                        </div>
+                        {/* Card Grid */}
+                        <div className="grid grid-cols-5 gap-[2px] p-[2px] bg-[#0a0f1e]">
+                          {Array.from({ length: 5 }).flatMap((_, r) =>
+                            Array.from({ length: 5 }, (_, c) => {
+                              const num = card.card_matrix[r][c];
+                              const isFree = num === 0;
+                              const isCalled = called.includes(num);
+                              const isManualMarked = manuallyMarked.has(num);
+                              const marked = isFree || (autoMark ? isCalled : isManualMarked);
+                              const isLast = num === lastNum;
+                              const canTap = !autoMark && isCalled && !isFree;
+                              return (
+                                <div
+                                  key={`${r}-${c}`}
+                                  onClick={() => {
+                                    if (!canTap) return;
+                                    setManuallyMarked(prev => {
+                                      const next = new Set(prev);
+                                      if (next.has(num)) next.delete(num); else next.add(num);
+                                      return next;
+                                    });
+                                    if (WebApp?.HapticFeedback) WebApp.HapticFeedback.selectionChanged();
+                                  }}
+                                  className={`aspect-square flex items-center justify-center font-black text-[11px] rounded transition-all duration-200 select-none ${
+                                    isFree ? 'bg-yellow-400 text-yellow-900 font-black' :
+                                    isLast && autoMark ? 'bg-orange-500 text-white shadow-[0_0_6px_rgba(249,115,22,0.8)]' :
+                                    marked ? 'bg-emerald-500 text-white' :
+                                    canTap ? 'bg-white text-[#1a2540] active:scale-95 cursor-pointer ring-1 ring-blue-400/50' :
+                                    'bg-white text-[#1a2540]'
+                                  }`}
+                                >
+                                  {isFree ? '★' : num}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                        {/* Cartela Label */}
+                        <div className="py-0.5 px-2 flex items-center justify-between bg-[#0a0f1e] border-t border-white/10">
+                          <p className="text-yellow-400 font-black text-[8px] tracking-wider uppercase">#{card.cartela_number}</p>
+                          <span className="text-white/40 text-[7px] font-bold uppercase">{t[language].bingo.cartelaNum.trim()}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })()}
-            </div>
+                  ))}
+                </div>
+              </div>
+            )
           ) : (
             <div className="w-full max-w-[250px] mx-auto relative mt-1 pointer-events-none">
               <div className="rounded-2xl overflow-hidden border border-white/10" style={{ background: 'linear-gradient(145deg,#1a2540,#0f1829)' }}>
