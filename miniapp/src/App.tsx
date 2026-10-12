@@ -135,6 +135,7 @@ import AdminSettings from './pages/AdminSettings';
 import AdminTxReport from './pages/AdminTxReport';
 import AdminUsers from './pages/AdminUsers';
 import AdminWorkers from './pages/AdminWorkers';
+import AdminBroadcast from './pages/AdminBroadcast';
 
 import DepositHistory from './pages/DepositHistory';
 import WithdrawHistory from './pages/WithdrawHistory';
@@ -239,6 +240,7 @@ function App() {
           <Route path="/admin/tx-report" element={<AdminTxReport />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/workers" element={<AdminWorkers />} />
+          <Route path="/admin/broadcast" element={<AdminBroadcast />} />
           <Route path="/worker" element={<Worker />} />
         </Routes></ErrorBoundary>
         <Profile />
