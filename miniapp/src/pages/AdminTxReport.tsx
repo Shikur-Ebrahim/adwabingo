@@ -8,7 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface Tx {
   id: string;
-  type: 'deposit' | 'withdrawal' | 'deposit_bonus' | 'second_deposit_bonus' | 'invitation_reward' | 'jackpot_8' | 'jackpot_10';
+  type: 'deposit' | 'withdrawal' | 'welcome_bonus' | 'deposit_bonus' | 'second_deposit_bonus' | 'invitation_reward' | 'jackpot_8' | 'jackpot_10';
   amount: number;
   status: string;
   created_at: string;
@@ -19,6 +19,7 @@ interface Tx {
 interface Stats {
   totalDeposits: number;
   totalWithdrawals: number;
+  totalWelcomeBonus: number;
   totalDepBonus: number;
   totalSecondDepBonus: number;
   totalInvBonus: number;
@@ -40,6 +41,7 @@ const PRESETS = [
 const TYPE_META = {
   deposit: { label: 'Deposit', icon: <ArrowDownCircle size={14} />, color: 'text-emerald-600', bg: 'bg-emerald-50', badge: 'bg-emerald-100 text-emerald-700' },
   withdrawal: { label: 'Withdrawal', icon: <ArrowUpCircle size={14} />, color: 'text-rose-600', bg: 'bg-rose-50', badge: 'bg-rose-100 text-rose-700' },
+  welcome_bonus: { label: 'Welcome Bonus', icon: <Gift size={14} />, color: 'text-amber-600', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700' },
   deposit_bonus: { label: '1st Deposit Bonus', icon: <Gift size={14} />, color: 'text-violet-600', bg: 'bg-violet-50', badge: 'bg-violet-100 text-violet-700' },
   second_deposit_bonus: { label: '2nd Deposit Bonus', icon: <Gift size={14} />, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50', badge: 'bg-fuchsia-100 text-fuchsia-700' },
   invitation_reward: { label: 'Invite Reward', icon: <Users size={14} />, color: 'text-blue-600', bg: 'bg-blue-50', badge: 'bg-blue-100 text-blue-700' },
@@ -73,7 +75,7 @@ export default function AdminTxReport() {
   const [fromIso, setFromIso] = useState(() => startOf(new Date()));
   const [toIso,   setToIso  ] = useState(() => endOf(new Date()));
   const [activePreset, setActivePreset] = useState('Today');
-  const [stats, setStats] = useState<Stats>({ totalDeposits: 0, totalWithdrawals: 0, totalDepBonus: 0, totalSecondDepBonus: 0, totalInvBonus: 0, totalJackpot8: 0, totalJackpot10: 0 });
+  const [stats, setStats] = useState<Stats>({ totalDeposits: 0, totalWithdrawals: 0, totalWelcomeBonus: 0, totalDepBonus: 0, totalSecondDepBonus: 0, totalInvBonus: 0, totalJackpot8: 0, totalJackpot10: 0 });
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | Tx['type']>('all');
@@ -147,6 +149,7 @@ export default function AdminTxReport() {
   const statCards = [
     { label: 'Deposits', value: stats.totalDeposits, icon: <ArrowDownCircle size={16} />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Withdrawals', value: stats.totalWithdrawals, icon: <ArrowUpCircle size={16} />, color: 'text-rose-600', bg: 'bg-rose-50' },
+    { label: 'Welcome Bonus', value: stats.totalWelcomeBonus || 0, icon: <Gift size={16} />, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: '1st Dep. Bonus', value: stats.totalDepBonus, icon: <Gift size={16} />, color: 'text-violet-600', bg: 'bg-violet-50' },
     { label: '2nd Dep. Bonus', value: stats.totalSecondDepBonus, icon: <Gift size={16} />, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50' },
     { label: 'Invite Reward', value: stats.totalInvBonus, icon: <Users size={16} />, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -266,6 +269,13 @@ export default function AdminTxReport() {
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                  <span className="text-white/70 text-[11px] font-semibold">Welcome Bonus</span>
+                </div>
+                <span className="text-amber-400 font-black text-[12px]">−{fmt(stats.totalWelcomeBonus || 0)} ETB</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-violet-400" />
                   <span className="text-white/70 text-[11px] font-semibold">1st Deposit Bonus</span>
                 </div>
@@ -308,11 +318,11 @@ export default function AdminTxReport() {
             <div className="flex items-center justify-between">
               <span className="text-white font-black text-xs">= Net Profit</span>
               <span className={`font-black text-base ${
-                stats.totalDeposits - stats.totalWithdrawals - stats.totalDepBonus - stats.totalSecondDepBonus - stats.totalInvBonus - stats.totalJackpot8 - stats.totalJackpot10 >= 0
+                stats.totalDeposits - stats.totalWithdrawals - (stats.totalWelcomeBonus || 0) - stats.totalDepBonus - stats.totalSecondDepBonus - stats.totalInvBonus - stats.totalJackpot8 - stats.totalJackpot10 >= 0
                   ? 'text-yellow-300' : 'text-rose-400'
               }`}>
-                {stats.totalDeposits - stats.totalWithdrawals - stats.totalDepBonus - stats.totalSecondDepBonus - stats.totalInvBonus - stats.totalJackpot8 - stats.totalJackpot10 >= 0 ? '+' : ''}
-                {fmt(stats.totalDeposits - stats.totalWithdrawals - stats.totalDepBonus - stats.totalSecondDepBonus - stats.totalInvBonus - stats.totalJackpot8 - stats.totalJackpot10)} ETB
+                {stats.totalDeposits - stats.totalWithdrawals - (stats.totalWelcomeBonus || 0) - stats.totalDepBonus - stats.totalSecondDepBonus - stats.totalInvBonus - stats.totalJackpot8 - stats.totalJackpot10 >= 0 ? '+' : ''}
+                {fmt(stats.totalDeposits - stats.totalWithdrawals - (stats.totalWelcomeBonus || 0) - stats.totalDepBonus - stats.totalSecondDepBonus - stats.totalInvBonus - stats.totalJackpot8 - stats.totalJackpot10)} ETB
               </span>
             </div>
           </div>
@@ -320,7 +330,7 @@ export default function AdminTxReport() {
 
         {/* TYPE FILTER CHIPS */}
         <div className="px-3 pb-2 flex space-x-1.5 overflow-x-auto scrollbar-hide">
-          {(['all', 'deposit', 'withdrawal', 'deposit_bonus', 'second_deposit_bonus', 'invitation_reward', 'jackpot_8', 'jackpot_10'] as const).map(f => (
+          {(['all', 'deposit', 'withdrawal', 'welcome_bonus', 'deposit_bonus', 'second_deposit_bonus', 'invitation_reward', 'jackpot_8', 'jackpot_10'] as const).map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}

@@ -554,10 +554,35 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
     }
   });
 
+  // ─── Welcome / Signup bonuses for users registered in period ────────────────
+  const welcomeBonusAmount = parseFloat(getSetting('welcome_bonus_amount', '10'));
+  let usersQuery = supabase
+    .from('users')
+    .select('id, telegram_id, username, first_name, created_at');
+  if (from) usersQuery = usersQuery.gte('created_at', from);
+  if (to)   usersQuery = usersQuery.lte('created_at', to);
+  const { data: registeredUsers } = await usersQuery;
+
+  let totalWelcomeBonus = 0;
+  if (welcomeBonusAmount > 0) {
+    (registeredUsers || []).forEach((u: any) => {
+      totalWelcomeBonus += welcomeBonusAmount;
+      txList.push({
+        id: u.id + '_wb',
+        type: 'welcome_bonus',
+        amount: welcomeBonusAmount,
+        status: 'approved',
+        created_at: u.created_at,
+        username: u.username || u.first_name || 'User',
+        telegram_id: u.telegram_id,
+      });
+    });
+  }
+
   txList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   res.json({
-    stats: { totalDeposits, totalWithdrawals, totalDepBonus, totalSecondDepBonus, totalInvBonus, totalJackpot8, totalJackpot10 },
+    stats: { totalDeposits, totalWithdrawals, totalDepBonus, totalSecondDepBonus, totalInvBonus, totalJackpot8, totalJackpot10, totalWelcomeBonus },
     transactions: txList
   });
 });
