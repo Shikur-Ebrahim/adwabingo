@@ -123,12 +123,19 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   let newBonus = bonusBal;
   let newMain = mainBal;
 
+  // Track how much came from each wallet for accurate refund later
+  let bonusUsed = 0;
+  let mainUsed = 0;
+
   if (newBonus >= toDeduct) {
+    bonusUsed = toDeduct;
     newBonus -= toDeduct;
     toDeduct = 0;
   } else {
+    bonusUsed = newBonus;
     toDeduct -= newBonus;
     newBonus = 0;
+    mainUsed = toDeduct;
     newMain -= toDeduct;
   }
 
@@ -167,6 +174,8 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
     first_name: user.first_name || 'User',
     cartela_number: seat,
     card_matrix,
+    bonus_used: bonusUsed,
+    main_used: mainUsed,
   });
 
   if (insertErr) {

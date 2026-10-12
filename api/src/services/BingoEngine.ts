@@ -89,7 +89,7 @@ class BingoEngine {
 
     const { data: pRows } = await supabase
       .from('bingo_players')
-      .select('id, telegram_id, cartela_number, created_at')
+      .select('id, telegram_id, cartela_number, created_at, bonus_used, main_used')
       .eq('game_id', game.id)
       .order('created_at', { ascending: true });
     
@@ -141,37 +141,52 @@ class BingoEngine {
     const stake = Number(game.stake);
     const botToken = process.env.BOT_TOKEN;
 
-    // Group players by telegram_id to calculate total refund per user
-    const userCartelas: Record<string, number> = {};
+    // Group players by telegram_id — summing bonus_used and main_used per user
+    const userRefunds: Record<string, { bonusAmt: number; mainAmt: number; count: number }> = {};
     for (const p of players) {
-      userCartelas[p.telegram_id] = (userCartelas[p.telegram_id] || 0) + 1;
+      if (!userRefunds[p.telegram_id]) {
+        userRefunds[p.telegram_id] = { bonusAmt: 0, mainAmt: 0, count: 0 };
+      }
+      userRefunds[p.telegram_id].bonusAmt += Number(p.bonus_used || 0);
+      userRefunds[p.telegram_id].mainAmt  += Number(p.main_used  || 0);
+      userRefunds[p.telegram_id].count    += 1;
     }
 
-    // Refund each user
-    for (const [telegramId, count] of Object.entries(userCartelas)) {
-      const refundAmt = count * stake;
+    // Refund each user back to the SAME wallet they originally paid from
+    for (const [telegramId, { bonusAmt, mainAmt, count }] of Object.entries(userRefunds)) {
+      const totalRefund = bonusAmt + mainAmt;
       const { data: u } = await supabase
         .from('users')
-        .select('main_balance')
+        .select('main_balance, bonus_balance')
         .eq('telegram_id', telegramId)
         .single();
       
       if (u) {
-        await supabase
-          .from('users')
-          .update({ main_balance: Number(u.main_balance || 0) + refundAmt })
-          .eq('telegram_id', telegramId);
+        const updates: any = {};
+        if (bonusAmt > 0) updates.bonus_balance = Number(u.bonus_balance || 0) + bonusAmt;
+        if (mainAmt  > 0) updates.main_balance  = Number(u.main_balance  || 0) + mainAmt;
+        await supabase.from('users').update(updates).eq('telegram_id', telegramId);
+      }
+
+      // Build a refund description for the notification
+      let refundDesc = '';
+      if (bonusAmt > 0 && mainAmt > 0) {
+        refundDesc = bonusAmt + ' ETB ወደ Bonus, ' + mainAmt + ' ETB ወደ Main Balance';
+      } else if (bonusAmt > 0) {
+        refundDesc = bonusAmt + ' ETB ወደ Bonus Balance';
+      } else {
+        refundDesc = mainAmt + ' ETB ወደ Main Balance';
       }
 
       // Notify user via Telegram bot if configured
       if (botToken) {
         try {
-          await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               chat_id: telegramId,
-              text: `⏳ *ቢንጎ ጨዋታ ተሰርዟል*\n\nሌላ ተጫዋች በጊዜው ስላልገባ የ ${count} ካርቴላ ክፍያ (*${refundAmt} ETB*) ወደ ዋና ሂሳብዎ ተመላሽ ተደርጓል።\n\n✅ ገንዘቡ ወደ Main Balance ተመልሷል።`,
+              text: '⏳ *ቢንጦ ጸዋታ ተሰርዋል*\n\nሌላ ተጫዋች በጊዜዱ ስለለገባ የ ' + count + ' ካርቴላ ክፈያ (*' + totalRefund + ' ETB*) ተመላሽ ተደርጋል።\n\n✅ ' + refundDesc + '።',
               parse_mode: 'Markdown',
             }),
           });
