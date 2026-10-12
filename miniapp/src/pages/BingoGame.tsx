@@ -323,10 +323,10 @@ export default function BingoGame() {
       if (!ctx) return;
       if (ctx.state === 'suspended') await ctx.resume();
 
-      // Use pre-decoded cache if available
+      // Use pre-decoded AudioBuffer if cached
       let audioBuf = audioBufferCache.current.get(src);
       if (!audioBuf) {
-        // Try raw buffer cache first (already fetched), else fetch fresh
+        // Use raw bytes from preload cache (already fetched at startup)
         let raw = rawBufferCache.current.get(src);
         if (!raw) {
           const res = await fetch(src);
@@ -334,7 +334,8 @@ export default function BingoGame() {
           raw = await res.arrayBuffer();
           rawBufferCache.current.set(src, raw);
         }
-        audioBuf = await ctx.decodeAudioData(raw.slice(0)); // .slice(0) = copy so buffer is not detached
+        // Must clone (.slice) the ArrayBuffer — decodeAudioData detaches the original
+        audioBuf = await ctx.decodeAudioData(raw.slice(0));
         audioBufferCache.current.set(src, audioBuf);
       }
 
@@ -350,7 +351,14 @@ export default function BingoGame() {
     }
   }, [volume]);
 
-  // ── CALLER SOUND: always creates a FRESH Audio element per call (most reliable on mobile) ──
+  // ── CALLER SOUND ─────────────────────────────────────────────────────────────────────────
+  // Uses ONE reusable <audio> element. Sets .src then calls .load() before .play().
+  // This is the ONLY reliable pattern on Android WebView / Telegram:
+  //   - .load() resets the media pipeline fully when src changes
+  //   - prevents silent "media session not acquired" failures
+  //   - WebAudio is the fallback if HTMLAudio errors
+  const callAudioElRef = useRef<HTMLAudioElement | null>(null);
+
   const playCallAudio = useCallback((num: number) => {
     if (!soundEnabled) return;
     const cleanNum = Number(num);
@@ -363,31 +371,44 @@ export default function BingoGame() {
     const src = getAudioSrc(cleanNum);
     unlockAudio();
 
-    // Stop whatever is currently playing
-    try { callAudioRef.current?.pause(); } catch {}
+    // Create the shared audio element once, reuse it every call
+    if (!callAudioElRef.current) {
+      callAudioElRef.current = new Audio();
+    }
+    const audio = callAudioElRef.current;
 
-    // If AudioContext is ready and we have the decoded buffer — instant 0ms play
-    if (audioCtxRef.current?.state === 'running' && audioBufferCache.current.has(src)) {
-      playViaWebAudio(src);
-      return;
+    // Stop and reset — pause() then clear src so browser fully releases media session
+    try { audio.pause(); } catch {}
+    audio.currentTime = 0;
+
+    // Set new source and LOAD before play (required on Android when changing src)
+    audio.src = src;
+    audio.volume = Math.min(1.0, Math.max(0.0, volume));
+
+    // onerror → fall back to WebAudio engine (uses pre-fetched rawBufferCache)
+    audio.onerror = () => { playViaWebAudio(src); };
+
+    // .load() must be called explicitly when src changes on a reused element
+    audio.load();
+
+    const p = audio.play();
+    if (p !== undefined) {
+      p.catch(() => {
+        // Play was blocked (autoplay policy) → use WebAudio which bypasses this
+        playViaWebAudio(src);
+      });
     }
 
-    // Fallback: fresh HTMLAudioElement (most reliable cross-browser)
-    try {
-      const audio = new Audio(src);
-      audio.volume = Math.min(1.0, Math.max(0.0, volume));
-      audio.onerror = () => { playViaWebAudio(src); };
-      callAudioRef.current = audio;
-      const p = audio.play();
-      if (p !== undefined) p.catch(() => { playViaWebAudio(src); });
-    } catch {
-      playViaWebAudio(src);
-    }
+    callAudioRef.current = audio; // keep ref in sync
   }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
 
-  // ── CELEBRATION: synthesized fanfare ALWAYS plays first (needs no pre-loaded files) ────────
+  // ── CELEBRATION ──────────────────────────────────────────────────────────────────────────
+  // Plays ONLY the synthesized Web Audio fanfare — no TTS voice, no bingo_win.mp3.
+  // This is the "BINGO!" celebration sound the user hears. It always works because:
+  //   - Web Audio oscillators require zero network, zero cache, zero user gesture
+  //   - AudioContext is created here if it doesn't exist yet
   const playSpecial = useCallback((_name: string) => {
-    // Always create AudioContext if missing (celebration fires after user gesture = safe)
+    // Create AudioContext if missing — celebration always fires after a user gesture (button tap)
     if (!audioCtxRef.current) {
       try {
         const AC = window.AudioContext || (window as any).webkitAudioContext;
@@ -395,19 +416,16 @@ export default function BingoGame() {
       } catch {}
     }
     const ctx = audioCtxRef.current;
+    if (!ctx) return;
 
     // Resume if suspended
-    if (ctx?.state === 'suspended') ctx.resume().catch(() => {});
+    if (ctx.state === 'suspended') {
+      ctx.resume().then(() => playBingoFanfare(ctx)).catch(() => {});
+      return;
+    }
 
-    // 1. Synthesized fanfare — works 100% offline, zero latency, ignores all mute states
-    if (ctx) playBingoFanfare(ctx);
-
-    // 2. Stop call audio
-    try { callAudioRef.current?.pause(); } catch {}
-
-    // 3. Play bingo_win.mp3 vocal at full volume via WebAudio (uses pre-fetched raw buffer)
-    playViaWebAudio('/audio/bingo/bingo_win.mp3', 1.5);
-  }, [playViaWebAudio]);
+    playBingoFanfare(ctx);
+  }, []);
 
 
 
