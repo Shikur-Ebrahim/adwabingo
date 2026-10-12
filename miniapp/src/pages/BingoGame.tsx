@@ -214,10 +214,12 @@ export default function BingoGame() {
   }, [selectedStake, homeGames]);
   const [lastCallNum, setLastCallNum] = useState<number | null>(null);
   const [callAnim, setCallAnim] = useState(false);
-  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const callAudioRef = useRef<HTMLAudioElement | null>(null);
+  const specialAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioBufferCache = useRef<Map<string, AudioBuffer>>(new Map());
 
-  // Unlocks both HTML5 Audio and Web Audio on any touch or click gesture
+  // Keep AudioContext resumed and mobile media pipeline unlocked on any touch
   const unlockAudio = useCallback(() => {
     try {
       if (!audioCtxRef.current) {
@@ -230,29 +232,34 @@ export default function BingoGame() {
     } catch(e) {}
 
     try {
-      if (!currentAudioRef.current) {
-        currentAudioRef.current = new Audio();
-      }
-      // Play a tiny silent sound to unlock mobile browser autoplay restrictions
-      currentAudioRef.current.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
-      currentAudioRef.current.play().catch(() => {});
+      const dummy = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA");
+      dummy.volume = 0.01;
+      dummy.play().catch(() => {});
     } catch(e) {}
   }, []);
 
   const initWebAudio = unlockAudio;
 
-  // Listen for the very first interaction anywhere on window to unlock audio
+  // Listen continuously on window touch/click so audio never gets suspended during game
   useEffect(() => {
     const handleGesture = () => unlockAudio();
-    window.addEventListener('touchstart', handleGesture, { passive: true, once: true });
-    window.addEventListener('touchend', handleGesture, { passive: true, once: true });
-    window.addEventListener('click', handleGesture, { passive: true, once: true });
+    window.addEventListener('touchstart', handleGesture, { passive: true });
+    window.addEventListener('touchend', handleGesture, { passive: true });
+    window.addEventListener('click', handleGesture, { passive: true });
     return () => {
       window.removeEventListener('touchstart', handleGesture);
       window.removeEventListener('touchend', handleGesture);
       window.removeEventListener('click', handleGesture);
     };
   }, [unlockAudio]);
+
+  // Preload celebration win sound and common sounds so they play with 0ms latency
+  useEffect(() => {
+    try {
+      const preWin = new Audio('/audio/bingo/bingo_win.mp3');
+      preWin.preload = 'auto';
+    } catch(e) {}
+  }, []);
 
   const playViaWebAudio = useCallback(async (src: string) => {
     try {
@@ -265,9 +272,14 @@ export default function BingoGame() {
       }
       if (!audioCtxRef.current) return;
 
-      const res = await fetch(src);
-      if (!res.ok) return;
-      const buf = await audioCtxRef.current.decodeAudioData(await res.arrayBuffer());
+      let buf = audioBufferCache.current.get(src);
+      if (!buf) {
+        const res = await fetch(src);
+        if (!res.ok) return;
+        buf = await audioCtxRef.current.decodeAudioData(await res.arrayBuffer());
+        audioBufferCache.current.set(src, buf);
+      }
+
       const source = audioCtxRef.current.createBufferSource();
       const gainNode = audioCtxRef.current.createGain();
       gainNode.gain.value = Math.min(2.0, volume * 1.5);
@@ -280,24 +292,32 @@ export default function BingoGame() {
     }
   }, [volume]);
 
-  // Robust dual-engine audio player: HTML5 Audio primary (instant on mobile), Web Audio fallback
-  const playAudioFile = useCallback((src: string) => {
+  // Dedicated caller sound player: independently manages call audio so it never freezes
+  const playCallAudio = useCallback((num: number) => {
     if (!soundEnabled) return;
+    setLastCallNum(num);
+    setCallAnim(false);
+    setTimeout(() => setCallAnim(true), 20);
+
+    const src = getAudioSrc(num);
     unlockAudio();
 
     try {
-      if (!currentAudioRef.current) {
-        currentAudioRef.current = new Audio();
+      // Safely stop previous call if still active
+      if (callAudioRef.current) {
+        try {
+          callAudioRef.current.pause();
+          callAudioRef.current.currentTime = 0;
+        } catch(e) {}
       }
-      const audio = currentAudioRef.current;
-      audio.pause();
-      audio.currentTime = 0;
-      audio.src = src;
+
+      const audio = new Audio(src);
+      callAudioRef.current = audio;
       audio.volume = Math.min(1.0, Math.max(0.0, volume));
+
       const playPromise = audio.play();
       if (playPromise !== undefined) {
         playPromise.catch(() => {
-          // If HTML5 Audio was blocked by autoplay policy, fallback to Web Audio API
           playViaWebAudio(src);
         });
       }
@@ -306,18 +326,39 @@ export default function BingoGame() {
     }
   }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
 
-  const playCallAudio = useCallback((num: number) => {
-    if (!soundEnabled) return;
-    setLastCallNum(num);
-    setCallAnim(false);
-    setTimeout(() => setCallAnim(true), 20);
-    playAudioFile(getAudioSrc(num));
-  }, [soundEnabled, playAudioFile]);
-
+  // Dedicated celebration / special sound player: runs on separate audio channel, NEVER interrupted by calls
   const playSpecial = useCallback((name: string) => {
     if (!soundEnabled) return;
-    playAudioFile(`/audio/bingo/${name}.mp3`);
-  }, [soundEnabled, playAudioFile]);
+    const src = `/audio/bingo/${name}.mp3`;
+    unlockAudio();
+
+    try {
+      // Fade out any pending call audio so the celebration announcement is loud and clear
+      if (callAudioRef.current) {
+        try { callAudioRef.current.pause(); } catch(e) {}
+      }
+
+      if (specialAudioRef.current) {
+        try {
+          specialAudioRef.current.pause();
+          specialAudioRef.current.currentTime = 0;
+        } catch(e) {}
+      }
+
+      const audio = new Audio(src);
+      specialAudioRef.current = audio;
+      audio.volume = Math.min(1.0, Math.max(0.0, volume));
+
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          playViaWebAudio(src);
+        });
+      }
+    } catch {
+      playViaWebAudio(src);
+    }
+  }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
 
 
 
@@ -765,7 +806,7 @@ export default function BingoGame() {
                     unlockAudio();
                     if (next) {
                       // Immediately play current number audio so user hears confirmation!
-                      playAudioFile(getAudioSrc(lastNum || 1));
+                      playCallAudio(lastNum || 1);
                     }
                   }}
                   className={`w-8 h-8 rounded-lg border flex items-center justify-center active:scale-90 ${soundEnabled ? 'bg-blue-500/20 border-blue-500/50' : 'bg-slate-800 border-slate-700'}`}>
