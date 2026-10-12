@@ -285,7 +285,7 @@ export default function BingoGame() {
   }, []);
 
   // ── CORE WEBAUDIO PLAYER: decodes from raw cache or fetches fresh ────────────────────────
-  const playViaWebAudio = useCallback(async (src: string, customGain?: number) => {
+  const playViaWebAudio = useCallback(async (src: string, customGain?: number, rate: number = 1.35) => {
     try {
       if (!audioCtxRef.current) {
         const AC = window.AudioContext || (window as any).webkitAudioContext;
@@ -315,6 +315,7 @@ export default function BingoGame() {
       const gainNode = ctx.createGain();
       gainNode.gain.value = customGain !== undefined ? customGain : Math.min(2.0, volume * 1.5);
       source.buffer = audioBuf;
+      source.playbackRate.value = rate;
       source.connect(gainNode);
       gainNode.connect(ctx.destination);
       source.start(0);
@@ -324,11 +325,8 @@ export default function BingoGame() {
   }, [volume]);
 
   // ── CALLER SOUND ─────────────────────────────────────────────────────────────────────────
-  // Uses ONE reusable <audio> element. Sets .src then calls .load() before .play().
-  // This is the ONLY reliable pattern on Android WebView / Telegram:
-  //   - .load() resets the media pipeline fully when src changes
-  //   - prevents silent "media session not acquired" failures
-  //   - WebAudio is the fallback if HTMLAudio errors
+  // Instantaneous 0ms WebAudio playback synchronous with the visual mark!
+  // Plays at 1.35x speed so the caller announces letter & number rapidly and crisply without lagging behind the mark.
   const callAudioElRef = useRef<HTMLAudioElement | null>(null);
 
   const playCallAudio = useCallback((num: number) => {
@@ -343,35 +341,38 @@ export default function BingoGame() {
     const src = getAudioSrc(cleanNum);
     unlockAudio();
 
-    // Create the shared audio element once, reuse it every call
-    if (!callAudioElRef.current) {
-      callAudioElRef.current = new Audio();
-    }
-    const audio = callAudioElRef.current;
-
-    // Stop and reset — pause() then clear src so browser fully releases media session
-    try { audio.pause(); } catch {}
-    audio.currentTime = 0;
-
-    // Set new source and LOAD before play (required on Android when changing src)
-    audio.src = src;
-    audio.volume = Math.min(1.0, Math.max(0.0, volume));
-
-    // onerror → fall back to WebAudio engine (uses pre-fetched rawBufferCache)
-    audio.onerror = () => { playViaWebAudio(src); };
-
-    // .load() must be called explicitly when src changes on a reused element
-    audio.load();
-
-    const p = audio.play();
-    if (p !== undefined) {
-      p.catch(() => {
-        // Play was blocked (autoplay policy) → use WebAudio which bypasses this
-        playViaWebAudio(src);
-      });
+    // Priority 1: Instant Web Audio (0ms hardware latency, perfectly in sync with visual mark)
+    if (audioCtxRef.current && (audioCtxRef.current.state === 'running' || audioCtxRef.current.state === 'suspended')) {
+      playViaWebAudio(src, undefined, 1.35);
+      return;
     }
 
-    callAudioRef.current = audio; // keep ref in sync
+    // Priority 2: HTMLAudioElement with 1.35x speed as reliable mobile fallback
+    try {
+      if (!callAudioElRef.current) {
+        callAudioElRef.current = new Audio();
+      }
+      const audio = callAudioElRef.current;
+
+      try { audio.pause(); } catch {}
+      audio.currentTime = 0;
+      audio.src = src;
+      audio.playbackRate = 1.35;
+      audio.volume = Math.min(1.0, Math.max(0.0, volume));
+      audio.onerror = () => { playViaWebAudio(src, undefined, 1.35); };
+      audio.load();
+
+      const p = audio.play();
+      if (p !== undefined) {
+        p.catch(() => {
+          playViaWebAudio(src, undefined, 1.35);
+        });
+      }
+
+      callAudioRef.current = audio;
+    } catch {
+      playViaWebAudio(src, undefined, 1.35);
+    }
   }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
 
   // ── CELEBRATION ──────────────────────────────────────────────────────────────────────────
