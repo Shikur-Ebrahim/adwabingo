@@ -979,15 +979,20 @@ export default function BingoGame() {
                         const num = myCartelas[0].card_matrix[r][c];
                         const isFree = num === 0;
                         const isCalled = called.includes(num);
-                        const isManualMarked = manuallyMarked.has(num);
+                        const isManualMarked = manuallyMarked.has(num) && isCalled;
                         const marked = isFree || (autoMark ? isCalled : isManualMarked);
                         const isLast = num === lastNum;
-                        const canTap = !autoMark && !isFree;
+                        const canTap = !autoMark && !isFree && isCalled;
                         return (
                           <div
                             key={`${r}-${c}`}
                             onClick={() => {
-                              if (!canTap) return;
+                              if (!canTap) {
+                                if (!autoMark && !isFree && !isCalled && WebApp?.HapticFeedback) {
+                                  WebApp.HapticFeedback.notificationOccurred("warning");
+                                }
+                                return;
+                              }
                               setManuallyMarked(prev => {
                                 const next = new Set(prev);
                                 if (next.has(num)) next.delete(num); else next.add(num);
@@ -998,8 +1003,8 @@ export default function BingoGame() {
                             className={`aspect-square flex items-center justify-center font-black text-sm rounded-lg transition-all duration-200 select-none ${
                               isFree ? 'bg-yellow-400 text-yellow-900' :
                               isLast && autoMark ? 'bg-orange-500 text-white shadow-[0_0_10px_rgba(249,115,22,0.7)]' :
-                              marked ? 'bg-emerald-500 text-white' :
-                              canTap ? 'bg-white text-[#1a2540] active:scale-95 cursor-pointer ring-1 ring-blue-400/50' :
+                              marked ? 'bg-emerald-500 text-white' + (!autoMark ? ' active:scale-95 cursor-pointer' : '') :
+                              canTap ? 'bg-white text-[#1a2540] active:scale-95 cursor-pointer ring-2 ring-yellow-400 shadow-[0_0_8px_rgba(250,204,21,0.6)]' :
                               'bg-white text-[#1a2540]'
                             }`}
                           >{isFree ? '★' : num}</div>
@@ -1037,15 +1042,20 @@ export default function BingoGame() {
                               const num = card.card_matrix[r][c];
                               const isFree = num === 0;
                               const isCalled = called.includes(num);
-                              const isManualMarked = manuallyMarked.has(num);
+                              const isManualMarked = manuallyMarked.has(num) && isCalled;
                               const marked = isFree || (autoMark ? isCalled : isManualMarked);
                               const isLast = num === lastNum;
-                              const canTap = !autoMark && !isFree;
+                              const canTap = !autoMark && !isFree && isCalled;
                               return (
                                 <div
                                   key={`${r}-${c}`}
                                   onClick={() => {
-                                    if (!canTap) return;
+                                    if (!canTap) {
+                                      if (!autoMark && !isFree && !isCalled && WebApp?.HapticFeedback) {
+                                        WebApp.HapticFeedback.notificationOccurred("warning");
+                                      }
+                                      return;
+                                    }
                                     setManuallyMarked(prev => {
                                       const next = new Set(prev);
                                       if (next.has(num)) next.delete(num); else next.add(num);
@@ -1056,8 +1066,8 @@ export default function BingoGame() {
                                   className={`aspect-square flex items-center justify-center font-black text-[11px] rounded transition-all duration-200 select-none ${
                                     isFree ? 'bg-yellow-400 text-yellow-900 font-black' :
                                     isLast && autoMark ? 'bg-orange-500 text-white shadow-[0_0_6px_rgba(249,115,22,0.8)]' :
-                                    marked ? 'bg-emerald-500 text-white' :
-                                    canTap ? 'bg-white text-[#1a2540] active:scale-95 cursor-pointer ring-1 ring-blue-400/50' :
+                                    marked ? 'bg-emerald-500 text-white' + (!autoMark ? ' active:scale-95 cursor-pointer' : '') :
+                                    canTap ? 'bg-white text-[#1a2540] active:scale-95 cursor-pointer ring-1.5 ring-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.5)]' :
                                     'bg-white text-[#1a2540]'
                                   }`}
                                 >
