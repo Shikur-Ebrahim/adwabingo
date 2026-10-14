@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowDownCircle, ArrowUpCircle, Gift, Users, Swords, Search, Filter } from 'lucide-react';
+import { ArrowLeft, ArrowDownCircle, ArrowUpCircle, Gift, Users, Swords, Search, Filter, Send, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import { useGameStore } from '../store/gameStore';
@@ -27,6 +27,8 @@ const getTypeMeta = (type: string, lang: 'en' | 'am') => {
   jackpot_8: { label: t[lang].fullAudit.typeJackpot8, icon: <Gift size={14} />, color: 'text-amber-600', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700', prefix: '+' },
   jackpot_10: { label: t[lang].fullAudit.typeJackpot10, icon: <Gift size={14} />, color: 'text-orange-600', bg: 'bg-orange-50', badge: 'bg-orange-100 text-orange-700', prefix: '+' },
   game_stake: { label: t[lang].fullAudit.typeGamePlayed, icon: <Swords size={14} />, color: 'text-slate-600', bg: 'bg-slate-100', badge: 'bg-slate-200 text-slate-700', prefix: '-' },
+  transfer_out: { label: t[lang].fullAudit.typeTransferSent, icon: <Send size={14} />, color: 'text-rose-600', bg: 'bg-rose-50', badge: 'bg-rose-100 text-rose-700', prefix: '-' },
+  transfer_in: { label: t[lang].fullAudit.typeTransferReceived, icon: <Download size={14} />, color: 'text-emerald-600', bg: 'bg-emerald-50', badge: 'bg-emerald-100 text-emerald-700', prefix: '+' },
   };
   return meta[type] || { label: type, icon: <Search size={14}/>, color: 'text-slate-600', bg: 'bg-slate-50', badge: 'bg-slate-200 text-slate-700', prefix: '' };
 };
@@ -61,7 +63,9 @@ export default function Audit() {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = filter === 'all' ? txs : txs.filter(t => t.type === filter || (filter === 'bonus' && t.type.includes('bonus')) || (filter === 'jackpot' && t.type.includes('jackpot')));
+  const filtered = filter === 'all'
+    ? txs
+    : txs.filter(t => t.type === filter || (filter === 'bonus' && t.type.includes('bonus')) || (filter === 'jackpot' && t.type.includes('jackpot')) || (filter === 'transfer' && t.type.includes('transfer')));
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 dark:bg-[#0a0f1e]">
@@ -80,6 +84,7 @@ export default function Audit() {
             { id: 'all', label: t[language].fullAudit.filterAll },
             { id: 'deposit', label: t[language].fullAudit.filterDeposits },
             { id: 'withdrawal', label: t[language].fullAudit.filterWithdrawals },
+            { id: 'transfer', label: t[language].fullAudit.filterTransfers },
             { id: 'bonus', label: t[language].fullAudit.filterBonuses },
             { id: 'jackpot', label: t[language].fullAudit.filterJackpots },
             { id: 'game_win', label: t[language].fullAudit.filterWins },
