@@ -152,7 +152,7 @@ export default function BingoGame() {
   const [previewCartela, setPreviewCartela] = useState<{ seat: number; matrix: number[][] } | null>(null);
   const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string; players: number }>>({});
   const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
-  const [soundEnabled, setSoundEnabled] = useState(true); // default ON
+  const [soundEnabled, setSoundEnabled] = useState(false); // default OFF
   const [volume, setVolume] = useState(1.0);
   const [autoMark, setAutoMark] = useState(true); // default: auto-mark called numbers
   const [manuallyMarked, setManuallyMarked] = useState<Set<number>>(new Set());
@@ -388,6 +388,7 @@ export default function BingoGame() {
   const specialAudioElRef = useRef<HTMLAudioElement | null>(null);
 
   const playSpecial = useCallback((name: string = 'bingo_win') => {
+    if (!soundEnabled) return;
     const src = `/audio/bingo/${name}.mp3`;
     unlockAudio();
 
@@ -421,7 +422,7 @@ export default function BingoGame() {
     } catch {
       playViaWebAudio(src, 1.5);
     }
-  }, [unlockAudio, playViaWebAudio]);
+  }, [soundEnabled, unlockAudio, playViaWebAudio]);
 
 
 
