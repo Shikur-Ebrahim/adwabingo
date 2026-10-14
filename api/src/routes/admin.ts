@@ -958,41 +958,7 @@ router.get('/user-audit/:telegramId', async (req, res) => {
       });
     }
 
-    // 7. Fetch Transfers (Sent & Received)
-    try {
-      const [sentRes, recvRes] = await Promise.all([
-        supabase.from('transfers').select('*').eq('sender_telegram_id', telegramId).order('created_at', { ascending: false }),
-        supabase.from('transfers').select('*').eq('recipient_telegram_id', telegramId).order('created_at', { ascending: false }),
-      ]);
-
-      (sentRes.data || []).forEach((t: any) => {
-        const target = t.recipient_username ? `@${t.recipient_username}` : (t.recipient_name || t.recipient_telegram_id);
-        txList.push({
-          id: 'tf_sent_' + t.id,
-          type: 'transfer_out',
-          amount: Number(t.amount),
-          status: t.status || 'approved',
-          created_at: t.created_at,
-          note: `Transfer to ${target}`
-        });
-      });
-
-      (recvRes.data || []).forEach((t: any) => {
-        const source = t.sender_username ? `@${t.sender_username}` : (t.sender_name || t.sender_telegram_id);
-        txList.push({
-          id: 'tf_recv_' + t.id,
-          type: 'transfer_in',
-          amount: Number(t.amount),
-          status: t.status || 'approved',
-          created_at: t.created_at,
-          note: `Transfer from ${source}`
-        });
-      });
-    } catch (e) {
-      console.warn('Transfers audit fetch skipped:', e);
-    }
-
-    // 8. Get user info
+    // 7. Get user info
     const { data: user } = await supabase.from('users').select('username, first_name, balance').eq('telegram_id', telegramId).single();
 
     txList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

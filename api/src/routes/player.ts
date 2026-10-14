@@ -165,22 +165,6 @@ router.post('/transfer', validateTelegramAuth, async (req: AuthRequest, res) => 
     res.status(500).json({ error: 'Failed to credit recipient. Transfer rolled back.' }); return;
   }
 
-  // Record transfer in database (safe insert)
-  try {
-    await supabase.from('transfers').insert({
-      sender_telegram_id: senderTelegramId,
-      sender_username: sender.username || null,
-      sender_name: sender.first_name || sender.username || 'User',
-      recipient_telegram_id: recipient_telegram_id,
-      recipient_username: recipient.username || null,
-      recipient_name: recipient.first_name || recipient.username || 'User',
-      amount: transferAmount,
-      status: 'approved',
-    });
-  } catch (err) {
-    console.error('Failed to log transfer to transfers table:', err);
-  }
-
   // Notify recipient and sender via Telegram bot
   try {
     const botToken = process.env.BOT_TOKEN;
@@ -300,40 +284,6 @@ router.get('/audit', validateTelegramAuth, async (req: AuthRequest, res) => {
           }
         }
       });
-    }
-
-    // 7. Fetch Transfers (Sent & Received)
-    try {
-      const [sentRes, recvRes] = await Promise.all([
-        supabase.from('transfers').select('*').eq('sender_telegram_id', telegramId).order('created_at', { ascending: false }),
-        supabase.from('transfers').select('*').eq('recipient_telegram_id', telegramId).order('created_at', { ascending: false }),
-      ]);
-
-      (sentRes.data || []).forEach((t: any) => {
-        const target = t.recipient_username ? `@${t.recipient_username}` : (t.recipient_name || t.recipient_telegram_id);
-        txList.push({
-          id: 'tf_sent_' + t.id,
-          type: 'transfer_out',
-          amount: Number(t.amount),
-          status: t.status || 'approved',
-          created_at: t.created_at,
-          note: `Transfer to ${target}`
-        });
-      });
-
-      (recvRes.data || []).forEach((t: any) => {
-        const source = t.sender_username ? `@${t.sender_username}` : (t.sender_name || t.sender_telegram_id);
-        txList.push({
-          id: 'tf_recv_' + t.id,
-          type: 'transfer_in',
-          amount: Number(t.amount),
-          status: t.status || 'approved',
-          created_at: t.created_at,
-          note: `Transfer from ${source}`
-        });
-      });
-    } catch (e) {
-      console.warn('Transfers audit fetch skipped:', e);
     }
 
     txList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());

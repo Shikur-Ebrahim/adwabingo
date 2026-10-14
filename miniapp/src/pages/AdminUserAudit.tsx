@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, ArrowDownCircle, ArrowUpCircle, Gift, Users, Swords, Search, User, Send, Download } from 'lucide-react';
+import { ArrowLeft, ArrowDownCircle, ArrowUpCircle, Gift, Users, Swords, Search, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 
@@ -24,8 +24,6 @@ const TYPE_META: Record<string, { label: string; icon: JSX.Element; color: strin
   jackpot_8: { label: '8-Call Jackpot', icon: <Gift size={14} />, color: 'text-amber-600', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700', prefix: '+' },
   jackpot_10: { label: '10-Call Jackpot', icon: <Gift size={14} />, color: 'text-orange-600', bg: 'bg-orange-50', badge: 'bg-orange-100 text-orange-700', prefix: '+' },
   game_stake: { label: 'Game Played', icon: <Swords size={14} />, color: 'text-slate-600', bg: 'bg-slate-100', badge: 'bg-slate-200 text-slate-700', prefix: '-' },
-  transfer_out: { label: 'Transfer Sent', icon: <Send size={14} />, color: 'text-rose-600', bg: 'bg-rose-50', badge: 'bg-rose-100 text-rose-700', prefix: '-' },
-  transfer_in: { label: 'Transfer Received', icon: <Download size={14} />, color: 'text-emerald-600', bg: 'bg-emerald-50', badge: 'bg-emerald-100 text-emerald-700', prefix: '+' },
 };
 
 function fmt(n: number) {
@@ -34,7 +32,7 @@ function fmt(n: number) {
 
 function fmtTime(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ï¿½ ' +
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' +
     d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 }
 
@@ -62,7 +60,7 @@ export default function AdminUserAudit() {
       .finally(() => setLoading(false));
   };
 
-  const filtered = filter === 'all' ? txs : txs.filter(t => t.type === filter || (filter === 'bonus' && t.type.includes('bonus')) || (filter === 'jackpot' && t.type.includes('jackpot')) || (filter === 'transfer' && t.type.includes('transfer')));
+  const filtered = filter === 'all' ? txs : txs.filter(t => t.type === filter || (filter === 'bonus' && t.type.includes('bonus')) || (filter === 'jackpot' && t.type.includes('jackpot')));
 
   return (
     <div className="flex flex-col h-screen bg-slate-50 dark:bg-[#0a0f1e]">
@@ -114,7 +112,6 @@ export default function AdminUserAudit() {
             { id: 'all', label: 'All' },
             { id: 'deposit', label: 'Deposits' },
             { id: 'withdrawal', label: 'Withdrawals' },
-            { id: 'transfer', label: 'Transfers' },
             { id: 'bonus', label: 'Bonuses' },
             { id: 'jackpot', label: 'Jackpots' },
             { id: 'game_win', label: 'Wins' },
