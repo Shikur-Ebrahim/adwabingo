@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, RefreshCw, ArrowDownCircle, ArrowUpCircle, Gift, Users, Calendar, TrendingUp, ChevronDown } from 'lucide-react';
+import { ArrowLeft, RefreshCw, ArrowDownCircle, ArrowUpCircle, Gift, Users, Calendar, TrendingUp, ChevronDown, Gamepad2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import { useGameStore } from '../store/gameStore';
@@ -8,7 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface Tx {
   id: string;
-  type: 'deposit' | 'withdrawal' | 'welcome_bonus' | 'deposit_bonus' | 'second_deposit_bonus' | 'invitation_reward' | 'jackpot_8' | 'jackpot_10';
+  type: 'deposit' | 'withdrawal' | 'welcome_bonus' | 'deposit_bonus' | 'second_deposit_bonus' | 'invitation_reward' | 'jackpot_8' | 'jackpot_10' | 'game_commission';
   amount: number;
   status: string;
   created_at: string;
@@ -25,6 +25,7 @@ interface Stats {
   totalInvBonus: number;
   totalJackpot8: number;
   totalJackpot10: number;
+  totalGameCommission: number;
 }
 
 const PRESETS = [
@@ -40,6 +41,7 @@ const PRESETS = [
 
 const TYPE_META = {
   deposit: { label: 'Deposit', icon: <ArrowDownCircle size={14} />, color: 'text-emerald-600', bg: 'bg-emerald-50', badge: 'bg-emerald-100 text-emerald-700' },
+  game_commission: { label: 'Game Commission (20%)', icon: <Gamepad2 size={14} />, color: 'text-cyan-600', bg: 'bg-cyan-50', badge: 'bg-cyan-100 text-cyan-700' },
   withdrawal: { label: 'Withdrawal', icon: <ArrowUpCircle size={14} />, color: 'text-rose-600', bg: 'bg-rose-50', badge: 'bg-rose-100 text-rose-700' },
   welcome_bonus: { label: 'Welcome Bonus', icon: <Gift size={14} />, color: 'text-amber-600', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700' },
   deposit_bonus: { label: '1st Deposit Bonus', icon: <Gift size={14} />, color: 'text-violet-600', bg: 'bg-violet-50', badge: 'bg-violet-100 text-violet-700' },
@@ -75,7 +77,7 @@ export default function AdminTxReport() {
   const [fromIso, setFromIso] = useState(() => startOf(new Date()));
   const [toIso,   setToIso  ] = useState(() => endOf(new Date()));
   const [activePreset, setActivePreset] = useState('Today');
-  const [stats, setStats] = useState<Stats>({ totalDeposits: 0, totalWithdrawals: 0, totalWelcomeBonus: 0, totalDepBonus: 0, totalSecondDepBonus: 0, totalInvBonus: 0, totalJackpot8: 0, totalJackpot10: 0 });
+  const [stats, setStats] = useState<Stats>({ totalDeposits: 0, totalWithdrawals: 0, totalWelcomeBonus: 0, totalDepBonus: 0, totalSecondDepBonus: 0, totalInvBonus: 0, totalJackpot8: 0, totalJackpot10: 0, totalGameCommission: 0 });
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | Tx['type']>('all');
@@ -148,6 +150,7 @@ export default function AdminTxReport() {
 
   const statCards = [
     { label: 'Deposits', value: stats.totalDeposits, icon: <ArrowDownCircle size={16} />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Game Commission (20%)', value: stats.totalGameCommission || 0, icon: <Gamepad2 size={16} />, color: 'text-cyan-600', bg: 'bg-cyan-50' },
     { label: 'Withdrawals', value: stats.totalWithdrawals, icon: <ArrowUpCircle size={16} />, color: 'text-rose-600', bg: 'bg-rose-50' },
     { label: 'Welcome Bonus', value: stats.totalWelcomeBonus || 0, icon: <Gift size={16} />, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: '1st Dep. Bonus', value: stats.totalDepBonus, icon: <Gift size={16} />, color: 'text-violet-600', bg: 'bg-violet-50' },
@@ -262,6 +265,13 @@ export default function AdminTxReport() {
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                  <span className="text-white/70 text-[11px] font-semibold">Game Commission (20%)</span>
+                </div>
+                <span className="text-cyan-400 font-black text-[12px]">+{fmt(stats.totalGameCommission || 0)} ETB</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-rose-400" />
                   <span className="text-white/70 text-[11px] font-semibold">Withdrawals</span>
                 </div>
@@ -315,22 +325,30 @@ export default function AdminTxReport() {
             <div className="border-t border-white/10" />
 
             {/* Net result */}
-            <div className="flex items-center justify-between">
-              <span className="text-white font-black text-xs">= Net Profit</span>
-              <span className={`font-black text-base ${
-                stats.totalDeposits - stats.totalWithdrawals - (stats.totalWelcomeBonus || 0) - stats.totalDepBonus - stats.totalSecondDepBonus - stats.totalInvBonus - stats.totalJackpot8 - stats.totalJackpot10 >= 0
-                  ? 'text-yellow-300' : 'text-rose-400'
-              }`}>
-                {stats.totalDeposits - stats.totalWithdrawals - (stats.totalWelcomeBonus || 0) - stats.totalDepBonus - stats.totalSecondDepBonus - stats.totalInvBonus - stats.totalJackpot8 - stats.totalJackpot10 >= 0 ? '+' : ''}
-                {fmt(stats.totalDeposits - stats.totalWithdrawals - (stats.totalWelcomeBonus || 0) - stats.totalDepBonus - stats.totalSecondDepBonus - stats.totalInvBonus - stats.totalJackpot8 - stats.totalJackpot10)} ETB
-              </span>
-            </div>
+            {(() => {
+              const netProfit = (stats.totalDeposits + (stats.totalGameCommission || 0))
+                - stats.totalWithdrawals
+                - (stats.totalWelcomeBonus || 0)
+                - stats.totalDepBonus
+                - stats.totalSecondDepBonus
+                - stats.totalInvBonus
+                - stats.totalJackpot8
+                - stats.totalJackpot10;
+              return (
+                <div className="flex items-center justify-between">
+                  <span className="text-white font-black text-xs">= Net Profit</span>
+                  <span className={`font-black text-base ${netProfit >= 0 ? 'text-yellow-300' : 'text-rose-400'}`}>
+                    {netProfit >= 0 ? '+' : ''}{fmt(netProfit)} ETB
+                  </span>
+                </div>
+              );
+            })()}
           </div>
         </div>
 
         {/* TYPE FILTER CHIPS */}
         <div className="px-3 pb-2 flex space-x-1.5 overflow-x-auto scrollbar-hide">
-          {(['all', 'deposit', 'withdrawal', 'welcome_bonus', 'deposit_bonus', 'second_deposit_bonus', 'invitation_reward', 'jackpot_8', 'jackpot_10'] as const).map(f => (
+          {(['all', 'deposit', 'game_commission', 'withdrawal', 'welcome_bonus', 'deposit_bonus', 'second_deposit_bonus', 'invitation_reward', 'jackpot_8', 'jackpot_10'] as const).map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -371,7 +389,7 @@ export default function AdminTxReport() {
                           {tx.status}
                         </span>
                       </div>
-                      <p className="text-[11px] font-bold text-slate-700 truncate">@{tx.username}</p>
+                      <p className="text-[11px] font-bold text-slate-700 truncate">{tx.username.startsWith('Game #') ? tx.username : '@' + tx.username}</p>
                       <p className="text-[9px] text-slate-400 font-medium">{fmtTime(tx.created_at)}</p>
                     </div>
                     <div className="text-right shrink-0">

@@ -580,10 +580,73 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
     });
   }
 
+  // ─── Bingo Game Commissions (House Profit from finished games) ──────────────
+  let allFinishedGamesQuery = supabase
+    .from('bingo_games')
+    .select('id, stake, status, winner_prize, winner_first_name, finished_at, created_at')
+    .eq('status', 'finished');
+  if (from) allFinishedGamesQuery = allFinishedGamesQuery.gte('finished_at', from);
+  if (to)   allFinishedGamesQuery = allFinishedGamesQuery.lte('finished_at', to);
+  const { data: allFinishedGames } = await allFinishedGamesQuery;
+
+  const fGameIds = (allFinishedGames || []).map((g: any) => g.id);
+  const gamePlayerCounts: Record<string, number> = {};
+  const gameUniquePlayers: Record<string, number> = {};
+
+  if (fGameIds.length > 0) {
+    const { data: pRows } = await supabase
+      .from('bingo_players')
+      .select('game_id, telegram_id')
+      .in('game_id', fGameIds);
+
+    const uMap: Record<string, Set<string>> = {};
+    (pRows || []).forEach((p: any) => {
+      gamePlayerCounts[p.game_id] = (gamePlayerCounts[p.game_id] || 0) + 1;
+      if (!uMap[p.game_id]) uMap[p.game_id] = new Set();
+      uMap[p.game_id].add(p.telegram_id);
+    });
+    Object.keys(uMap).forEach(gid => {
+      gameUniquePlayers[gid] = uMap[gid].size;
+    });
+  }
+
+  let totalGameCommission = 0;
+  (allFinishedGames || []).forEach((g: any) => {
+    const totalCartelas = gamePlayerCounts[g.id] || 0;
+    const uniqueCount = gameUniquePlayers[g.id] || 0;
+    const stakeAmt = Number(g.stake || 0);
+    const totalCollected = totalCartelas * stakeAmt;
+    const prizePaid = Number(g.winner_prize || 0);
+
+    // When unique players >= 3, house takes 20% commission (totalCollected - prizePaid)
+    let commission = 0;
+    if (uniqueCount >= 3) {
+      commission = Math.max(0, totalCollected - prizePaid);
+    } else if (totalCollected > prizePaid && prizePaid > 0) {
+      commission = totalCollected - prizePaid;
+    }
+
+    if (commission > 0) {
+      totalGameCommission += commission;
+      const shortId = g.id.slice(0, 8).toUpperCase();
+      txList.push({
+        id: g.id + '_comm',
+        type: 'game_commission',
+        amount: commission,
+        status: 'approved',
+        created_at: g.finished_at || g.created_at,
+        username: `Game #${shortId} (${totalCartelas} cards, ${uniqueCount} players)`,
+        telegram_id: '',
+        game_id: shortId,
+        stake: g.stake
+      });
+    }
+  });
+
   txList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   res.json({
-    stats: { totalDeposits, totalWithdrawals, totalDepBonus, totalSecondDepBonus, totalInvBonus, totalJackpot8, totalJackpot10, totalWelcomeBonus },
+    stats: { totalDeposits, totalWithdrawals, totalDepBonus, totalSecondDepBonus, totalInvBonus, totalJackpot8, totalJackpot10, totalWelcomeBonus, totalGameCommission },
     transactions: txList
   });
 });
