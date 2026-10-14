@@ -583,10 +583,10 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   // ─── Bingo Game Commissions (House Profit from finished games) ──────────────
   let allFinishedGamesQuery = supabase
     .from('bingo_games')
-    .select('id, stake, status, winner_prize, winner_first_name, finished_at, created_at')
+    .select('id, stake, status, winner_prize, prize_pool, winner_first_name, finished_at, created_at')
     .eq('status', 'finished');
-  if (from) allFinishedGamesQuery = allFinishedGamesQuery.gte('finished_at', from);
-  if (to)   allFinishedGamesQuery = allFinishedGamesQuery.lte('finished_at', to);
+  if (from) allFinishedGamesQuery = allFinishedGamesQuery.gte('created_at', from);
+  if (to)   allFinishedGamesQuery = allFinishedGamesQuery.lte('created_at', to);
   const { data: allFinishedGames } = await allFinishedGamesQuery;
 
   const fGameIds = (allFinishedGames || []).map((g: any) => g.id);
@@ -611,23 +611,38 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   }
 
   let totalGameCommission = 0;
+  let totalFinishedGames = 0;
   (allFinishedGames || []).forEach((g: any) => {
     const totalCartelas = gamePlayerCounts[g.id] || 0;
     const uniqueCount = gameUniquePlayers[g.id] || 0;
     const stakeAmt = Number(g.stake || 0);
-    const totalCollected = totalCartelas * stakeAmt;
-    const prizePaid = Number(g.winner_prize || 0);
+    const prize = Number(g.winner_prize || g.prize_pool || 0);
 
-    // When unique players >= 3, house takes 20% commission (totalCollected - prizePaid)
     let commission = 0;
+    let labelInfo = '';
+
     if (uniqueCount >= 3) {
-      commission = Math.max(0, totalCollected - prizePaid);
-    } else if (totalCollected > prizePaid && prizePaid > 0) {
-      commission = totalCollected - prizePaid;
+      // Direct player records available
+      const totalCollected = totalCartelas * stakeAmt;
+      commission = Math.max(0, totalCollected - prize);
+      labelInfo = `${totalCartelas} cards, ${uniqueCount} players`;
+    } else if (totalCartelas > 0 && totalCartelas * stakeAmt > prize && prize > 0) {
+      commission = (totalCartelas * stakeAmt) - prize;
+      labelInfo = `${totalCartelas} cards`;
+    } else if (prize > 0 && stakeAmt > 0) {
+      // Fallback from game prize_pool / winner_prize when bingo_players table was pruned
+      // If prize > 2 * stake, game had >= 3 players and 20% commission was retained
+      if (prize > stakeAmt * 2) {
+        const estTotal = Math.round(prize / 0.8);
+        commission = Math.max(0, estTotal - prize);
+        const estCards = Math.round(estTotal / stakeAmt);
+        labelInfo = `~${estCards} cards, 20% cut`;
+      }
     }
 
     if (commission > 0) {
       totalGameCommission += commission;
+      totalFinishedGames++;
       const shortId = g.id.slice(0, 8).toUpperCase();
       txList.push({
         id: g.id + '_comm',
@@ -635,7 +650,7 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
         amount: commission,
         status: 'approved',
         created_at: g.finished_at || g.created_at,
-        username: `Game #${shortId} (${totalCartelas} cards, ${uniqueCount} players)`,
+        username: `Game #${shortId} (${labelInfo || '20% commission'})`,
         telegram_id: '',
         game_id: shortId,
         stake: g.stake
@@ -646,7 +661,7 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   txList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   res.json({
-    stats: { totalDeposits, totalWithdrawals, totalDepBonus, totalSecondDepBonus, totalInvBonus, totalJackpot8, totalJackpot10, totalWelcomeBonus, totalGameCommission },
+    stats: { totalDeposits, totalWithdrawals, totalDepBonus, totalSecondDepBonus, totalInvBonus, totalJackpot8, totalJackpot10, totalWelcomeBonus, totalGameCommission, totalFinishedGames },
     transactions: txList
   });
 });

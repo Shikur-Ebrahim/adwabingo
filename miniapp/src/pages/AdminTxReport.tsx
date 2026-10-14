@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowLeft, RefreshCw, ArrowDownCircle, ArrowUpCircle, Gift, Users, Calendar, TrendingUp, ChevronDown, Gamepad2 } from 'lucide-react';
+import { ArrowLeft, RefreshCw, ArrowDownCircle, ArrowUpCircle, Gift, Users, Calendar, TrendingUp, ChevronDown, Gamepad2, Search } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import { useGameStore } from '../store/gameStore';
@@ -26,6 +26,7 @@ interface Stats {
   totalJackpot8: number;
   totalJackpot10: number;
   totalGameCommission: number;
+  totalFinishedGames?: number;
 }
 
 const PRESETS = [
@@ -81,6 +82,7 @@ export default function AdminTxReport() {
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | Tx['type']>('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showCustom, setShowCustom] = useState(false);
   // Custom picker raw values
   const [customFromRaw, setCustomFromRaw] = useState(toDateStr(new Date()));
@@ -146,7 +148,16 @@ export default function AdminTxReport() {
     return <div className="p-10 text-center font-bold text-slate-600">Access Denied</div>;
   }
 
-  const filtered = filter === 'all' ? transactions : transactions.filter(t => t.type === filter);
+  const filtered = transactions.filter(t => {
+    const matchesFilter = filter === 'all' || t.type === filter;
+    if (!matchesFilter) return false;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (t.username || '').toLowerCase().includes(q) ||
+      (t.type || '').toLowerCase().includes(q) ||
+      String(t.amount).includes(q) ||
+      (t.id || '').toLowerCase().includes(q);
+  });
 
   const statCards = [
     { label: 'Deposits', value: stats.totalDeposits, icon: <ArrowDownCircle size={16} />, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -335,14 +346,38 @@ export default function AdminTxReport() {
                 - stats.totalJackpot8
                 - stats.totalJackpot10;
               return (
-                <div className="flex items-center justify-between">
-                  <span className="text-white font-black text-xs">= Net Profit</span>
-                  <span className={`font-black text-base ${netProfit >= 0 ? 'text-yellow-300' : 'text-rose-400'}`}>
-                    {netProfit >= 0 ? '+' : ''}{fmt(netProfit)} ETB
-                  </span>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-white font-black text-xs">= Net Profit</span>
+                    <span className={`font-black text-base ${netProfit >= 0 ? 'text-yellow-300' : 'text-rose-400'}`}>
+                      {netProfit >= 0 ? '+' : ''}{fmt(netProfit)} ETB
+                    </span>
+                  </div>
+                  {Boolean(stats.totalFinishedGames && stats.totalFinishedGames > 0) && (
+                    <p className="text-[10px] text-cyan-300/80 font-bold text-right">
+                      🎮 {stats.totalFinishedGames} finished games with 20% house cut
+                    </p>
+                  )}
                 </div>
               );
             })()}
+          </div>
+        </div>
+
+        {/* SEARCH BOX */}
+        <div className="px-3 pb-2">
+          <div className="relative">
+            <Search size={13} className="absolute left-2.5 top-2.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search user, game ID, or amount..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-slate-800"
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-2 text-xs font-bold text-slate-400">✕</button>
+            )}
           </div>
         </div>
 
