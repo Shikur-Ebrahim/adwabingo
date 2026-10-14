@@ -187,19 +187,18 @@ class BingoEngine {
         refundDesc = mainAmt + ' ETB ወደ Main Balance';
       }
 
-      // Notify user via Telegram bot if configured
+      // Notify user via Telegram bot if configured (fire & forget with 3s timeout so engine never hangs)
       if (botToken) {
-        try {
-          await fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              chat_id: telegramId,
-              text: '⏳ *ቢንጦ ጸዋታ ተሰርዋል*\n\nሌላ ተጫዋች በጊዜዱ ስለለገባ የ ' + count + ' ካርቴላ ክፈያ (*' + totalRefund + ' ETB*) ተመላሽ ተደርጋል።\n\n✅ ' + refundDesc + '።',
-              parse_mode: 'Markdown',
-            }),
-          });
-        } catch (e) { console.error('Refund notify error:', e); }
+        fetch('https://api.telegram.org/bot' + botToken + '/sendMessage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id: telegramId,
+            text: '⏳ *ቢንጦ ጸዋታ ተሰርዋል*\n\nሌላ ተጫዋች በጊዜዱ ስለለገባ የ ' + count + ' ካርቴላ ክፈያ (*' + totalRefund + ' ETB*) ተመላሽ ተደርጋል።\n\n✅ ' + refundDesc + '።',
+            parse_mode: 'Markdown',
+          }),
+          signal: AbortSignal.timeout(3000),
+        }).catch((e) => { console.error('Refund notify error:', e?.message); });
       }
     }
 
@@ -288,15 +287,16 @@ class BingoEngine {
     const prize = Number(prizePool);
     const token = process.env.BOT_TOKEN;
 
-    // ── Helper: send Telegram notification ────────────────────────────────────
+    // ── Helper: send Telegram notification with 3s timeout (non-blocking) ───
     const notify = async (chatId: string, text: string) => {
       try {
         if (token) {
-          await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ chat_id: chatId, text }),
-          });
+            signal: AbortSignal.timeout(3000),
+          }).catch(() => {});
         }
       } catch { /* ignore */ }
     };

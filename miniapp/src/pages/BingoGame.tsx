@@ -450,6 +450,8 @@ export default function BingoGame() {
           setGame(d.game); setTaken(d.taken_cartelas ?? []); setMyCard(d.my_card ?? null);
           gameIdRef.current = d.game.id;
           prevCalledLenRef.current = d.game.called_numbers?.length || 0;
+          setManuallyMarked(new Set()); // Reset manual marks on new game
+          hasCelebratedRef.current = null;
         } else if (d.game) {
           setGame(d.game); setTaken(d.taken_cartelas ?? []); setMyCard(d.my_card ?? null);
         }
@@ -459,11 +461,29 @@ export default function BingoGame() {
 
   useEffect(() => { if (selectedStake) fetchState(); }, [selectedStake, fetchState]);
 
+  // Active game polling heartbeat — guarantees game NEVER gets stuck, even if WebSockets disconnect
+  useEffect(() => {
+    if (!selectedStake) return;
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      fetchState();
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [selectedStake, fetchState]);
+
   useEffect(() => {
     if (!selectedStake) return;
     const ch = supabase.channel(`bingo-rt-${selectedStake}-${Date.now()}`)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "bingo_games" }, ({ new: g }) => {
-        if (Number(g.stake) === selectedStake) setGame(g as BGame);
+        if (Number(g.stake) === selectedStake) {
+          setGame(g as BGame);
+          if (g.id !== gameIdRef.current) {
+            gameIdRef.current = g.id;
+            prevCalledLenRef.current = 0;
+            setManuallyMarked(new Set());
+            fetchState();
+          }
+        }
       })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "bingo_games" }, () => { fetchState(); })
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "bingo_players" }, ({ new: p }) => {
@@ -481,12 +501,17 @@ export default function BingoGame() {
     if (!game || game.status !== "waiting") return;
     const update = () => {
       if (document.visibilityState === 'hidden') return;
-      setTimeLeft(Math.max(0, Math.ceil((new Date(game.start_at).getTime() - Date.now()) / 1000)));
+      const rem = Math.max(0, Math.ceil((new Date(game.start_at).getTime() - Date.now()) / 1000));
+      setTimeLeft(rem);
+      if (rem === 0) {
+        // Countdown reached 0 — fetch state immediately so calling starts with 0 delay
+        fetchState();
+      }
     };
     update();
     const id = setInterval(update, 1000);
     return () => clearInterval(id);
-  }, [game?.status, game?.start_at]);
+  }, [game?.status, game?.start_at, fetchState]);
 
   const called = game?.called_numbers ?? [];
   const lastNum = called.length > 0 ? Number(called[called.length - 1]) : null;
@@ -505,8 +530,26 @@ export default function BingoGame() {
   useEffect(() => {
     if (game?.status !== 'finished') return;
     if (hasCelebratedRef.current === game.id) return;
+
+    // Safety fallback: if finished game has no winner details after 4s, clear and move to next game
+    const fallbackTimer = setTimeout(() => {
+      if (hasCelebratedRef.current !== game.id) {
+        hasCelebratedRef.current = game.id;
+        setCelebration(null);
+        setMyCard(null);
+        setMyCartelas([]);
+        setActiveCartelaIdx(0);
+        setTaken([]);
+        fetchState();
+        refreshUser();
+      }
+    }, 4000);
+
     // Guard: wait for backend to finish populating winner fields before celebrating
-    if (!game.winner_cartela && game.winner_first_name !== 'REMATCH') return;
+    if (!game.winner_cartela && game.winner_first_name !== 'REMATCH') {
+      return () => clearTimeout(fallbackTimer);
+    }
+    clearTimeout(fallbackTimer);
 
     hasCelebratedRef.current = game.id;
 
@@ -894,7 +937,7 @@ export default function BingoGame() {
                         const isManualMarked = manuallyMarked.has(num);
                         const marked = isFree || (autoMark ? isCalled : isManualMarked);
                         const isLast = num === lastNum;
-                        const canTap = !autoMark && isCalled && !isFree;
+                        const canTap = !autoMark && !isFree;
                         return (
                           <div
                             key={`${r}-${c}`}
@@ -952,7 +995,7 @@ export default function BingoGame() {
                               const isManualMarked = manuallyMarked.has(num);
                               const marked = isFree || (autoMark ? isCalled : isManualMarked);
                               const isLast = num === lastNum;
-                              const canTap = !autoMark && isCalled && !isFree;
+                              const canTap = !autoMark && !isFree;
                               return (
                                 <div
                                   key={`${r}-${c}`}
