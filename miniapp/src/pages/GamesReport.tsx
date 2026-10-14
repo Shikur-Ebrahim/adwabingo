@@ -8,7 +8,8 @@ import { t } from '../lib/translations';
 const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface GameRecord {
-  game_id: string;
+  id: string;
+  game_id?: string;
   game_number: string | null;
   stake: number;
   status: string;
@@ -200,7 +201,7 @@ export default function GamesReport() {
                 const grad = getStakeGradient(g.stake);
 
                 return (
-                  <div key={g.game_id}
+                  <div key={g.id}
                     className={`bg-white rounded-2xl overflow-hidden shadow-sm border ${g.is_winner ? 'border-yellow-200' : isOngoing ? 'border-blue-100' : 'border-gray-100'}`}>
 
                     {/* Stake color bar */}
@@ -208,9 +209,9 @@ export default function GamesReport() {
                       <div className="flex items-center gap-2">
                         <Gamepad2 size={15} className="text-white/80" />
                         <span className="text-white font-black text-sm">{g.stake} ETB</span>
-                        {(g.game_number || g.game_id) && (
+                        {(g.game_number || g.id) && (
                           <span className="bg-white/20 text-white text-[10px] font-bold font-mono px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
-                            <Hash size={8} />{(g.game_number || g.game_id?.slice(0, 8) || '').toUpperCase()}
+                            <Hash size={8} />{(g.game_number || g.id?.slice(0, 8) || '').toUpperCase()}
                           </span>
                         )}
                       </div>

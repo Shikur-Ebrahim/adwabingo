@@ -80,11 +80,9 @@ router.get('/current', validateTelegramAuth, async (req: AuthRequest, res) => {
       game = latest;
     } else {
       const id = randomUUID();
-      const game_id = id.split('-')[0].toUpperCase();
       const start_at = new Date(Date.now() + 86400000 * 365).toISOString();
       const { data: newGame } = await supabase.from('bingo_games').insert({
         id,
-        game_id,
         stake,
         prize_pool: 0,
         status: 'waiting',
@@ -134,7 +132,7 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   if (requestedGameId) {
     const { data } = await supabase
       .from('bingo_games')
-      .select('id, game_id, stake, status, start_at')
+      .select('id, stake, status, start_at')
       .eq('id', requestedGameId)
       .eq('status', 'waiting')
       .maybeSingle();
@@ -145,7 +143,7 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   if (!game) {
     const { data: gamesData } = await supabase
       .from('bingo_games')
-      .select('id, game_id, stake, status, start_at')
+      .select('id, stake, status, start_at')
       .eq('status', 'waiting')
       .eq('stake', Number(requestedStake))
       .order('created_at', { ascending: false })

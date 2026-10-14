@@ -85,7 +85,7 @@ class BingoEngine {
       if (games.length > 1) {
         for (const g of games) {
           if (g.id !== activeGame.id && g.status === 'waiting' && (!g.prize_pool || g.prize_pool === 0)) {
-            console.log(`🧹 Cleaning up ghost game #${g.game_id} (Stake: ${stake})`);
+            console.log(`🧹 Cleaning up ghost game #${g.id.slice(0,8).toUpperCase()} (Stake: ${stake})`);
             await supabase.from('bingo_games').update({ status: 'finished', finished_at: new Date().toISOString() }).eq('id', g.id);
           }
         }
@@ -101,12 +101,11 @@ class BingoEngine {
 
   private async createGame(stake: number) {
     const id = randomUUID();
-    const game_id = id.split('-')[0].toUpperCase();
+    const label = id.split('-')[0].toUpperCase(); // for log display only
     const start_at = new Date(Date.now() + 86400000 * 365).toISOString();
 
     const { data: newGame, error } = await supabase.from('bingo_games').insert({
       id,
-      game_id,
       stake,
       prize_pool: 0,
       status: 'waiting',
@@ -117,7 +116,7 @@ class BingoEngine {
     if (error) {
       console.error(`[BingoEngine] Failed to create game for stake ${stake}:`, error);
     } else {
-      console.log(`🎰 Game #${game_id} (Stake: ${stake}) created, waiting for first player`);
+      console.log(`🎰 Game #${label} (Stake: ${stake}) created, waiting for first player`);
     }
     return newGame;
   }
@@ -154,7 +153,7 @@ class BingoEngine {
 
       // Has the release time (default 60s) expired?
       if (waitingDurationSec >= releaseTimeoutSec) {
-        console.log(`⏰ Game #${game.game_id} (Stake: ${game.stake}): Release time reached (${Math.round(waitingDurationSec)}s >= ${releaseTimeoutSec}s). Refunding ${players.length} cartelas and releasing player.`);
+        console.log(`⏰ Game #${game.id.slice(0,8).toUpperCase()} (Stake: ${game.stake}): Release time reached (${Math.round(waitingDurationSec)}s >= ${releaseTimeoutSec}s). Refunding ${players.length} cartelas and releasing player.`);
         await this.refundAndResetGame(game, players);
         return;
       }
@@ -165,7 +164,7 @@ class BingoEngine {
         start_at: new Date(Date.now() + remainingSec * 1000).toISOString(),
         updated_at: new Date().toISOString(),
       }).eq('id', game.id);
-      console.log(`🎰 Game #${game.game_id} extended by ${remainingSec}s (${Math.round(waitingDurationSec)}s elapsed / ${releaseTimeoutSec}s total release limit)`);
+      console.log(`🎰 Game #${game.id.slice(0,8).toUpperCase()} extended by ${remainingSec}s (${Math.round(waitingDurationSec)}s elapsed / ${releaseTimeoutSec}s total release limit)`);
       return;
     }
 
@@ -175,7 +174,7 @@ class BingoEngine {
       called_numbers: [],
       updated_at: new Date().toISOString(),
     }).eq('id', game.id);
-    console.log(`🎰 Game #${game.game_id} started with ${uniquePlayers} unique players!`);
+    console.log(`🎰 Game #${game.id.slice(0,8).toUpperCase()} started with ${uniquePlayers} unique players!`);
   }
 
   private async refundAndResetGame(game: any, players: any[]) {
@@ -245,7 +244,7 @@ class BingoEngine {
       updated_at: new Date().toISOString(),
     }).eq('id', game.id);
 
-    console.log(`✅ Game #${game.game_id} successfully reset and refunded.`);
+    console.log(`✅ Game #${game.id.slice(0,8).toUpperCase()} successfully reset and refunded.`);
   }
 
   private async handleCalling(game: any) {
@@ -282,7 +281,7 @@ class BingoEngine {
       updated_at: new Date().toISOString(),
     }).eq('id', game.id);
 
-    await this.checkWinners(game.id, game.game_id, newCalled, game.prize_pool, game.stake);
+    await this.checkWinners(game.id, game.id.slice(0,8).toUpperCase(), newCalled, game.prize_pool, game.stake);
   }
 
   private async checkWinners(
