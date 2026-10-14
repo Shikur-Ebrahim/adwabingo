@@ -180,6 +180,10 @@ export default function BingoGame() {
     };
     fetchPools();
 
+    const pollTimer = setInterval(() => {
+      if (document.visibilityState !== 'hidden') fetchPools();
+    }, 2000);
+
     // Listen to table changes so home page updates in real-time
     const ch = supabase.channel('home_pools')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_games' }, () => {
@@ -190,7 +194,11 @@ export default function BingoGame() {
       })
       .subscribe();
 
-    return () => { isMounted = false; supabase.removeChannel(ch); };
+    return () => {
+      isMounted = false;
+      clearInterval(pollTimer);
+      supabase.removeChannel(ch);
+    };
   }, [selectedStake]);
 
   // Tick timer for home screen
@@ -435,6 +443,29 @@ export default function BingoGame() {
   const prevCalledLenRef = useRef(0);
   const hadCartelasRef = useRef(false);
 
+  // Clear any leftover state when changing stakes or unmounting so no old game data is stored
+  useEffect(() => {
+    setGame(null);
+    setTaken([]);
+    setMyCard(null);
+    setMyCartelas([]);
+    setCelebration(null);
+    gameIdRef.current = null;
+    prevCalledLenRef.current = 0;
+    hasCelebratedRef.current = null;
+    setManuallyMarked(new Set());
+    setActiveCartelaIdx(0);
+    setPreviewCartela(null);
+    return () => {
+      setGame(null);
+      setCelebration(null);
+      setMyCard(null);
+      setMyCartelas([]);
+      hasCelebratedRef.current = null;
+      gameIdRef.current = null;
+    };
+  }, [selectedStake]);
+
   const fetchState = useCallback(async () => {
     if (!selectedStake) return;
     setLoading(true);
@@ -451,7 +482,11 @@ export default function BingoGame() {
           gameIdRef.current = d.game.id;
           prevCalledLenRef.current = d.game.called_numbers?.length || 0;
           setManuallyMarked(new Set()); // Reset manual marks on new game
-          hasCelebratedRef.current = null;
+          if (d.game.status === 'finished') {
+            hasCelebratedRef.current = d.game.id;
+          } else {
+            hasCelebratedRef.current = null;
+          }
         } else if (d.game) {
           setGame(d.game); setTaken(d.taken_cartelas ?? []); setMyCard(d.my_card ?? null);
         }
@@ -530,6 +565,14 @@ export default function BingoGame() {
   useEffect(() => {
     if (game?.status !== 'finished') return;
     if (hasCelebratedRef.current === game.id) return;
+
+    // Suppress celebration if game finished more than 3500ms ago (e.g. user just opened the page)
+    const finishTime = game.finished_at ? new Date(game.finished_at).getTime() : 0;
+    if (finishTime > 0 && Date.now() - finishTime > 3500) {
+      hasCelebratedRef.current = game.id;
+      fetchState();
+      return;
+    }
 
     // Safety fallback: if finished game has no winner details after 4s, clear and move to next game
     const fallbackTimer = setTimeout(() => {
@@ -627,7 +670,9 @@ export default function BingoGame() {
       setMyCartelas([]);
       setActiveCartelaIdx(0);
       setTaken([]);
-      hasCelebratedRef.current = null; // Reset so subsequent games celebrate cleanly
+      // NOTE: Do NOT reset hasCelebratedRef.current to null here.
+      // Keeping it set to the finished game id prevents repeating celebrations.
+      // It will reset to null only when a brand new game id arrives in fetchState().
       fetchState();
       refreshUser();
     }, 2000);

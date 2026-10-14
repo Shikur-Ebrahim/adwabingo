@@ -8,12 +8,23 @@ const router = Router();
 
 // ── GET /api/bingo/pools ── server-side unique player count (bypasses RLS) ──
 router.get('/pools', validateTelegramAuth, async (_req, res) => {
-  const { data: games } = await supabase
+  const { data: allGames } = await supabase
     .from('bingo_games')
-    .select('id, stake, prize_pool, start_at, status')
-    .in('status', ['waiting', 'calling']);
+    .select('id, stake, prize_pool, start_at, status, created_at')
+    .in('status', ['waiting', 'calling'])
+    .order('created_at', { ascending: false });
 
-  if (!games || games.length === 0) { res.json({ pools: [] }); return; }
+  if (!allGames || allGames.length === 0) { res.json({ pools: [] }); return; }
+
+  // Deduplicate by stake: keep the newest game for each stake
+  const seenStakes = new Set<number>();
+  const games: typeof allGames = [];
+  for (const g of allGames) {
+    if (!seenStakes.has(g.stake)) {
+      seenStakes.add(g.stake);
+      games.push(g);
+    }
+  }
 
   const ids = games.map(g => g.id);
   const { data: rows } = await supabase
@@ -44,13 +55,52 @@ router.get('/current', validateTelegramAuth, async (req: AuthRequest, res) => {
   const telegramId = req.telegramUser!.id.toString();
   const stake = Number(req.query.stake) || 10;
 
-  const { data: game } = await supabase
+  // 1. Prioritize active game (waiting or calling)
+  let { data: game } = await supabase
     .from('bingo_games')
     .select('*')
     .eq('stake', stake)
+    .in('status', ['waiting', 'calling'])
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  // 2. If no active game, check if a game finished very recently (< 4s) for live celebration
+  if (!game) {
+    const { data: latest } = await supabase
+      .from('bingo_games')
+      .select('*')
+      .eq('stake', stake)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (latest && latest.finished_at && Date.now() - new Date(latest.finished_at).getTime() < 4000) {
+      game = latest;
+      let game_id = '';
+      for (let attempts = 0; attempts < 10; attempts++) {
+        const candidate = String(Math.floor(1000 + Math.random() * 999000));
+        const { data } = await supabase.from('bingo_games').select('id').eq('game_id', candidate).maybeSingle();
+        if (!data) {
+          game_id = candidate;
+          break;
+        }
+      }
+      if (!game_id) {
+        game_id = String(Date.now()).slice(-6);
+      }
+      const start_at = new Date(Date.now() + 86400000 * 365).toISOString();
+      const { data: newGame } = await supabase.from('bingo_games').insert({
+        game_id,
+        stake,
+        prize_pool: 0,
+        status: 'waiting',
+        called_numbers: [],
+        start_at,
+      }).select().single();
+      game = newGame;
+    }
+  }
 
   if (!game) { res.json({ game: null, taken_cartelas: [], my_card: null, my_cartelas: [], max_players: 150, max_cartelas_per_user: 2 }); return; }
 

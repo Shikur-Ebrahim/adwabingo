@@ -39,6 +39,7 @@ export function checkBingo(card: number[][], called: number[]): boolean {
 class BingoEngine {
   private timer: ReturnType<typeof setInterval> | null = null;
   private busy = false;
+  private busySince = 0;
 
   start() {
     if (this.timer) return;
@@ -47,8 +48,16 @@ class BingoEngine {
   }
 
   private async tick() {
-    if (this.busy) return;
+    if (this.busy) {
+      if (Date.now() - this.busySince > 15000) {
+        console.warn('[BingoEngine] Busy timeout reached (15s), resetting lock');
+        this.busy = false;
+      } else {
+        return;
+      }
+    }
     this.busy = true;
+    this.busySince = Date.now();
     try { await this.step(); }
     catch (e) { console.error('[BingoEngine]', e); }
     finally { this.busy = false; }
@@ -56,38 +65,69 @@ class BingoEngine {
 
   private async step() {
     for (const stake of STAKES) {
-      const { data: game } = await supabase
+      const { data: games } = await supabase
         .from('bingo_games')
         .select('*')
         .eq('stake', stake)
         .neq('status', 'finished')
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .order('created_at', { ascending: false });
 
-      if (!game) {
+      if (!games || games.length === 0) {
         await this.createGame(stake);
-      } else if (game.status === 'waiting') {
-        await this.handleWaiting(game);
-      } else if (game.status === 'calling') {
-        await this.handleCalling(game);
+        continue;
+      }
+
+      // Prioritize active game with players or currently calling
+      const activeGame = games.find(g => g.status === 'calling' || (g.prize_pool && g.prize_pool > 0)) || games[0];
+
+      // Clean up extra empty waiting games if multiple exist
+      if (games.length > 1) {
+        for (const g of games) {
+          if (g.id !== activeGame.id && g.status === 'waiting' && (!g.prize_pool || g.prize_pool === 0)) {
+            console.log(`🧹 Cleaning up ghost game #${g.game_id} (Stake: ${stake})`);
+            await supabase.from('bingo_games').update({ status: 'finished', finished_at: new Date().toISOString() }).eq('id', g.id);
+          }
+        }
+      }
+
+      if (activeGame.status === 'waiting') {
+        await this.handleWaiting(activeGame);
+      } else if (activeGame.status === 'calling') {
+        await this.handleCalling(activeGame);
       }
     }
   }
 
   private async createGame(stake: number) {
-    const game_id = Math.floor(100 + Math.random() * 900).toString();
+    let game_id = '';
+    for (let attempts = 0; attempts < 10; attempts++) {
+      const candidate = String(Math.floor(1000 + Math.random() * 999000));
+      const { data } = await supabase.from('bingo_games').select('id').eq('game_id', candidate).maybeSingle();
+      if (!data) {
+        game_id = candidate;
+        break;
+      }
+    }
+    if (!game_id) {
+      game_id = String(Date.now()).slice(-6);
+    }
     const start_at = new Date(Date.now() + 86400000 * 365).toISOString();
 
-    await supabase.from('bingo_games').insert({
+    const { data: newGame, error } = await supabase.from('bingo_games').insert({
       game_id,
       stake,
       prize_pool: 0,
       status: 'waiting',
       called_numbers: [],
       start_at,
-    });
-    console.log(`🎰 Game #${game_id} (Stake: ${stake}) created, waiting for first player`);
+    }).select().single();
+
+    if (error) {
+      console.error(`[BingoEngine] Failed to create game for stake ${stake}:`, error);
+    } else {
+      console.log(`🎰 Game #${game_id} (Stake: ${stake}) created, waiting for first player`);
+    }
+    return newGame;
   }
 
   private async handleWaiting(game: any) {
@@ -228,7 +268,7 @@ class BingoEngine {
     const cfg = await getSettings();
     const intervalMs = Math.max(1000, Number(cfg.call_interval_ms) || 3000);
     const lastUpdate = new Date(freshGame.updated_at || game.updated_at).getTime();
-    if (Date.now() - lastUpdate < intervalMs) return;
+    if (!isNaN(lastUpdate) && lastUpdate <= Date.now() && (Date.now() - lastUpdate) < intervalMs) return;
 
     const called: number[] = (freshGame.called_numbers || game.called_numbers || []).map(Number);
     const pool = Array.from({ length: 75 }, (_, i) => i + 1).filter(n => !called.includes(n));

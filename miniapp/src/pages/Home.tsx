@@ -61,39 +61,57 @@ export default function Home() {
 
   useEffect(() => {
     let isMounted = true;
+    const API = import.meta.env.VITE_API_URL || '/api';
     
     const fetchPools = async () => {
-      const { data } = await supabase.from('bingo_games').select('id, stake, prize_pool, start_at, status').in('status', ['waiting', 'calling']);
+      try {
+        const r = await fetch(`${API}/bingo/pools`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'x-telegram-init-data': WebApp?.initData || '',
+          }
+        });
+        if (r.ok && isMounted) {
+          const { pools } = await r.json();
+          const p: Record<number, any> = {};
+          (pools || []).forEach((g: any) => {
+            p[Number(g.stake)] = {
+              pool: g.prize_pool,
+              start_at: g.start_at,
+              status: g.status,
+              players: g.unique_players,
+            };
+          });
+          setHomeGames(p);
+          return;
+        }
+      } catch {}
+
+      // Fallback direct supabase query with deduplication
+      const { data } = await supabase.from('bingo_games')
+        .select('id, stake, prize_pool, start_at, status, created_at')
+        .in('status', ['waiting', 'calling'])
+        .order('created_at', { ascending: false });
+
       if (data && isMounted) {
         const p: Record<number, any> = {};
-        data.forEach(g => { p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status, players: 0, _id: g.id }; });
-
-        // Fetch unique player counts for each active game
-        const ids = data.map(g => g.id);
-        if (ids.length > 0) {
-          const { data: playerRows } = await supabase
-            .from('bingo_players')
-            .select('game_id, telegram_id')
-            .in('game_id', ids);
-          if (playerRows) {
-            const uniquePlayersMap: Record<string, Set<string>> = {};
-            playerRows.forEach((r: any) => {
-              if (!uniquePlayersMap[r.game_id]) {
-                uniquePlayersMap[r.game_id] = new Set();
-              }
-              uniquePlayersMap[r.game_id].add(r.telegram_id);
-            });
-            data.forEach(g => {
-              if (p[g.stake]) {
-                p[g.stake].players = uniquePlayersMap[g.id] ? uniquePlayersMap[g.id].size : 0;
-              }
-            });
+        const seen = new Set<number>();
+        data.forEach(g => {
+          if (!seen.has(g.stake)) {
+            seen.add(g.stake);
+            p[g.stake] = { pool: g.prize_pool, start_at: g.start_at, status: g.status, players: 0, _id: g.id };
           }
-        }
+        });
         setHomeGames(p);
       }
     };
+
     fetchPools();
+
+    // 2-second heartbeat polling so Home page status NEVER gets stuck!
+    const pollTimer = setInterval(() => {
+      if (document.visibilityState !== 'hidden') fetchPools();
+    }, 2000);
 
     const ch = supabase.channel('home_pools_root')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bingo_games' }, () => {
@@ -101,7 +119,11 @@ export default function Home() {
       })
       .subscribe();
 
-    return () => { isMounted = false; supabase.removeChannel(ch); };
+    return () => {
+      isMounted = false;
+      clearInterval(pollTimer);
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   useEffect(() => {
