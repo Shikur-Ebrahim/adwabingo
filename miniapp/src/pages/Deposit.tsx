@@ -146,9 +146,6 @@ export default function Deposit() {
     if (!amount || isNaN(numAmount) || numAmount <= 0) {
       setError('Please enter a valid amount.'); return;
     }
-    if (numAmount < selected.min_deposit) {
-      setError(`Minimum deposit is ${selected.min_deposit.toLocaleString()} ETB`); return;
-    }
     if (!file) {
       setError('Please upload your payment screenshot.'); return;
     }
@@ -289,10 +286,6 @@ export default function Deposit() {
                 </div>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-50 flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{t[language].deposit.minDepositText}</span>
-              <span className="font-black text-emerald-600">{selected.min_deposit.toLocaleString('en-US')} ETB</span>
-            </div>
           </div>
 
           {/* Instructions */}
@@ -314,7 +307,7 @@ export default function Deposit() {
             <div className="relative">
               <input
                 type="number"
-                min={selected.min_deposit}
+                min={1}
                 placeholder={`Min ${selected.min_deposit.toLocaleString()} ETB`}
                 className="w-full bg-slate-50 dark:bg-slate-900 border-2 border-gray-200 rounded-xl px-4 py-4 text-xl font-black outline-none focus:border-yellow-400 focus:bg-white dark:bg-slate-900 transition-all"
                 value={amount}
@@ -344,7 +337,7 @@ export default function Deposit() {
                 </div>
                 <p className="font-bold text-slate-600 dark:text-slate-300">{t[language].deposit.tapToUpload}</p>
                 <p className="text-xs text-slate-400 mt-1">{t[language].deposit.jpgPng}</p>
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] || null); setError(''); }} />
+                <input type="file" accept="image/*,image/heic,image/heif" capture="environment" className="hidden" onChange={(e) => { setFile(e.target.files?.[0] || null); setError(''); }} />
               </label>
             )}
           </div>

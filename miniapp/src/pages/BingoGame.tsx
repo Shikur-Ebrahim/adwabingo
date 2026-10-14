@@ -722,7 +722,7 @@ export default function BingoGame() {
     const rawPool = newTotalCartelas * stakeAmt;
     setGame(prev => prev ? { ...prev, prize_pool: newUniquePlayers < 3 ? rawPool : Math.floor(rawPool * 0.8) } : prev);
     try {
-      const r = await fetch(`${API}/bingo/join`, { method: "POST", headers: hdrs(), body: JSON.stringify({ cartela_number: seat, stake: selectedStake, card_matrix: matrix }) });
+      const r = await fetch(`${API}/bingo/join`, { method: "POST", headers: hdrs(), body: JSON.stringify({ cartela_number: seat, stake: selectedStake, game_id: game.id, card_matrix: matrix }) });
       const d = await r.json();
       if (r.ok) {
         if (WebApp?.HapticFeedback) WebApp.HapticFeedback.notificationOccurred("success");

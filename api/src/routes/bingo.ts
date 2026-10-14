@@ -126,16 +126,32 @@ router.post('/join', validateTelegramAuth, async (req: AuthRequest, res) => {
   }
 
   const requestedStake = req.body.stake || 10;
+  const requestedGameId = req.body.game_id; // frontend can pass the exact game id
 
-  let query = supabase
-    .from('bingo_games')
-    .select('id, game_id, stake, status, start_at')
-    .eq('status', 'waiting')
-    .eq('stake', Number(requestedStake))
-    .order('created_at', { ascending: false });
-  
-  const { data: gamesData } = await query.limit(1);
-  const game = gamesData?.[0];
+  let game: any = null;
+
+  // 1. If frontend sent the specific game id, use that directly (most reliable)
+  if (requestedGameId) {
+    const { data } = await supabase
+      .from('bingo_games')
+      .select('id, game_id, stake, status, start_at')
+      .eq('id', requestedGameId)
+      .eq('status', 'waiting')
+      .maybeSingle();
+    game = data;
+  }
+
+  // 2. Fallback: find any waiting game for this stake
+  if (!game) {
+    const { data: gamesData } = await supabase
+      .from('bingo_games')
+      .select('id, game_id, stake, status, start_at')
+      .eq('status', 'waiting')
+      .eq('stake', Number(requestedStake))
+      .order('created_at', { ascending: false })
+      .limit(1);
+    game = gamesData?.[0] ?? null;
+  }
 
   if (!game) {
     res.status(400).json({ error: 'No game accepting players for this stake right now.' }); return;
