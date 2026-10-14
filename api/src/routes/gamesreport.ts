@@ -76,7 +76,7 @@ router.get('/', async (req: AuthRequest, res) => {
 
   const enriched = paginated.map((g: any) => ({
     game_id:       g.id,
-    game_number:   g.game_id || null,       // sequential number e.g. 122
+    game_number:   g.game_number || g.id?.slice(0, 8).toUpperCase() || null,       // sequential number or UUID slice
     stake:         Number(g.stake) || 0,
     status:        g.status || 'unknown',
     prize_pool:    Number(g.prize_pool) || 0,

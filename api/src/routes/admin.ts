@@ -526,7 +526,7 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   // ─── Bingo jackpot wins (8-call and 10-call) ────────────────────────────────
   let bingoQuery = supabase
     .from('bingo_games')
-    .select('id, game_id, stake, winner_prize, winner_telegram_id, winner_first_name, win_type, finished_at')
+    .select('id, stake, winner_prize, winner_telegram_id, winner_first_name, win_type, finished_at')
     .in('win_type', ['jackpot_8', 'jackpot_10'])
     .eq('status', 'finished');
   if (from) bingoQuery = bingoQuery.gte('finished_at', from);
@@ -545,12 +545,13 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   (jackpotGames || []).forEach((g: any) => {
     const uname = winnerUsernameMap[g.winner_telegram_id] || g.winner_first_name || 'Unknown';
     const prize = Number(g.winner_prize || 0);
+    const shortGameId = g.id?.slice(0, 8).toUpperCase();
     if (g.win_type === 'jackpot_8') {
       totalJackpot8 += prize;
-      txList.push({ id: g.id + '_j8', type: 'jackpot_8', amount: prize, status: 'approved', created_at: g.finished_at, username: uname, telegram_id: g.winner_telegram_id, game_id: g.game_id, stake: g.stake });
+      txList.push({ id: g.id + '_j8', type: 'jackpot_8', amount: prize, status: 'approved', created_at: g.finished_at, username: uname, telegram_id: g.winner_telegram_id, game_id: shortGameId, stake: g.stake });
     } else if (g.win_type === 'jackpot_10') {
       totalJackpot10 += prize;
-      txList.push({ id: g.id + '_j10', type: 'jackpot_10', amount: prize, status: 'approved', created_at: g.finished_at, username: uname, telegram_id: g.winner_telegram_id, game_id: g.game_id, stake: g.stake });
+      txList.push({ id: g.id + '_j10', type: 'jackpot_10', amount: prize, status: 'approved', created_at: g.finished_at, username: uname, telegram_id: g.winner_telegram_id, game_id: shortGameId, stake: g.stake });
     }
   });
 
@@ -817,7 +818,7 @@ router.get('/bingo-report', validateTelegramAuth, requireAdmin, async (req, res)
   // Fetch games
   const { data: games, error } = await supabase
     .from('bingo_games')
-    .select('id, game_id, stake, status, winner_prize, winner_first_name, winner_cartela, created_at, finished_at')
+    .select('id, stake, status, winner_prize, winner_first_name, winner_cartela, created_at, finished_at')
     .gte('created_at', startDate.toISOString())
     .lte('created_at', endDate.toISOString())
     .order('created_at', { ascending: false });
@@ -853,7 +854,7 @@ router.get('/bingo-report', validateTelegramAuth, requireAdmin, async (req, res)
       total_prizes_paid += paid;
     }
 
-    return { ...g, players_count: pc, collected, paid };
+    return { ...g, game_id: g.id?.slice(0, 8).toUpperCase(), players_count: pc, collected, paid };
   });
 
   res.json({
