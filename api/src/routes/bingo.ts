@@ -3,6 +3,7 @@ import { AuthRequest, validateTelegramAuth } from '../middleware/auth';
 import { supabase } from '../services/supabase';
 import { generateBingoCard, checkBingo } from '../services/BingoEngine';
 import { getSettings } from './adminSettings';
+import { randomUUID } from 'crypto';
 
 const router = Router();
 
@@ -77,20 +78,12 @@ router.get('/current', validateTelegramAuth, async (req: AuthRequest, res) => {
 
     if (latest && latest.finished_at && Date.now() - new Date(latest.finished_at).getTime() < 4000) {
       game = latest;
-      let game_id = '';
-      for (let attempts = 0; attempts < 10; attempts++) {
-        const candidate = String(Math.floor(1000 + Math.random() * 999000));
-        const { data } = await supabase.from('bingo_games').select('id').eq('game_id', candidate).maybeSingle();
-        if (!data) {
-          game_id = candidate;
-          break;
-        }
-      }
-      if (!game_id) {
-        game_id = String(Date.now()).slice(-6);
-      }
+    } else {
+      const id = randomUUID();
+      const game_id = id.split('-')[0].toUpperCase();
       const start_at = new Date(Date.now() + 86400000 * 365).toISOString();
       const { data: newGame } = await supabase.from('bingo_games').insert({
+        id,
         game_id,
         stake,
         prize_pool: 0,
