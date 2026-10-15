@@ -14,13 +14,16 @@ router.get('/players', async (req: AuthRequest, res) => {
   let fromDate: string | null = null;
   const now = new Date();
   if (period === 'daily') {
+    // Today only: from today's midnight
     const d = new Date(now); d.setHours(0, 0, 0, 0);
     fromDate = d.toISOString();
   } else if (period === 'weekly') {
-    const d = new Date(now); d.setDate(d.getDate() - 7);
+    // Last 7 days including today: from midnight of (today - 6 days)
+    const d = new Date(now); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - 6);
     fromDate = d.toISOString();
   } else if (period === 'monthly') {
-    const d = new Date(now); d.setDate(1); d.setHours(0, 0, 0, 0);
+    // Last 30 days including today: from midnight of (today - 29 days)
+    const d = new Date(now); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - 29);
     fromDate = d.toISOString();
   }
 
