@@ -22,6 +22,7 @@ interface Stats {
   totalWelcomeBonus: number;
   totalDepBonus: number;
   totalSecondDepBonus: number;
+  totalWeekendBonus?: number;
   totalInvBonus: number;
   totalJackpot8: number;
   totalJackpot10: number;
@@ -47,6 +48,7 @@ const TYPE_META = {
   welcome_bonus: { label: 'Welcome Bonus', icon: <Gift size={14} />, color: 'text-amber-600', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700' },
   deposit_bonus: { label: '1st Deposit Bonus', icon: <Gift size={14} />, color: 'text-violet-600', bg: 'bg-violet-50', badge: 'bg-violet-100 text-violet-700' },
   second_deposit_bonus: { label: '2nd Deposit Bonus', icon: <Gift size={14} />, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50', badge: 'bg-fuchsia-100 text-fuchsia-700' },
+  weekend_bonus: { label: 'Weekend Bonus', icon: <Gift size={14} />, color: 'text-purple-600', bg: 'bg-purple-50', badge: 'bg-purple-100 text-purple-700' },
   invitation_reward: { label: 'Invite Reward', icon: <Users size={14} />, color: 'text-blue-600', bg: 'bg-blue-50', badge: 'bg-blue-100 text-blue-700' },
   jackpot_8: { label: '8-Call Jackpot', icon: <Gift size={14} />, color: 'text-amber-600', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700' },
   jackpot_10: { label: '10-Call Jackpot', icon: <Gift size={14} />, color: 'text-orange-600', bg: 'bg-orange-50', badge: 'bg-orange-100 text-orange-700' },
@@ -309,6 +311,15 @@ export default function AdminTxReport() {
                 </div>
                 <span className="text-fuchsia-400 font-black text-[12px]">−{fmt(stats.totalSecondDepBonus)} ETB</span>
               </div>
+              {Boolean(stats.totalWeekendBonus && stats.totalWeekendBonus > 0) && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                    <span className="text-white/70 text-[11px] font-semibold">Weekend Bonus</span>
+                  </div>
+                  <span className="text-purple-400 font-black text-[12px]">−{fmt(stats.totalWeekendBonus || 0)} ETB</span>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
@@ -342,6 +353,7 @@ export default function AdminTxReport() {
                 - (stats.totalWelcomeBonus || 0)
                 - stats.totalDepBonus
                 - stats.totalSecondDepBonus
+                - (stats.totalWeekendBonus || 0)
                 - stats.totalInvBonus
                 - stats.totalJackpot8
                 - stats.totalJackpot10;

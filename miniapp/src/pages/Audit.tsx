@@ -22,6 +22,7 @@ const getTypeMeta = (type: string, lang: 'en' | 'am') => {
   withdrawal: { label: t[lang].fullAudit.typeWithdrawal, icon: <ArrowUpCircle size={14} />, color: 'text-rose-600', bg: 'bg-rose-50', badge: 'bg-rose-100 text-rose-700', prefix: '-' },
   deposit_bonus: { label: t[lang].fullAudit.typeFirstBonus, icon: <Gift size={14} />, color: 'text-violet-600', bg: 'bg-violet-50', badge: 'bg-violet-100 text-violet-700', prefix: '+' },
   second_deposit_bonus: { label: t[lang].fullAudit.typeSecondBonus, icon: <Gift size={14} />, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50', badge: 'bg-fuchsia-100 text-fuchsia-700', prefix: '+' },
+  weekend_bonus: { label: t[lang].fullAudit.typeWeekendBonus, icon: <Gift size={14} />, color: 'text-purple-600', bg: 'bg-purple-50', badge: 'bg-purple-100 text-purple-700', prefix: '+' },
   invitation_reward: { label: t[lang].fullAudit.typeInvite, icon: <Users size={14} />, color: 'text-blue-600', bg: 'bg-blue-50', badge: 'bg-blue-100 text-blue-700', prefix: '+' },
   game_win: { label: t[lang].fullAudit.typeGameWin, icon: <Swords size={14} />, color: 'text-yellow-600', bg: 'bg-yellow-50', badge: 'bg-yellow-100 text-yellow-700', prefix: '+' },
   jackpot_8: { label: t[lang].fullAudit.typeJackpot8, icon: <Gift size={14} />, color: 'text-amber-600', bg: 'bg-amber-50', badge: 'bg-amber-100 text-amber-700', prefix: '+' },

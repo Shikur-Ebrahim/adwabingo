@@ -170,6 +170,24 @@ router.get('/deposits', async (req, res) => {
 });
 
 // Approve deposit → add to user balance + mark approved + apply bonus + notify user
+
+// Helper to check if a date matches allowed weekend bonus days (0=Sunday, 6=Saturday, etc.) in Ethiopian time
+export function isWeekendBonusDay(dateInput?: string | Date, allowedDaysJson?: string): boolean {
+  if (!allowedDaysJson) return false;
+  try {
+    const days = typeof allowedDaysJson === 'string' ? JSON.parse(allowedDaysJson) : allowedDaysJson;
+    if (!Array.isArray(days) || days.length === 0) return false;
+    const d = dateInput ? new Date(dateInput) : new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Africa/Addis_Ababa', weekday: 'short' });
+    const dayStr = formatter.format(d);
+    const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const dayNum = map[dayStr] !== undefined ? map[dayStr] : d.getDay();
+    return days.includes(dayNum);
+  } catch {
+    return false;
+  }
+}
+
 router.post('/deposits/:id/approve', async (req, res) => {
   const { data: deposit, error: fetchErr } = await supabase
     .from('deposits').select('*').eq('id', req.params.id).single();
@@ -196,44 +214,59 @@ router.post('/deposits/:id/approve', async (req, res) => {
   let inviterBonus = 0;
   let inviterId = null;
   let bonusReason = '';
-  
-  if (isFirstDeposit || isSecondDeposit) {
-    const { data: allSettings } = await supabase.from('settings').select('key, value');
-    const getSetting = (key: string, def: number | string) => {
-      const row = allSettings?.find(s => s.key === key);
-      return row ? row.value : def;
-    };
 
-    const firstDepositPct = parseFloat(getSetting('first_deposit_bonus_pct', '20') as string) / 100;
-    const secondDepositPct = parseFloat(getSetting('second_deposit_bonus_pct', '10') as string) / 100;
-    const invitationPct = parseFloat(getSetting('invitation_reward_pct', '10') as string) / 100;
+  const { data: allSettings } = await supabase.from('settings').select('key, value');
+  const getSetting = (key: string, def: number | string) => {
+    const row = allSettings?.find(s => s.key === key);
+    return row ? row.value : def;
+  };
 
-    const { data: depRecord } = await supabase.from('users').select('bonus_balance, inviter_id').eq('telegram_id', deposit.telegram_id).single();
+  const firstDepositPct = parseFloat(getSetting('first_deposit_bonus_pct', '20') as string) / 100;
+  const secondDepositPct = parseFloat(getSetting('second_deposit_bonus_pct', '10') as string) / 100;
+  const invitationPct = parseFloat(getSetting('invitation_reward_pct', '10') as string) / 100;
+  const weekendBonusEnabled = getSetting('weekend_bonus_enabled', 'false') === 'true';
+  const weekendBonusDays = getSetting('weekend_bonus_days', '[0,6]') as string;
+  const weekendBonusPct = parseFloat(getSetting('weekend_bonus_pct', '10') as string) / 100;
 
-    if (isFirstDeposit) {
-      depositorBonus = deposit.amount * firstDepositPct;
-      bonusReason = 'First Deposit';
-      
-      if (depRecord && depRecord.inviter_id) {
-        inviterId = depRecord.inviter_id;
-        inviterBonus = deposit.amount * invitationPct;
-      }
-    } else if (isSecondDeposit && secondDepositPct > 0) {
-      depositorBonus = deposit.amount * secondDepositPct;
-      bonusReason = 'Second Deposit';
+  // Determine if this deposit qualifies for weekend bonus (independent of 1st/2nd deposit)
+  const depDate = deposit.created_at ? new Date(deposit.created_at) : new Date();
+  const qualifiesWeekend = weekendBonusEnabled && isWeekendBonusDay(depDate, weekendBonusDays) && weekendBonusPct > 0;
+  const weekendBonusAmount = qualifiesWeekend ? Number(deposit.amount) * weekendBonusPct : 0;
+
+  let firstOrSecondBonus = 0;
+  const bonusReasons: string[] = [];
+
+  const { data: depRecord } = await supabase.from('users').select('bonus_balance, inviter_id').eq('telegram_id', deposit.telegram_id).single();
+
+  if (isFirstDeposit && firstDepositPct > 0) {
+    firstOrSecondBonus = Number(deposit.amount) * firstDepositPct;
+    bonusReasons.push(`1st Deposit Bonus (${Number(firstOrSecondBonus).toLocaleString('en-US')} ETB)`);
+    if (depRecord && depRecord.inviter_id) {
+      inviterId = depRecord.inviter_id;
+      inviterBonus = Number(deposit.amount) * invitationPct;
     }
+  } else if (isSecondDeposit && secondDepositPct > 0) {
+    firstOrSecondBonus = Number(deposit.amount) * secondDepositPct;
+    bonusReasons.push(`2nd Deposit Bonus (${Number(firstOrSecondBonus).toLocaleString('en-US')} ETB)`);
+  }
 
-    if (depRecord && depositorBonus > 0) {
-      const currentDepBonus = Number(depRecord.bonus_balance || 0);
-      await supabase.from('users').update({ bonus_balance: currentDepBonus + depositorBonus }).eq('telegram_id', deposit.telegram_id);
-    }
+  if (weekendBonusAmount > 0) {
+    bonusReasons.push(`Weekend Bonus (${Number(weekendBonusAmount).toLocaleString('en-US')} ETB)`);
+  }
 
-    if (inviterId && inviterBonus > 0) {
-      const { data: invRecord } = await supabase.from('users').select('bonus_balance').eq('telegram_id', inviterId).single();
-      if (invRecord) {
-        const currentInvBonus = Number(invRecord.bonus_balance || 0);
-        await supabase.from('users').update({ bonus_balance: currentInvBonus + inviterBonus }).eq('telegram_id', inviterId);
-      }
+  depositorBonus = firstOrSecondBonus + weekendBonusAmount;
+  bonusReason = bonusReasons.join(' + ');
+
+  if (depRecord && depositorBonus > 0) {
+    const currentDepBonus = Number(depRecord.bonus_balance || 0);
+    await supabase.from('users').update({ bonus_balance: currentDepBonus + depositorBonus }).eq('telegram_id', deposit.telegram_id);
+  }
+
+  if (inviterId && inviterBonus > 0) {
+    const { data: invRecord } = await supabase.from('users').select('bonus_balance').eq('telegram_id', inviterId).single();
+    if (invRecord) {
+      const currentInvBonus = Number(invRecord.bonus_balance || 0);
+      await supabase.from('users').update({ bonus_balance: currentInvBonus + inviterBonus }).eq('telegram_id', inviterId);
     }
   }
 
@@ -244,7 +277,7 @@ router.post('/deposits/:id/approve', async (req, res) => {
   try {
     let msgText = `✅ *Deposit Approved!*\n\n💰 Amount: *${Number(deposit.amount).toLocaleString('en-US')} ETB* has been added to your balance.`;
     if (depositorBonus > 0) {
-      msgText += `\n\n🎁 *${bonusReason} Bonus!* You received an extra *${Number(depositorBonus).toLocaleString('en-US')} ETB* in your bonus balance!`;
+      msgText += `\n\n🎁 *Bonus Received!* (${bonusReason})\nYou received an extra *${Number(depositorBonus).toLocaleString('en-US')} ETB* in your bonus balance!`;
     }
     msgText += `\n\n🎮 Open the Mini App to start playing!`;
 
@@ -279,7 +312,7 @@ router.post('/deposits/:id/approve', async (req, res) => {
     }
   }
 
-  res.json({ success: true, isFirstDeposit, isSecondDeposit, depositorBonus, inviterBonus });
+  res.json({ success: true, isFirstDeposit, isSecondDeposit, depositorBonus, weekendBonus: weekendBonusAmount, inviterBonus });
 });
 
 // Reject deposit → permanently delete from DB
@@ -474,11 +507,15 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   const depPct = parseFloat(getSetting('first_deposit_bonus_pct', '20')) / 100;
   const secondDepPct = parseFloat(getSetting('second_deposit_bonus_pct', '10')) / 100;
   const invPct = parseFloat(getSetting('invitation_reward_pct', '10')) / 100;
+  const weekendBonusEnabled = getSetting('weekend_bonus_enabled', 'false') === 'true';
+  const weekendBonusDays = getSetting('weekend_bonus_days', '[0,6]');
+  const weekendBonusPct = parseFloat(getSetting('weekend_bonus_pct', '10')) / 100;
 
   let totalDeposits = 0;
   let totalWithdrawals = 0;
   let totalDepBonus = 0;
   let totalSecondDepBonus = 0;
+  let totalWeekendBonus = 0;
   let totalInvBonus = 0;
 
   const txList: any[] = [];
@@ -489,24 +526,23 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
     txList.push({ id: d.id, type: 'deposit', amount: Number(d.amount), status: d.status, created_at: d.created_at, username, telegram_id: d.telegram_id });
 
     if (d.status === 'approved') {
-      let bonusAmount = 0;
       let isFirst = firstDepositIds.has(d.id);
       let isSecond = secondDepositIds.has(d.id);
 
-      if (isFirst) {
-        bonusAmount = Number(d.amount) * depPct;
+      if (isFirst && depPct > 0) {
+        const b = Number(d.amount) * depPct;
+        totalDepBonus += b;
+        txList.push({ id: d.id + '_db', type: 'deposit_bonus', amount: b, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
       } else if (isSecond && secondDepPct > 0) {
-        bonusAmount = Number(d.amount) * secondDepPct;
+        const b = Number(d.amount) * secondDepPct;
+        totalSecondDepBonus += b;
+        txList.push({ id: d.id + '_db2', type: 'second_deposit_bonus', amount: b, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
       }
 
-      if (bonusAmount > 0) {
-        if (isFirst) {
-          totalDepBonus += bonusAmount;
-          txList.push({ id: d.id + '_db', type: 'deposit_bonus', amount: bonusAmount, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
-        } else if (isSecond) {
-          totalSecondDepBonus += bonusAmount;
-          txList.push({ id: d.id + '_db2', type: 'second_deposit_bonus', amount: bonusAmount, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
-        }
+      if (weekendBonusEnabled && weekendBonusPct > 0 && isWeekendBonusDay(d.created_at, weekendBonusDays)) {
+        const wb = Number(d.amount) * weekendBonusPct;
+        totalWeekendBonus += wb;
+        txList.push({ id: d.id + '_wb', type: 'weekend_bonus', amount: wb, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
       }
 
       if (isFirst && d.users?.inviter_id) {
@@ -661,7 +697,7 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   txList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   res.json({
-    stats: { totalDeposits, totalWithdrawals, totalDepBonus, totalSecondDepBonus, totalInvBonus, totalJackpot8, totalJackpot10, totalWelcomeBonus, totalGameCommission, totalFinishedGames },
+    stats: { totalDeposits, totalWithdrawals, totalDepBonus, totalSecondDepBonus, totalWeekendBonus, totalInvBonus, totalJackpot8, totalJackpot10, totalWelcomeBonus, totalGameCommission, totalFinishedGames },
     transactions: txList
   });
 });
@@ -971,6 +1007,9 @@ router.get('/user-audit/:telegramId', async (req, res) => {
     const depPct = parseFloat(getSetting('first_deposit_bonus_pct', '20')) / 100;
     const secondDepPct = parseFloat(getSetting('second_deposit_bonus_pct', '10')) / 100;
     const invPct = parseFloat(getSetting('invitation_reward_pct', '10')) / 100;
+    const weekendBonusEnabled = getSetting('weekend_bonus_enabled', 'false') === 'true';
+    const weekendBonusDays = getSetting('weekend_bonus_days', '[0,6]');
+    const weekendBonusPct = parseFloat(getSetting('weekend_bonus_pct', '10')) / 100;
 
     // 2. Fetch Deposits
     const { data: deposits } = await supabase.from('deposits').select('*').eq('telegram_id', telegramId).order('created_at', { ascending: true });
@@ -986,6 +1025,10 @@ router.get('/user-audit/:telegramId', async (req, res) => {
         } else if (approvedCount === 2 && secondDepPct > 0) {
           const bAmount = d.amount * secondDepPct;
           txList.push({ id: d.id + '_db2', type: 'second_deposit_bonus', amount: bAmount, status: 'approved', created_at: d.created_at, note: '2nd Deposit Bonus' });
+        }
+        if (weekendBonusEnabled && weekendBonusPct > 0 && isWeekendBonusDay(d.created_at, weekendBonusDays)) {
+          const wb = Number(d.amount) * weekendBonusPct;
+          txList.push({ id: d.id + '_wb', type: 'weekend_bonus', amount: wb, status: 'approved', created_at: d.created_at, note: 'Weekend Bonus' });
         }
       }
     });

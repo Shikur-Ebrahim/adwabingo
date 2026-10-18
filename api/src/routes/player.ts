@@ -204,6 +204,24 @@ router.post('/transfer', validateTelegramAuth, async (req: AuthRequest, res) => 
 });
 
 
+
+// Helper to check if a date matches allowed weekend bonus days (0=Sunday, 6=Saturday, etc.) in Ethiopian time
+export function isWeekendBonusDay(dateInput?: string | Date, allowedDaysJson?: string): boolean {
+  if (!allowedDaysJson) return false;
+  try {
+    const days = typeof allowedDaysJson === 'string' ? JSON.parse(allowedDaysJson) : allowedDaysJson;
+    if (!Array.isArray(days) || days.length === 0) return false;
+    const d = dateInput ? new Date(dateInput) : new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Africa/Addis_Ababa', weekday: 'short' });
+    const dayStr = formatter.format(d);
+    const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const dayNum = map[dayStr] !== undefined ? map[dayStr] : d.getDay();
+    return days.includes(dayNum);
+  } catch {
+    return false;
+  }
+}
+
 router.get('/audit', validateTelegramAuth, async (req: AuthRequest, res) => {
   const telegramId = req.telegramUser!.id.toString();
   try {
@@ -218,6 +236,9 @@ router.get('/audit', validateTelegramAuth, async (req: AuthRequest, res) => {
     const depPct = parseFloat(getSetting('first_deposit_bonus_pct', '20')) / 100;
     const secondDepPct = parseFloat(getSetting('second_deposit_bonus_pct', '10')) / 100;
     const invPct = parseFloat(getSetting('invitation_reward_pct', '10')) / 100;
+    const weekendBonusEnabled = getSetting('weekend_bonus_enabled', 'false') === 'true';
+    const weekendBonusDays = getSetting('weekend_bonus_days', '[0,6]');
+    const weekendBonusPct = parseFloat(getSetting('weekend_bonus_pct', '10')) / 100;
 
     // 2. Fetch Deposits
     const { data: deposits } = await supabase.from('deposits').select('*').eq('telegram_id', telegramId).order('created_at', { ascending: true });
@@ -233,6 +254,10 @@ router.get('/audit', validateTelegramAuth, async (req: AuthRequest, res) => {
         } else if (approvedCount === 2 && secondDepPct > 0) {
           const bAmount = d.amount * secondDepPct;
           txList.push({ id: d.id + '_db2', type: 'second_deposit_bonus', amount: bAmount, status: 'approved', created_at: d.created_at, note: '2nd Deposit Bonus' });
+        }
+        if (weekendBonusEnabled && weekendBonusPct > 0 && isWeekendBonusDay(d.created_at, weekendBonusDays)) {
+          const wb = Number(d.amount) * weekendBonusPct;
+          txList.push({ id: d.id + '_wb', type: 'weekend_bonus', amount: wb, status: 'approved', created_at: d.created_at, note: 'Weekend Bonus' });
         }
       }
     });

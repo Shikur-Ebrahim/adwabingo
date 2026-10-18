@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Settings, Save, Gift, Users, Headphones, Megaphone, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Settings, Save, Gift, Users, Headphones, Megaphone, CheckCircle2, AlertCircle, Calendar, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import { useGameStore } from '../store/gameStore';
@@ -56,6 +56,9 @@ export default function AdminSettings() {
         SETTING_FIELDS.forEach(f => {
           if (!(f.key in map)) map[f.key] = String(f.defaultValue);
         });
+        if (!('weekend_bonus_enabled' in map)) map['weekend_bonus_enabled'] = 'false';
+        if (!('weekend_bonus_days' in map))    map['weekend_bonus_days']    = '[0,6]';
+        if (!('weekend_bonus_pct' in map))     map['weekend_bonus_pct']     = '10';
         setValues(map);
       }
     } catch (err) {
@@ -130,6 +133,193 @@ export default function AdminSettings() {
             <p className="text-xs font-bold text-slate-400">Loading...</p>
           </div>
         ) : (
+          <>
+          {/* ── WEEKEND DEPOSIT REWARD SECTION ── */}
+          <div className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-200/80 rounded-2xl p-4 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2.5">
+                <div className="w-8 h-8 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-sm">
+                  <Sparkles size={16} />
+                </div>
+                <div>
+                  <h2 className="font-black text-slate-800 text-sm flex items-center gap-1.5">
+                    Weekend Deposit Reward
+                    <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">Bonus</span>
+                  </h2>
+                  <p className="text-[11px] text-slate-500 font-medium">Independent bonus credited directly to bonus balance</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const current = values['weekend_bonus_enabled'] === 'true';
+                  const nextVal = current ? 'false' : 'true';
+                  setValues(prev => ({ ...prev, weekend_bonus_enabled: nextVal }));
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs font-black transition-all flex items-center gap-1.5 shadow-sm active:scale-95 ${
+                  values['weekend_bonus_enabled'] === 'true'
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-slate-200 text-slate-600'
+                }`}
+              >
+                <span className={`w-2 h-2 rounded-full ${values['weekend_bonus_enabled'] === 'true' ? 'bg-white animate-pulse' : 'bg-slate-400'}`} />
+                {values['weekend_bonus_enabled'] === 'true' ? 'ENABLED' : 'DISABLED'}
+              </button>
+            </div>
+
+            {/* Bonus Percentage & Quick Info */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="bg-white/90 rounded-xl p-2.5 border border-purple-100">
+                <label className="block text-[10px] font-black text-slate-500 tracking-wider mb-1">REWARD PERCENT</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={values['weekend_bonus_pct'] ?? '10'}
+                    onChange={(e) => setValues(prev => ({ ...prev, weekend_bonus_pct: e.target.value }))}
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-purple-500 outline-none rounded-lg px-2 py-1.5 font-black text-slate-800 text-sm text-center"
+                    placeholder="10"
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xs">%</span>
+                </div>
+              </div>
+
+              <div className="bg-white/90 rounded-xl p-2.5 border border-purple-100 flex flex-col justify-between">
+                <label className="block text-[10px] font-black text-slate-500 tracking-wider mb-1">APPLIES TO</label>
+                <div className="text-[11px] font-bold text-purple-700 leading-tight">
+                  {(() => {
+                    try {
+                      const days: number[] = JSON.parse(values['weekend_bonus_days'] || '[0,6]');
+                      if (days.length === 0) return 'No days selected';
+                      if (days.includes(0) && days.includes(6) && days.length === 2) return 'Sunday & Saturday';
+                      const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+                      return days.map(d => names[d] || d).join(', ');
+                    } catch {
+                      return 'Sunday & Saturday';
+                    }
+                  })()}
+                </div>
+              </div>
+            </div>
+
+            {/* Active Days Selector */}
+            <div className="bg-white/90 rounded-xl p-3 border border-purple-100 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black text-slate-500 tracking-wider flex items-center gap-1">
+                  <Calendar size={12} />
+                  SELECT REWARD DAYS
+                </span>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setValues(prev => ({ ...prev, weekend_bonus_days: '[0,6]' }))}
+                    className="text-[10px] font-bold text-purple-600 hover:underline"
+                  >
+                    Sat & Sun
+                  </button>
+                  <span className="text-slate-300">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setValues(prev => ({ ...prev, weekend_bonus_days: '[0]' }))}
+                    className="text-[10px] font-bold text-purple-600 hover:underline"
+                  >
+                    Sun Only
+                  </button>
+                  <span className="text-slate-300">·</span>
+                  <button
+                    type="button"
+                    onClick={() => setValues(prev => ({ ...prev, weekend_bonus_days: '[6]' }))}
+                    className="text-[10px] font-bold text-purple-600 hover:underline"
+                  >
+                    Sat Only
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-1">
+                {[
+                  { day: 0, label: 'Sun' },
+                  { day: 1, label: 'Mon' },
+                  { day: 2, label: 'Tue' },
+                  { day: 3, label: 'Wed' },
+                  { day: 4, label: 'Thu' },
+                  { day: 5, label: 'Fri' },
+                  { day: 6, label: 'Sat' },
+                ].map(({ day, label }) => {
+                  let activeDays: number[] = [0, 6];
+                  try {
+                    activeDays = JSON.parse(values['weekend_bonus_days'] || '[0,6]');
+                  } catch {}
+                  const isSelected = activeDays.includes(day);
+
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => {
+                        let nextDays: number[];
+                        if (isSelected) {
+                          nextDays = activeDays.filter(d => d !== day);
+                        } else {
+                          nextDays = [...activeDays, day].sort();
+                        }
+                        setValues(prev => ({ ...prev, weekend_bonus_days: JSON.stringify(nextDays) }));
+                      }}
+                      className={`py-2 rounded-lg text-xs font-black transition-all flex flex-col items-center justify-center ${
+                        isSelected
+                          ? 'bg-purple-600 text-white shadow-sm ring-2 ring-purple-300'
+                          : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                      }`}
+                    >
+                      <span>{label}</span>
+                      <span className="text-[9px] opacity-75">{day}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Save Button for Weekend Bonus */}
+            <button
+              type="button"
+              onClick={async () => {
+                setSaving('weekend_bonus');
+                try {
+                  const updates = [
+                    { key: 'weekend_bonus_enabled', value: values['weekend_bonus_enabled'] ?? 'false' },
+                    { key: 'weekend_bonus_days',    value: values['weekend_bonus_days']    ?? '[0,6]' },
+                    { key: 'weekend_bonus_pct',     value: values['weekend_bonus_pct']     ?? '10' },
+                  ];
+                  for (const u of updates) {
+                    await fetch(`${API_URL}/admin/settings`, {
+                      method: 'PUT',
+                      headers: getHeaders(),
+                      body: JSON.stringify(u),
+                    });
+                  }
+                  showToast('success', 'Weekend Bonus Settings Saved!');
+                  if (typeof WebApp !== 'undefined') WebApp.HapticFeedback.notificationOccurred('success');
+                } catch (err: any) {
+                  showToast('error', err.message || 'Failed to save');
+                } finally {
+                  setSaving(null);
+                }
+              }}
+              disabled={saving === 'weekend_bonus'}
+              className="w-full py-2.5 bg-purple-600 hover:bg-purple-700 active:scale-[0.98] text-white font-black text-xs rounded-xl shadow-sm flex items-center justify-center space-x-1.5 transition-all disabled:opacity-50"
+            >
+              {saving === 'weekend_bonus' ? (
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Save size={14} />
+                  <span>Save Weekend Reward Settings</span>
+                </>
+              )}
+            </button>
+          </div>
+
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2 space-y-1">
             {SETTING_FIELDS.map((field, idx) => (
               <div key={field.key} className={`p-2 flex flex-col space-y-2 ${idx !== SETTING_FIELDS.length - 1 ? 'border-b border-gray-50' : ''}`}>
@@ -180,6 +370,7 @@ export default function AdminSettings() {
               </div>
             ))}
           </div>
+          </>
         )}
       </div>
     </div>
