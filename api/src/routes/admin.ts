@@ -188,6 +188,13 @@ export function isWeekendBonusDay(dateInput?: string | Date, allowedDaysJson?: s
   }
 }
 
+// Helper to get Ethiopian date string YYYY-MM-DD
+export function getEthiopianDateStr(dateInput?: string | Date): string {
+  const d = dateInput ? new Date(dateInput) : new Date();
+  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Addis_Ababa', year: 'numeric', month: '2-digit', day: '2-digit' });
+  return formatter.format(d);
+}
+
 router.post('/deposits/:id/approve', async (req, res) => {
   const { data: deposit, error: fetchErr } = await supabase
     .from('deposits').select('*').eq('id', req.params.id).single();
@@ -228,9 +235,26 @@ router.post('/deposits/:id/approve', async (req, res) => {
   const weekendBonusDays = getSetting('weekend_bonus_days', '[0,6]') as string;
   const weekendBonusPct = parseFloat(getSetting('weekend_bonus_pct', '10') as string) / 100;
 
-  // Determine if this deposit qualifies for weekend bonus (independent of 1st/2nd deposit)
+  // Determine if this deposit qualifies for weekend bonus (limit: 1 weekend bonus per user per day)
   const depDate = deposit.created_at ? new Date(deposit.created_at) : new Date();
-  const qualifiesWeekend = weekendBonusEnabled && isWeekendBonusDay(depDate, weekendBonusDays) && weekendBonusPct > 0;
+  const depDateStr = getEthiopianDateStr(depDate);
+
+  // Check if user already had an approved deposit on the same Ethiopian calendar date
+  const { data: userApprovedDeps } = await supabase
+    .from('deposits')
+    .select('id, created_at')
+    .eq('telegram_id', deposit.telegram_id)
+    .eq('status', 'approved');
+
+  const hasApprovedDepositOnSameDay = (userApprovedDeps || []).some(
+    d => d.id !== deposit.id && getEthiopianDateStr(d.created_at) === depDateStr
+  );
+
+  const qualifiesWeekend = weekendBonusEnabled
+    && isWeekendBonusDay(depDate, weekendBonusDays)
+    && weekendBonusPct > 0
+    && !hasApprovedDepositOnSameDay;
+
   const weekendBonusAmount = qualifiesWeekend ? Number(deposit.amount) * weekendBonusPct : 0;
 
   let firstOrSecondBonus = 0;
@@ -519,6 +543,7 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   let totalInvBonus = 0;
 
   const txList: any[] = [];
+  const userWeekendBonusDays = new Set<string>();
 
   deposits.forEach((d: any) => {
     if (d.status === 'approved') totalDeposits += Number(d.amount);
@@ -539,7 +564,12 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
         txList.push({ id: d.id + '_db2', type: 'second_deposit_bonus', amount: b, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
       }
 
-      if (weekendBonusEnabled && weekendBonusPct > 0 && isWeekendBonusDay(d.created_at, weekendBonusDays)) {
+      const depDateStr = getEthiopianDateStr(d.created_at);
+      const userWeekendKey = `${d.telegram_id}_${depDateStr}`;
+      const isFirstWeekendDepositToday = !userWeekendBonusDays.has(userWeekendKey);
+
+      if (weekendBonusEnabled && weekendBonusPct > 0 && isWeekendBonusDay(d.created_at, weekendBonusDays) && isFirstWeekendDepositToday) {
+        userWeekendBonusDays.add(userWeekendKey);
         const wb = Number(d.amount) * weekendBonusPct;
         totalWeekendBonus += wb;
         txList.push({ id: d.id + '_wb', type: 'weekend_bonus', amount: wb, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
@@ -1014,6 +1044,7 @@ router.get('/user-audit/:telegramId', async (req, res) => {
     // 2. Fetch Deposits
     const { data: deposits } = await supabase.from('deposits').select('*').eq('telegram_id', telegramId).order('created_at', { ascending: true });
     let approvedCount = 0;
+    const userWeekendDates = new Set<string>();
     (deposits || []).forEach((d: any) => {
       txList.push({ id: d.id, type: 'deposit', amount: d.amount, status: d.status, created_at: d.created_at, note: d.payment_method });
       
@@ -1026,7 +1057,11 @@ router.get('/user-audit/:telegramId', async (req, res) => {
           const bAmount = d.amount * secondDepPct;
           txList.push({ id: d.id + '_db2', type: 'second_deposit_bonus', amount: bAmount, status: 'approved', created_at: d.created_at, note: '2nd Deposit Bonus' });
         }
-        if (weekendBonusEnabled && weekendBonusPct > 0 && isWeekendBonusDay(d.created_at, weekendBonusDays)) {
+        const depDateStr = getEthiopianDateStr(d.created_at);
+        const isFirstWeekendDepositToday = !userWeekendDates.has(depDateStr);
+
+        if (weekendBonusEnabled && weekendBonusPct > 0 && isWeekendBonusDay(d.created_at, weekendBonusDays) && isFirstWeekendDepositToday) {
+          userWeekendDates.add(depDateStr);
           const wb = Number(d.amount) * weekendBonusPct;
           txList.push({ id: d.id + '_wb', type: 'weekend_bonus', amount: wb, status: 'approved', created_at: d.created_at, note: 'Weekend Bonus' });
         }

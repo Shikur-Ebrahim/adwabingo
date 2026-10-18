@@ -222,6 +222,13 @@ export function isWeekendBonusDay(dateInput?: string | Date, allowedDaysJson?: s
   }
 }
 
+// Helper to get Ethiopian date string YYYY-MM-DD
+export function getEthiopianDateStr(dateInput?: string | Date): string {
+  const d = dateInput ? new Date(dateInput) : new Date();
+  const formatter = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Addis_Ababa', year: 'numeric', month: '2-digit', day: '2-digit' });
+  return formatter.format(d);
+}
+
 router.get('/audit', validateTelegramAuth, async (req: AuthRequest, res) => {
   const telegramId = req.telegramUser!.id.toString();
   try {
@@ -243,6 +250,7 @@ router.get('/audit', validateTelegramAuth, async (req: AuthRequest, res) => {
     // 2. Fetch Deposits
     const { data: deposits } = await supabase.from('deposits').select('*').eq('telegram_id', telegramId).order('created_at', { ascending: true });
     let approvedCount = 0;
+    const userWeekendDates = new Set<string>();
     (deposits || []).forEach((d: any) => {
       txList.push({ id: d.id, type: 'deposit', amount: d.amount, status: d.status, created_at: d.created_at, note: d.payment_method });
       
@@ -255,7 +263,11 @@ router.get('/audit', validateTelegramAuth, async (req: AuthRequest, res) => {
           const bAmount = d.amount * secondDepPct;
           txList.push({ id: d.id + '_db2', type: 'second_deposit_bonus', amount: bAmount, status: 'approved', created_at: d.created_at, note: '2nd Deposit Bonus' });
         }
-        if (weekendBonusEnabled && weekendBonusPct > 0 && isWeekendBonusDay(d.created_at, weekendBonusDays)) {
+        const depDateStr = getEthiopianDateStr(d.created_at);
+        const isFirstWeekendDepositToday = !userWeekendDates.has(depDateStr);
+
+        if (weekendBonusEnabled && weekendBonusPct > 0 && isWeekendBonusDay(d.created_at, weekendBonusDays) && isFirstWeekendDepositToday) {
+          userWeekendDates.add(depDateStr);
           const wb = Number(d.amount) * weekendBonusPct;
           txList.push({ id: d.id + '_wb', type: 'weekend_bonus', amount: wb, status: 'approved', created_at: d.created_at, note: 'Weekend Bonus' });
         }
