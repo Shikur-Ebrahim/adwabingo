@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useGameStore } from '../store/gameStore';
-import { Users, UserCog, ArrowDownToLine, ArrowUpFromLine, Landmark, CreditCard, Gamepad2, Receipt, Settings2, Search, Radio } from 'lucide-react';
+import { Users, UserCog, ArrowDownToLine, ArrowUpFromLine, Landmark, CreditCard, Gamepad2, Receipt, Settings2, Search, Radio, QrCode } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 
@@ -42,6 +42,7 @@ export default function Admin() {
     { id: 'tx_report', title: 'Transaction Report', icon: Receipt, color: 'text-teal-600', bg: 'bg-teal-100', show: isAdmin || perms.reports },
     { id: 'settings', title: 'Settings', icon: Settings2, color: 'text-slate-600', bg: 'bg-slate-100', show: isAdmin || perms.settings },
     { id: 'broadcast', title: 'Broadcast', icon: Radio, color: 'text-pink-600', bg: 'bg-pink-100', show: isAdmin },
+    { id: 'qr_code', title: 'QR Code Poster', icon: QrCode, color: 'text-amber-600', bg: 'bg-amber-100', show: isAdmin },
   ].filter(m => m.show);
 
   return (
@@ -133,6 +134,7 @@ export default function Admin() {
             tx_report: '/admin/tx-report',
             settings: '/admin/settings',
             broadcast: '/admin/broadcast',
+            qr_code: '/admin/qr-code',
           };
           if (routeMap[mod.id]) {
             return (
