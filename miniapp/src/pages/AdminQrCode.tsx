@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { ArrowLeft, Download, Copy, ExternalLink, QrCode, Sparkles, CheckCircle2, Sliders, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Download, Copy, ExternalLink, QrCode, Sparkles, CheckCircle2, Sliders, RefreshCw, Send, Image as ImageIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import WebApp from '@twa-dev/sdk';
 import QRCode from 'qrcode';
 import { useGameStore } from '../store/gameStore';
+
+const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export default function AdminQrCode() {
   const { user } = useGameStore();
@@ -11,16 +13,23 @@ export default function AdminQrCode() {
 
   // Customization options
   const [botUsername, setBotUsername] = useState('adwabingo_bot');
-  const [roomTitle, setRoomTitle] = useState("OFFICIAL AGENT ROOM • PATHWAY'S ROOM");
+  const [roomTitle, setRoomTitle] = useState('OFFICIAL ADWA BINGO');
   const [startParam, setStartParam] = useState('qr');
   const [showOptions, setShowOptions] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [downloading, setDownloading] = useState(false);
+  const [sendingTg, setSendingTg] = useState(false);
+  const [posterUrl, setPosterUrl] = useState<string>('');
 
-  const showNotification = (msg: string) => {
-    setToast(msg);
-    setTimeout(() => setToast(null), 3000);
+  const showNotification = (text: string, type: 'success' | 'error' = 'success') => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 3500);
   };
+
+  const getHeaders = () => ({
+    'Content-Type': 'application/json',
+    'x-telegram-init-data': typeof WebApp !== 'undefined' ? WebApp.initData : '',
+  });
 
   const getFullTelegramUrl = useCallback(() => {
     const cleanBot = botUsername.replace(/^@/, '').trim() || 'adwabingo_bot';
@@ -31,7 +40,7 @@ export default function AdminQrCode() {
     return `https://t.me/${cleanBot}`;
   }, [botUsername, startParam]);
 
-  // Helper function to draw rounded rectangles
+  // Helper function to draw rounded rectangles on canvas
   const drawRoundRect = (
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -162,11 +171,11 @@ export default function AdminQrCode() {
     ctx.textBaseline = 'alphabetic';
     ctx.fillText('ADWA BINGO', W / 2, 245);
 
-    // 5. Room / Official Subtitle
+    // 5. Official Subtitle: OFFICIAL ADWA BINGO
     ctx.fillStyle = '#8C6D3B';
-    ctx.font = '700 16px sans-serif';
+    ctx.font = '700 17px sans-serif';
     ctx.letterSpacing = '2px';
-    const subText = roomTitle.toUpperCase();
+    const subText = (roomTitle || 'OFFICIAL ADWA BINGO').toUpperCase();
     const subWidth = ctx.measureText(subText).width;
 
     ctx.fillText(subText, W / 2, 285);
@@ -214,7 +223,7 @@ export default function AdminQrCode() {
     drawArrowWing(W / 2 - 200, s2pY - 12, false);
     drawArrowWing(W / 2 + 200, s2pY - 12, true);
 
-    // 7. Gold Pill: "SCAN THE QR CODE TO Play & Win Cash!"
+    // 7. Gold Pill: "SCAN THE QR CODE TO Play & Win Cash!" (PERFECT NON-OVERLAPPING ALIGNMENT)
     const pillW = 680;
     const pillH = 58;
     const pillX = (W - pillW) / 2;
@@ -232,16 +241,31 @@ export default function AdminQrCode() {
     ctx.strokeStyle = '#B88E3E';
     ctx.stroke();
 
-    // Pill text
-    ctx.textAlign = 'center';
+    // Calculate exact width of each part so they NEVER overlap
+    const part1 = 'SCAN THE QR CODE TO ';
+    const part2 = 'Play & Win Cash!';
+
+    ctx.font = '800 17px sans-serif';
+    const w1 = ctx.measureText(part1).width;
+
+    ctx.font = 'italic 700 24px "Times New Roman", Georgia, serif';
+    const w2 = ctx.measureText(part2).width;
+
+    const totalPillTextW = w1 + w2;
+    const startPillX = (W - totalPillTextW) / 2;
+
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
+
+    // Draw Part 1
     ctx.fillStyle = '#543604';
     ctx.font = '800 17px sans-serif';
-    ctx.fillText('SCAN THE QR CODE TO  ', W / 2 - 70, pillY + pillH / 2);
+    ctx.fillText(part1, startPillX, pillY + pillH / 2);
 
+    // Draw Part 2 directly after Part 1
     ctx.fillStyle = '#732E00';
-    ctx.font = 'italic 700 24px "Times New Roman", serif';
-    ctx.fillText('Play & Win Cash!', W / 2 + 105, pillY + pillH / 2);
+    ctx.font = 'italic 700 24px "Times New Roman", Georgia, serif';
+    ctx.fillText(part2, startPillX + w1, pillY + pillH / 2);
 
     // 8. White Rounded Frame for QR Code
     const qrCardSize = 740;
@@ -405,35 +429,84 @@ export default function AdminQrCode() {
     ctx.stroke();
 
     drawDiamond(W / 2, H - 48, 6);
+
+    // Export to Image Data URL for real <img> tag display (enables native mobile long-press "Save Image")
+    try {
+      const url = canvas.toDataURL('image/png', 1.0);
+      setPosterUrl(url);
+    } catch (e) {
+      console.error('DataURL error:', e);
+    }
   }, [botUsername, roomTitle, startParam, getFullTelegramUrl]);
 
   useEffect(() => {
     renderPoster();
   }, [renderPoster]);
 
-  // Handle Download Poster as High-Resolution PNG
+  // Method 1: Send Photo to Admin Telegram Chat (Zero-Fail for Phone Gallery Save)
+  const handleSendToTelegram = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    setSendingTg(true);
+
+    try {
+      const dataUrl = canvas.toDataURL('image/png', 1.0);
+      const res = await fetch(`${API_URL}/admin/send-qr-poster`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({ image_base64: dataUrl }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        showNotification('Poster sent to your Telegram chat! Tap photo → Save to Gallery 🖼️');
+        if (typeof WebApp !== 'undefined') {
+          WebApp.HapticFeedback.notificationOccurred('success');
+        }
+      } else {
+        showNotification(data.error || 'Failed to send to Telegram.', 'error');
+      }
+    } catch (err: any) {
+      console.error(err);
+      showNotification(err.message || 'Network error.', 'error');
+    } finally {
+      setSendingTg(false);
+    }
+  };
+
+  // Method 2: Native Download
   const handleDownload = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     setDownloading(true);
 
     try {
-      const dataUrl = canvas.toDataURL('image/png', 1.0);
-      const link = document.createElement('a');
-      link.download = `ADWA_BINGO_QR_${botUsername.replace(/^@/, '')}.png`;
-      link.href = dataUrl;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          showNotification('Failed to generate image file.', 'error');
+          setDownloading(false);
+          return;
+        }
 
-      showNotification('Poster downloaded successfully!');
-      if (typeof WebApp !== 'undefined') {
-        WebApp.HapticFeedback.notificationOccurred('success');
-      }
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `ADWA_BINGO_QR_${botUsername.replace(/^@/, '')}.png`;
+        link.href = blobUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+
+        showNotification('Download started! If on mobile, also use "Send to Telegram" or long-press the poster.');
+        if (typeof WebApp !== 'undefined') {
+          WebApp.HapticFeedback.notificationOccurred('success');
+        }
+        setDownloading(false);
+      }, 'image/png');
     } catch (err: any) {
       console.error(err);
-      showNotification('Failed to download image.');
-    } finally {
+      showNotification('Failed to download image.', 'error');
       setDownloading(false);
     }
   };
@@ -467,9 +540,13 @@ export default function AdminQrCode() {
     <div className="flex flex-col min-h-screen bg-slate-900 text-white">
       {/* Toast Overlay */}
       {toast && (
-        <div className="fixed top-4 left-4 right-4 z-50 flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-amber-500 text-slate-900 font-black text-xs shadow-lg animate-fade-in">
+        <div
+          className={`fixed top-4 left-4 right-4 z-50 flex items-center justify-center space-x-2 px-4 py-3 rounded-xl font-black text-xs shadow-xl animate-fade-in ${
+            toast.type === 'success' ? 'bg-amber-500 text-slate-950' : 'bg-rose-500 text-white'
+          }`}
+        >
           <CheckCircle2 size={16} />
-          <span>{toast}</span>
+          <span>{toast.text}</span>
         </div>
       )}
 
@@ -515,7 +592,7 @@ export default function AdminQrCode() {
               <button
                 onClick={() => {
                   setBotUsername('adwabingo_bot');
-                  setRoomTitle("OFFICIAL AGENT ROOM • PATHWAY'S ROOM");
+                  setRoomTitle('OFFICIAL ADWA BINGO');
                   setStartParam('qr');
                 }}
                 className="text-[10px] text-slate-400 hover:text-white flex items-center gap-1"
@@ -546,7 +623,7 @@ export default function AdminQrCode() {
                   value={roomTitle}
                   onChange={(e) => setRoomTitle(e.target.value)}
                   className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs font-bold text-white outline-none focus:border-amber-400"
-                  placeholder="OFFICIAL AGENT ROOM • PATHWAY'S ROOM"
+                  placeholder="OFFICIAL ADWA BINGO"
                 />
               </div>
 
@@ -567,27 +644,53 @@ export default function AdminQrCode() {
           </div>
         )}
 
-        {/* Live Canvas Poster Preview */}
+        {/* Live Poster Preview */}
         <div className="flex flex-col items-center">
           <div className="relative w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl border-2 border-amber-500/40 bg-slate-950">
-            {/* The Actual HTML5 Canvas */}
-            <canvas
-              ref={canvasRef}
-              className="w-full h-auto block select-none"
-              style={{ aspectRatio: '2/3' }}
-            />
+            {/* Real Image tag so mobile users can long-press to save directly to gallery */}
+            {posterUrl ? (
+              <img
+                src={posterUrl}
+                alt="ADWA BINGO QR Poster"
+                className="w-full h-auto block select-none pointer-events-auto"
+                style={{ aspectRatio: '2/3' }}
+              />
+            ) : null}
+
+            {/* Hidden canvas for drawing and high-res export */}
+            <canvas ref={canvasRef} className="hidden" />
+          </div>
+
+          <div className="flex items-center gap-1.5 mt-2 text-[11px] font-semibold text-amber-300/80 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
+            <ImageIcon size={13} />
+            <span>Mobile Tip: Tap & hold the poster to Save to Gallery!</span>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="max-w-sm mx-auto space-y-2 pt-1">
+          {/* Method 1: Send Photo Directly to Telegram Chat (Guaranteed 1-Tap Save to Gallery) */}
+          <button
+            onClick={handleSendToTelegram}
+            disabled={sendingTg}
+            className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-white font-black text-sm rounded-xl shadow-lg flex items-center justify-center space-x-2 active:scale-95 transition-all"
+          >
+            {sendingTg ? (
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Send size={18} />
+            )}
+            <span>{sendingTg ? 'Sending to Telegram...' : '📲 Send to My Telegram (Save to Gallery)'}</span>
+          </button>
+
+          {/* Method 2: Direct File Download */}
           <button
             onClick={handleDownload}
             disabled={downloading}
-            className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-sm rounded-xl shadow-lg flex items-center justify-center space-x-2 active:scale-95 transition-all"
+            className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-sm rounded-xl shadow-md flex items-center justify-center space-x-2 active:scale-95 transition-all"
           >
-            <Download size={18} />
-            <span>{downloading ? 'Preparing PNG...' : 'Download HD Poster (PNG)'}</span>
+            <Download size={17} />
+            <span>{downloading ? 'Preparing PNG...' : '📥 Download Poster (PNG)'}</span>
           </button>
 
           <div className="grid grid-cols-2 gap-2">
@@ -614,7 +717,7 @@ export default function AdminQrCode() {
           <Sparkles size={16} className="text-amber-400 shrink-0 mt-0.5" />
           <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
             This QR poster is generated in <strong className="text-slate-200">Ultra-HD print resolution (1200×1800)</strong>.
-            You can download and print it for physical game venues, or share it on Telegram channels, TikTok, and WhatsApp.
+            Click <strong className="text-emerald-400">"Send to My Telegram"</strong> to receive the high-res photo directly in your chat with @adwabingo_bot, then tap <strong>Save to Gallery</strong>!
           </p>
         </div>
       </div>

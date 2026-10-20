@@ -893,6 +893,46 @@ router.put('/settings', validateTelegramAuth, requireAdmin, async (req, res) => 
   res.json({ success: true });
 });
 
+// POST /admin/send-qr-poster — send high-res poster directly to admin's Telegram chat so they can save to gallery
+router.post('/send-qr-poster', validateTelegramAuth, requireAdmin, async (req: AuthRequest, res) => {
+  const telegramId = req.telegramUser!.id.toString();
+  const { image_base64 } = req.body;
+
+  if (!image_base64) {
+    return res.status(400).json({ error: 'image_base64 is required' });
+  }
+
+  try {
+    const base64Data = image_base64.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    const formData = new FormData();
+    formData.append('chat_id', telegramId);
+    formData.append('photo', new Blob([buffer], { type: 'image/png' }), 'ADWA_BINGO_QR.png');
+    formData.append(
+      'caption',
+      '🎉 *ADWA BINGO — Official QR Poster*\n\n🖼️ *To Save to Phone Gallery:*\n1. Tap this photo to open it\n2. Tap the three dots (⋮) in the top-right\n3. Tap *Save to Gallery* / *Save to Photos*!\n\nYou can also forward this directly to your channels & groups.'
+    );
+    formData.append('parse_mode', 'Markdown');
+
+    const tgRes = await fetch(`https://api.telegram.org/bot${process.env.BOT_TOKEN}/sendPhoto`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const tgData: any = await tgRes.json().catch(() => ({}));
+    if (!tgRes.ok) {
+      console.error('Telegram sendPhoto error:', tgData);
+      return res.status(500).json({ error: tgData?.description || 'Failed to send photo on Telegram' });
+    }
+
+    res.json({ success: true, message: 'Poster sent to your Telegram chat!' });
+  } catch (err: any) {
+    console.error('send-qr-poster error:', err);
+    res.status(500).json({ error: err?.message || 'Server error' });
+  }
+});
+
 // ─── BINGO ADMIN MONITORING ───────────────────────────────────────────────────
 
 // GET /admin/bingo-games — list recent games for monitoring
