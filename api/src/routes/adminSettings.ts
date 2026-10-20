@@ -73,7 +73,8 @@ router.put('/', async (req: AuthRequest, res) => {
   const { 
     call_interval_ms, waiting_period_s, release_time_s, min_players, max_players, prize_percent,
     early_call_8_enabled, early_call_8_rewards,
-    early_call_10_enabled, early_call_10_rewards
+    early_call_10_enabled, early_call_10_rewards,
+    max_cartelas_per_user
   } = req.body;
 
   // Validate ranges
@@ -83,6 +84,7 @@ router.put('/', async (req: AuthRequest, res) => {
   const mnp = Math.max(2,     Math.min(50,    Number(min_players)       || DEFAULT_SETTINGS.min_players));
   const mxp = Math.max(10,    Math.min(500,   Number(max_players)       || DEFAULT_SETTINGS.max_players));
   const pp  = Math.max(50,    Math.min(100,   Number(prize_percent)     || DEFAULT_SETTINGS.prize_percent));
+  const mcu = Math.max(1,     Math.min(20,    Number(max_cartelas_per_user) || DEFAULT_SETTINGS.max_cartelas_per_user));
 
   const payload: any = {
     call_interval_ms: ci,
@@ -91,6 +93,7 @@ router.put('/', async (req: AuthRequest, res) => {
     min_players:      mnp,
     max_players:      mxp,
     prize_percent:    pp,
+    max_cartelas_per_user: mcu,
     early_call_8_enabled:  !!early_call_8_enabled,
     early_call_8_rewards:  early_call_8_rewards || DEFAULT_SETTINGS.early_call_8_rewards,
     early_call_10_enabled: !!early_call_10_enabled,
