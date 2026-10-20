@@ -8,7 +8,7 @@ const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 interface Tx {
   id: string;
-  type: 'deposit' | 'withdrawal' | 'welcome_bonus' | 'deposit_bonus' | 'second_deposit_bonus' | 'invitation_reward' | 'jackpot_8' | 'jackpot_10' | 'game_commission';
+  type: 'deposit' | 'withdrawal' | 'welcome_bonus' | 'deposit_bonus' | 'second_deposit_bonus' | 'weekend_bonus' | 'invitation_reward' | 'jackpot_8' | 'jackpot_10' | 'game_commission';
   amount: number;
   status: string;
   created_at: string;
@@ -31,14 +31,14 @@ interface Stats {
 }
 
 const PRESETS = [
-  { label: 'Today', days: 0 },
-  { label: 'Yesterday', days: 1, exact: true },
-  { label: '7 Days', days: 7 },
-  { label: '1 Month', days: 30 },
-  { label: '3 Months', days: 90 },
-  { label: '6 Months', days: 180 },
-  { label: '1 Year', days: 365 },
-  { label: 'All Time', days: -1 },
+  { label: 'Today' },
+  { label: 'Yesterday' },
+  { label: '7 Days' },
+  { label: '1 Month' },
+  { label: '3 Months' },
+  { label: '6 Months' },
+  { label: '1 Year' },
+  { label: 'All Time' },
 ];
 
 const TYPE_META = {
@@ -74,13 +74,19 @@ function fmtTime(iso: string) {
 export default function AdminTxReport() {
   const { user } = useGameStore();
 
-  const startOf = (d: Date) => { const c = new Date(d); c.setHours(0,0,0,0); return c.toISOString(); };
-  const endOf   = (d: Date) => { const c = new Date(d); c.setHours(23,59,59,999); return c.toISOString(); };
+  const startOf = (d: Date) => {
+    const c = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    return c.toISOString();
+  };
+  const endOf = (d: Date) => {
+    const c = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+    return c.toISOString();
+  };
 
   const [fromIso, setFromIso] = useState(() => startOf(new Date()));
   const [toIso,   setToIso  ] = useState(() => endOf(new Date()));
   const [activePreset, setActivePreset] = useState('Today');
-  const [stats, setStats] = useState<Stats>({ totalDeposits: 0, totalWithdrawals: 0, totalWelcomeBonus: 0, totalDepBonus: 0, totalSecondDepBonus: 0, totalInvBonus: 0, totalJackpot8: 0, totalJackpot10: 0, totalGameCommission: 0 });
+  const [stats, setStats] = useState<Stats>({ totalDeposits: 0, totalWithdrawals: 0, totalWelcomeBonus: 0, totalDepBonus: 0, totalSecondDepBonus: 0, totalWeekendBonus: 0, totalInvBonus: 0, totalJackpot8: 0, totalJackpot10: 0, totalGameCommission: 0 });
   const [transactions, setTransactions] = useState<Tx[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<'all' | Tx['type']>('all');
@@ -99,19 +105,40 @@ export default function AdminTxReport() {
     setActivePreset(preset.label);
     setShowCustom(false);
     const now = new Date();
-    if (preset.days === -1) {
+
+    if (preset.label === 'All Time') {
       setFromIso('2024-01-01T00:00:00.000Z');
       setToIso(endOf(now));
-    } else if (preset.days === 0) {
+    } else if (preset.label === 'Today') {
       setFromIso(startOf(now));
       setToIso(endOf(now));
-    } else if (preset.exact) {
-      // Yesterday
-      const y = new Date(now); y.setDate(y.getDate() - 1);
+    } else if (preset.label === 'Yesterday') {
+      const y = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
       setFromIso(startOf(y));
       setToIso(endOf(y));
-    } else {
-      const f = new Date(now); f.setDate(f.getDate() - preset.days);
+    } else if (preset.label === '7 Days') {
+      // Today + 6 past calendar days = 7 full calendar days
+      const f = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+      setFromIso(startOf(f));
+      setToIso(endOf(now));
+    } else if (preset.label === '1 Month') {
+      // Exactly 1 month back up to today
+      const f = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+      setFromIso(startOf(f));
+      setToIso(endOf(now));
+    } else if (preset.label === '3 Months') {
+      // Exactly 3 months back up to today
+      const f = new Date(now.getFullYear(), now.getMonth() - 3, now.getDate());
+      setFromIso(startOf(f));
+      setToIso(endOf(now));
+    } else if (preset.label === '6 Months') {
+      // Exactly 6 months back up to today
+      const f = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
+      setFromIso(startOf(f));
+      setToIso(endOf(now));
+    } else if (preset.label === '1 Year') {
+      // Exactly 1 year back up to today
+      const f = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
       setFromIso(startOf(f));
       setToIso(endOf(now));
     }
@@ -121,8 +148,10 @@ export default function AdminTxReport() {
     if (!customFromRaw || !customToRaw) return;
     setActivePreset('Custom');
     setShowCustom(false);
-    setFromIso(startOf(new Date(customFromRaw)));
-    setToIso(endOf(new Date(customToRaw)));
+    const [fy, fm, fd] = customFromRaw.split('-').map(Number);
+    const [ty, tm, td] = customToRaw.split('-').map(Number);
+    setFromIso(startOf(new Date(fy, fm - 1, fd)));
+    setToIso(endOf(new Date(ty, tm - 1, td)));
   };
 
   const fetchReport = useCallback(async () => {
@@ -168,6 +197,7 @@ export default function AdminTxReport() {
     { label: 'Welcome Bonus', value: stats.totalWelcomeBonus || 0, icon: <Gift size={16} />, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: '1st Dep. Bonus', value: stats.totalDepBonus, icon: <Gift size={16} />, color: 'text-violet-600', bg: 'bg-violet-50' },
     { label: '2nd Dep. Bonus', value: stats.totalSecondDepBonus, icon: <Gift size={16} />, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50' },
+    { label: 'Weekend Bonus', value: stats.totalWeekendBonus || 0, icon: <Gift size={16} />, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: 'Invite Reward', value: stats.totalInvBonus, icon: <Users size={16} />, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: '8-Call Jackpot', value: stats.totalJackpot8, icon: <Gift size={16} />, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: '10-Call Jackpot', value: stats.totalJackpot10, icon: <Gift size={16} />, color: 'text-orange-600', bg: 'bg-orange-50' },
@@ -183,7 +213,7 @@ export default function AdminTxReport() {
         <div className="ml-3 flex-1">
           <h1 className="text-base font-black text-slate-800">Transaction Report</h1>
           <p className="text-[10px] text-slate-400 font-medium">
-            {fromIso ? new Date(fromIso).toLocaleDateString() : 'All'} → {toIso ? new Date(toIso).toLocaleDateString() : 'Now'}
+            {fromIso ? new Date(fromIso).toLocaleDateString('en-GB') : 'All Time'} → {toIso ? new Date(toIso).toLocaleDateString('en-GB') : 'Now'}
           </p>
         </div>
         <button onClick={fetchReport} disabled={loading} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:bg-slate-200">
@@ -311,15 +341,13 @@ export default function AdminTxReport() {
                 </div>
                 <span className="text-fuchsia-400 font-black text-[12px]">−{fmt(stats.totalSecondDepBonus)} ETB</span>
               </div>
-              {Boolean(stats.totalWeekendBonus && stats.totalWeekendBonus > 0) && (
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                    <span className="text-white/70 text-[11px] font-semibold">Weekend Bonus</span>
-                  </div>
-                  <span className="text-purple-400 font-black text-[12px]">−{fmt(stats.totalWeekendBonus || 0)} ETB</span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                  <span className="text-white/70 text-[11px] font-semibold">Weekend Bonus</span>
                 </div>
-              )}
+                <span className="text-purple-400 font-black text-[12px]">−{fmt(stats.totalWeekendBonus || 0)} ETB</span>
+              </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-1.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
@@ -395,7 +423,7 @@ export default function AdminTxReport() {
 
         {/* TYPE FILTER CHIPS */}
         <div className="px-3 pb-2 flex space-x-1.5 overflow-x-auto scrollbar-hide">
-          {(['all', 'deposit', 'game_commission', 'withdrawal', 'welcome_bonus', 'deposit_bonus', 'second_deposit_bonus', 'invitation_reward', 'jackpot_8', 'jackpot_10'] as const).map(f => (
+          {(['all', 'deposit', 'game_commission', 'withdrawal', 'welcome_bonus', 'deposit_bonus', 'second_deposit_bonus', 'weekend_bonus', 'invitation_reward', 'jackpot_8', 'jackpot_10'] as const).map(f => (
             <button
               key={f}
               onClick={() => setFilter(f)}

@@ -500,28 +500,6 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
     (wUsers || []).forEach(u => wUsersMap[u.telegram_id] = u.username);
   }
 
-  const { data: allApproved } = await supabase
-    .from('deposits')
-    .select('id, telegram_id, created_at')
-    .eq('status', 'approved')
-    .order('created_at', { ascending: true });
-
-  const firstDepositIds = new Set();
-  const secondDepositIds = new Set();
-  const userDepCounts: Record<string, number> = {};
-
-  if (allApproved) {
-    for (const d of allApproved) {
-      const currentCount = userDepCounts[d.telegram_id] || 0;
-      if (currentCount === 0) {
-        firstDepositIds.add(d.id);
-      } else if (currentCount === 1) {
-        secondDepositIds.add(d.id);
-      }
-      userDepCounts[d.telegram_id] = currentCount + 1;
-    }
-  }
-
   const { data: allSettings } = await supabase.from('settings').select('key, value');
   const getSetting = (key: string, def: string) => {
     const row = allSettings?.find(s => s.key === key);
@@ -535,6 +513,39 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   const weekendBonusDays = getSetting('weekend_bonus_days', '[0,6]');
   const weekendBonusPct = parseFloat(getSetting('weekend_bonus_pct', '10')) / 100;
 
+  const { data: allApproved } = await supabase
+    .from('deposits')
+    .select('id, telegram_id, created_at')
+    .eq('status', 'approved')
+    .order('created_at', { ascending: true });
+
+  const firstDepositIds = new Set();
+  const secondDepositIds = new Set();
+  const firstDailyWeekendDepositIds = new Set();
+  const userDepCounts: Record<string, number> = {};
+  const userWeekendDaysSeen = new Set<string>();
+
+  if (allApproved) {
+    for (const d of allApproved) {
+      const currentCount = userDepCounts[d.telegram_id] || 0;
+      if (currentCount === 0) {
+        firstDepositIds.add(d.id);
+      } else if (currentCount === 1) {
+        secondDepositIds.add(d.id);
+      }
+      userDepCounts[d.telegram_id] = currentCount + 1;
+
+      if (weekendBonusEnabled && isWeekendBonusDay(d.created_at, weekendBonusDays)) {
+        const depDateStr = getEthiopianDateStr(d.created_at);
+        const userDayKey = `${d.telegram_id}_${depDateStr}`;
+        if (!userWeekendDaysSeen.has(userDayKey)) {
+          userWeekendDaysSeen.add(userDayKey);
+          firstDailyWeekendDepositIds.add(d.id);
+        }
+      }
+    }
+  }
+
   let totalDeposits = 0;
   let totalWithdrawals = 0;
   let totalDepBonus = 0;
@@ -543,7 +554,6 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   let totalInvBonus = 0;
 
   const txList: any[] = [];
-  const userWeekendBonusDays = new Set<string>();
 
   deposits.forEach((d: any) => {
     if (d.status === 'approved') totalDeposits += Number(d.amount);
@@ -564,12 +574,7 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
         txList.push({ id: d.id + '_db2', type: 'second_deposit_bonus', amount: b, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
       }
 
-      const depDateStr = getEthiopianDateStr(d.created_at);
-      const userWeekendKey = `${d.telegram_id}_${depDateStr}`;
-      const isFirstWeekendDepositToday = !userWeekendBonusDays.has(userWeekendKey);
-
-      if (weekendBonusEnabled && weekendBonusPct > 0 && isWeekendBonusDay(d.created_at, weekendBonusDays) && isFirstWeekendDepositToday) {
-        userWeekendBonusDays.add(userWeekendKey);
+      if (weekendBonusEnabled && weekendBonusPct > 0 && firstDailyWeekendDepositIds.has(d.id)) {
         const wb = Number(d.amount) * weekendBonusPct;
         totalWeekendBonus += wb;
         txList.push({ id: d.id + '_wb', type: 'weekend_bonus', amount: wb, status: 'approved', created_at: d.created_at, username, telegram_id: d.telegram_id });
@@ -651,8 +656,8 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
     .from('bingo_games')
     .select('id, stake, status, winner_prize, prize_pool, winner_first_name, finished_at, created_at')
     .eq('status', 'finished');
-  if (from) allFinishedGamesQuery = allFinishedGamesQuery.gte('created_at', from);
-  if (to)   allFinishedGamesQuery = allFinishedGamesQuery.lte('created_at', to);
+  if (from) allFinishedGamesQuery = allFinishedGamesQuery.gte('finished_at', from);
+  if (to)   allFinishedGamesQuery = allFinishedGamesQuery.lte('finished_at', to);
   const { data: allFinishedGames } = await allFinishedGamesQuery;
 
   const fGameIds = (allFinishedGames || []).map((g: any) => g.id);
