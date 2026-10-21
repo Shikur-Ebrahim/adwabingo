@@ -28,6 +28,7 @@ interface Stats {
   totalJackpot10: number;
   totalGameCommission: number;
   totalFinishedGames?: number;
+  totalCommissionGames?: number;
 }
 
 const PRESETS = [
@@ -92,6 +93,7 @@ export default function AdminTxReport() {
   const [filter, setFilter] = useState<'all' | Tx['type']>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showCustom, setShowCustom] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(100);
   // Custom picker raw values
   const [customFromRaw, setCustomFromRaw] = useState(toDateStr(new Date()));
   const [customToRaw,   setCustomToRaw  ] = useState(toDateStr(new Date()));
@@ -393,9 +395,12 @@ export default function AdminTxReport() {
                       {netProfit >= 0 ? '+' : ''}{fmt(netProfit)} ETB
                     </span>
                   </div>
-                  {Boolean(stats.totalFinishedGames && stats.totalFinishedGames > 0) && (
-                    <p className="text-[10px] text-cyan-300/80 font-bold text-right">
-                      🎮 {stats.totalFinishedGames} finished games with 20% house cut
+                  {Boolean((stats.totalFinishedGames || 0) > 0) && (
+                    <p className="text-[10px] text-cyan-300 font-bold text-right">
+                      🎮 {fmt(stats.totalCommissionGames || stats.totalFinishedGames || 0)} finished games with 20% house cut
+                      {stats.totalFinishedGames && stats.totalCommissionGames && stats.totalFinishedGames > stats.totalCommissionGames ? (
+                        <span className="text-white/60 font-medium"> ({fmt(stats.totalFinishedGames)} total played)</span>
+                      ) : null}
                     </p>
                   )}
                 </div>
@@ -412,11 +417,11 @@ export default function AdminTxReport() {
               type="text"
               placeholder="Search user, game ID, or amount..."
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={e => { setSearchQuery(e.target.value); setVisibleCount(100); }}
               className="w-full bg-white border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs font-bold text-slate-700 outline-none focus:border-slate-800"
             />
             {searchQuery && (
-              <button onClick={() => setSearchQuery('')} className="absolute right-2.5 top-2 text-xs font-bold text-slate-400">✕</button>
+              <button onClick={() => { setSearchQuery(''); setVisibleCount(100); }} className="absolute right-2.5 top-2 text-xs font-bold text-slate-400">✕</button>
             )}
           </div>
         </div>
@@ -426,7 +431,7 @@ export default function AdminTxReport() {
           {(['all', 'deposit', 'game_commission', 'withdrawal', 'welcome_bonus', 'deposit_bonus', 'second_deposit_bonus', 'weekend_bonus', 'invitation_reward', 'jackpot_8', 'jackpot_10'] as const).map(f => (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => { setFilter(f); setVisibleCount(100); }}
               className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-black transition-all border ${
                 filter === f ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-500 border-slate-200'
               }`}
@@ -450,7 +455,7 @@ export default function AdminTxReport() {
             </div>
           ) : (
             <div className="space-y-2">
-              {filtered.map(tx => {
+              {filtered.slice(0, visibleCount).map(tx => {
                 const meta = TYPE_META[tx.type];
                 return (
                   <div key={tx.id} className="bg-white rounded-xl border border-gray-100 shadow-sm px-3 py-2.5 flex items-center space-x-3">
@@ -477,6 +482,15 @@ export default function AdminTxReport() {
                   </div>
                 );
               })}
+
+              {filtered.length > visibleCount && (
+                <button
+                  onClick={() => setVisibleCount(c => c + 100)}
+                  className="w-full py-2.5 text-xs font-bold text-slate-700 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm active:scale-98"
+                >
+                  Show More ({visibleCount} of {filtered.length})
+                </button>
+              )}
             </div>
           )}
         </div>

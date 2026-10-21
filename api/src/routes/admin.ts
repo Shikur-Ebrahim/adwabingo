@@ -471,33 +471,57 @@ router.get('/profit-report', validateTelegramAuth, requireAdmin, async (req, res
   res.json({ totalDeposits, totalWithdrawals, netProfit });
 });
 
+// Helper: fetch all rows across 1000-row PostgREST pagination limit
+async function fetchAllRows<T = any>(buildQuery: (from: number, to: number) => any): Promise<T[]> {
+  const allRows: T[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await buildQuery(from, from + pageSize - 1);
+    if (error || !data || data.length === 0) break;
+    allRows.push(...data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  return allRows;
+}
+
 // ─── TRANSACTION REPORT ────────────────────────────────────────────────────────
 router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) => {
   const { from, to } = req.query;
   
   // Use explicit FK for deposits. Withdrawals might lack FK, so no join there.
-  let dQuery = supabase.from('deposits').select('*, users!deposits_telegram_id_fkey(username, inviter_id)');
-  let wQuery = supabase.from('withdrawals').select('*');
+  const deposits = await fetchAllRows(async (rangeFrom, rangeTo) => {
+    let q = supabase
+      .from('deposits')
+      .select('*, users!deposits_telegram_id_fkey(username, inviter_id)')
+      .order('created_at', { ascending: false })
+      .range(rangeFrom, rangeTo);
+    if (from) q = q.gte('created_at', from);
+    if (to)   q = q.lte('created_at', to);
+    return q;
+  });
 
-  if (from) {
-    dQuery = dQuery.gte('created_at', from);
-    wQuery = wQuery.gte('created_at', from);
-  }
-  if (to) {
-    dQuery = dQuery.lte('created_at', to);
-    wQuery = wQuery.lte('created_at', to);
-  }
+  const withdrawals = await fetchAllRows(async (rangeFrom, rangeTo) => {
+    let q = supabase
+      .from('withdrawals')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .range(rangeFrom, rangeTo);
+    if (from) q = q.gte('created_at', from);
+    if (to)   q = q.lte('created_at', to);
+    return q;
+  });
 
-  const [dRes, wRes] = await Promise.all([dQuery, wQuery]);
-  const deposits = dRes.data || [];
-  const withdrawals = wRes.data || [];
-
-  // Fetch usernames for withdrawals manually
+  // Fetch usernames for withdrawals manually (chunked to prevent URL length limits)
   let wTelegramIds = [...new Set(withdrawals.map((w: any) => w.telegram_id))];
   let wUsersMap: Record<string, string> = {};
   if (wTelegramIds.length > 0) {
-    const { data: wUsers } = await supabase.from('users').select('telegram_id, username').in('telegram_id', wTelegramIds);
-    (wUsers || []).forEach(u => wUsersMap[u.telegram_id] = u.username);
+    for (let i = 0; i < wTelegramIds.length; i += 100) {
+      const chunk = wTelegramIds.slice(i, i + 100);
+      const { data: wUsers } = await supabase.from('users').select('telegram_id, username').in('telegram_id', chunk);
+      (wUsers || []).forEach(u => { wUsersMap[u.telegram_id] = u.username; });
+    }
   }
 
   const { data: allSettings } = await supabase.from('settings').select('key, value');
@@ -513,11 +537,14 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   const weekendBonusDays = getSetting('weekend_bonus_days', '[0,6]');
   const weekendBonusPct = parseFloat(getSetting('weekend_bonus_pct', '10')) / 100;
 
-  const { data: allApproved } = await supabase
-    .from('deposits')
-    .select('id, telegram_id, created_at')
-    .eq('status', 'approved')
-    .order('created_at', { ascending: true });
+  const allApproved = await fetchAllRows(async (rangeFrom, rangeTo) => {
+    return supabase
+      .from('deposits')
+      .select('id, telegram_id, created_at')
+      .eq('status', 'approved')
+      .order('created_at', { ascending: true })
+      .range(rangeFrom, rangeTo);
+  });
 
   const firstDepositIds = new Set();
   const secondDepositIds = new Set();
@@ -595,21 +622,28 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   });
 
   // ─── Bingo jackpot wins (8-call and 10-call) ────────────────────────────────
-  let bingoQuery = supabase
-    .from('bingo_games')
-    .select('id, stake, winner_prize, winner_telegram_id, winner_first_name, win_type, finished_at')
-    .in('win_type', ['jackpot_8', 'jackpot_10'])
-    .eq('status', 'finished');
-  if (from) bingoQuery = bingoQuery.gte('finished_at', from);
-  if (to)   bingoQuery = bingoQuery.lte('finished_at', to);
-  const { data: jackpotGames } = await bingoQuery;
+  const jackpotGames = await fetchAllRows(async (rangeFrom, rangeTo) => {
+    let q = supabase
+      .from('bingo_games')
+      .select('id, stake, winner_prize, winner_telegram_id, winner_first_name, win_type, finished_at')
+      .in('win_type', ['jackpot_8', 'jackpot_10'])
+      .eq('status', 'finished')
+      .order('finished_at', { ascending: false })
+      .range(rangeFrom, rangeTo);
+    if (from) q = q.gte('finished_at', from);
+    if (to)   q = q.lte('finished_at', to);
+    return q;
+  });
 
   // Get winner usernames
   const winnerIds = [...new Set((jackpotGames || []).map((g: any) => g.winner_telegram_id).filter(Boolean))];
   let winnerUsernameMap: Record<string, string> = {};
   if (winnerIds.length > 0) {
-    const { data: wu } = await supabase.from('users').select('telegram_id, username').in('telegram_id', winnerIds);
-    (wu || []).forEach((u: any) => { winnerUsernameMap[u.telegram_id] = u.username || 'Unknown'; });
+    for (let i = 0; i < winnerIds.length; i += 100) {
+      const chunk = winnerIds.slice(i, i + 100);
+      const { data: wu } = await supabase.from('users').select('telegram_id, username').in('telegram_id', chunk);
+      (wu || []).forEach((u: any) => { winnerUsernameMap[u.telegram_id] = u.username || 'Unknown'; });
+    }
   }
 
   let totalJackpot8 = 0, totalJackpot10 = 0;
@@ -628,17 +662,23 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
 
   // ─── Welcome / Signup bonuses for users registered in period ────────────────
   const welcomeBonusAmount = parseFloat(getSetting('welcome_bonus_amount', '10'));
-  let usersQuery = supabase
-    .from('users')
-    .select('id, telegram_id, username, first_name, created_at');
-  if (from) usersQuery = usersQuery.gte('created_at', from);
-  if (to)   usersQuery = usersQuery.lte('created_at', to);
-  const { data: registeredUsers } = await usersQuery;
-
   let totalWelcomeBonus = 0;
   if (welcomeBonusAmount > 0) {
-    (registeredUsers || []).forEach((u: any) => {
-      totalWelcomeBonus += welcomeBonusAmount;
+    let uCountQuery = supabase.from('users').select('*', { count: 'exact', head: true });
+    if (from) uCountQuery = uCountQuery.gte('created_at', from);
+    if (to)   uCountQuery = uCountQuery.lte('created_at', to);
+    const { count: regCount } = await uCountQuery;
+    totalWelcomeBonus = (regCount || 0) * welcomeBonusAmount;
+
+    let sampleUQuery = supabase
+      .from('users')
+      .select('id, telegram_id, username, first_name, created_at')
+      .order('created_at', { ascending: false })
+      .limit(100);
+    if (from) sampleUQuery = sampleUQuery.gte('created_at', from);
+    if (to)   sampleUQuery = sampleUQuery.lte('created_at', to);
+    const { data: sampleUsers } = await sampleUQuery;
+    (sampleUsers || []).forEach((u: any) => {
       txList.push({
         id: u.id + '_wb',
         type: 'welcome_bonus',
@@ -652,38 +692,60 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   }
 
   // ─── Bingo Game Commissions (House Profit from finished games) ──────────────
-  let allFinishedGamesQuery = supabase
-    .from('bingo_games')
-    .select('id, stake, status, winner_prize, prize_pool, winner_first_name, finished_at, created_at')
-    .eq('status', 'finished');
-  if (from) allFinishedGamesQuery = allFinishedGamesQuery.gte('finished_at', from);
-  if (to)   allFinishedGamesQuery = allFinishedGamesQuery.lte('finished_at', to);
-  const { data: allFinishedGames } = await allFinishedGamesQuery;
+  // Fetch ALL finished games in the date range with prize > 0
+  const allFinishedGames = await fetchAllRows(async (rangeFrom, rangeTo) => {
+    let q = supabase
+      .from('bingo_games')
+      .select('id, stake, status, winner_prize, prize_pool, winner_first_name, finished_at, created_at')
+      .eq('status', 'finished')
+      .or('winner_prize.gt.0,prize_pool.gt.0')
+      .order('finished_at', { ascending: false })
+      .range(rangeFrom, rangeTo);
+    if (from) q = q.gte('finished_at', from);
+    if (to)   q = q.lte('finished_at', to);
+    return q;
+  });
 
-  const fGameIds = (allFinishedGames || []).map((g: any) => g.id);
+  const fGameIds = allFinishedGames.map((g: any) => g.id);
   const gamePlayerCounts: Record<string, number> = {};
   const gameUniquePlayers: Record<string, number> = {};
 
   if (fGameIds.length > 0) {
-    const { data: pRows } = await supabase
-      .from('bingo_players')
-      .select('game_id, telegram_id')
-      .in('game_id', fGameIds);
+    const CHUNK_SIZE = 80;
+    const chunks: string[][] = [];
+    for (let i = 0; i < fGameIds.length; i += CHUNK_SIZE) {
+      chunks.push(fGameIds.slice(i, i + CHUNK_SIZE));
+    }
 
-    const uMap: Record<string, Set<string>> = {};
-    (pRows || []).forEach((p: any) => {
-      gamePlayerCounts[p.game_id] = (gamePlayerCounts[p.game_id] || 0) + 1;
-      if (!uMap[p.game_id]) uMap[p.game_id] = new Set();
-      uMap[p.game_id].add(p.telegram_id);
-    });
-    Object.keys(uMap).forEach(gid => {
-      gameUniquePlayers[gid] = uMap[gid].size;
-    });
+    const BATCH_CONCURRENCY = 6;
+    for (let i = 0; i < chunks.length; i += BATCH_CONCURRENCY) {
+      const batch = chunks.slice(i, i + BATCH_CONCURRENCY);
+      await Promise.all(
+        batch.map(async (chunk) => {
+          const { data: pRows } = await supabase
+            .from('bingo_players')
+            .select('game_id, telegram_id')
+            .in('game_id', chunk);
+
+          const uMap: Record<string, Set<string>> = {};
+          (pRows || []).forEach((p: any) => {
+            gamePlayerCounts[p.game_id] = (gamePlayerCounts[p.game_id] || 0) + 1;
+            if (!uMap[p.game_id]) uMap[p.game_id] = new Set();
+            uMap[p.game_id].add(p.telegram_id);
+          });
+          Object.keys(uMap).forEach(gid => {
+            gameUniquePlayers[gid] = uMap[gid].size;
+          });
+        })
+      );
+    }
   }
 
   let totalGameCommission = 0;
-  let totalFinishedGames = 0;
-  (allFinishedGames || []).forEach((g: any) => {
+  let totalCommissionGames = 0;
+  let totalFinishedGames = allFinishedGames.length;
+
+  allFinishedGames.forEach((g: any) => {
     const totalCartelas = gamePlayerCounts[g.id] || 0;
     const uniqueCount = gameUniquePlayers[g.id] || 0;
     const stakeAmt = Number(g.stake || 0);
@@ -693,27 +755,24 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
     let labelInfo = '';
 
     if (uniqueCount >= 3) {
-      // Direct player records available
+      // Direct player records available with 3+ unique players (20% house commission)
       const totalCollected = totalCartelas * stakeAmt;
       commission = Math.max(0, totalCollected - prize);
       labelInfo = `${totalCartelas} cards, ${uniqueCount} players`;
     } else if (totalCartelas > 0 && totalCartelas * stakeAmt > prize && prize > 0) {
       commission = (totalCartelas * stakeAmt) - prize;
       labelInfo = `${totalCartelas} cards`;
-    } else if (prize > 0 && stakeAmt > 0) {
+    } else if (prize > 0 && stakeAmt > 0 && prize > stakeAmt * 2) {
       // Fallback from game prize_pool / winner_prize when bingo_players table was pruned
-      // If prize > 2 * stake, game had >= 3 players and 20% commission was retained
-      if (prize > stakeAmt * 2) {
-        const estTotal = Math.round(prize / 0.8);
-        commission = Math.max(0, estTotal - prize);
-        const estCards = Math.round(estTotal / stakeAmt);
-        labelInfo = `~${estCards} cards, 20% cut`;
-      }
+      const estTotal = Math.round(prize / 0.8);
+      commission = Math.max(0, estTotal - prize);
+      const estCards = Math.round(estTotal / stakeAmt);
+      labelInfo = `~${estCards} cards, 20% cut`;
     }
 
     if (commission > 0) {
       totalGameCommission += commission;
-      totalFinishedGames++;
+      totalCommissionGames++;
       const shortId = g.id.slice(0, 8).toUpperCase();
       txList.push({
         id: g.id + '_comm',
@@ -732,7 +791,20 @@ router.get('/tx-report', validateTelegramAuth, requireAdmin, async (req, res) =>
   txList.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   res.json({
-    stats: { totalDeposits, totalWithdrawals, totalDepBonus, totalSecondDepBonus, totalWeekendBonus, totalInvBonus, totalJackpot8, totalJackpot10, totalWelcomeBonus, totalGameCommission, totalFinishedGames },
+    stats: {
+      totalDeposits,
+      totalWithdrawals,
+      totalDepBonus,
+      totalSecondDepBonus,
+      totalWeekendBonus,
+      totalInvBonus,
+      totalJackpot8,
+      totalJackpot10,
+      totalWelcomeBonus,
+      totalGameCommission,
+      totalFinishedGames,
+      totalCommissionGames
+    },
     transactions: txList
   });
 });
@@ -1005,23 +1077,25 @@ router.get('/bingo-report', validateTelegramAuth, requireAdmin, async (req, res)
   }
 
   // Fetch games
-  const { data: games, error } = await supabase
-    .from('bingo_games')
-    .select('id, stake, status, winner_prize, winner_first_name, winner_cartela, created_at, finished_at')
-    .gte('created_at', startDate.toISOString())
-    .lte('created_at', endDate.toISOString())
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    return res.status(500).json({ error: error.message });
-  }
+  const games = await fetchAllRows(async (rangeFrom, rangeTo) => {
+    return supabase
+      .from('bingo_games')
+      .select('id, stake, status, winner_prize, winner_first_name, winner_cartela, created_at, finished_at')
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
+      .order('created_at', { ascending: false })
+      .range(rangeFrom, rangeTo);
+  });
 
   // Fetch all players in date range to calculate collected stakes accurately
-  const { data: players } = await supabase
-    .from('bingo_players')
-    .select('game_id')
-    .gte('created_at', startDate.toISOString())
-    .lte('created_at', endDate.toISOString());
+  const players = await fetchAllRows(async (rangeFrom, rangeTo) => {
+    return supabase
+      .from('bingo_players')
+      .select('game_id')
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString())
+      .range(rangeFrom, rangeTo);
+  });
 
   const playerCounts: Record<string, number> = {};
   (players || []).forEach(p => {
