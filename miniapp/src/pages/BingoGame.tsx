@@ -64,9 +64,10 @@ const AMHARIC_NUM: Record<number, string> = {
   71:'ሰባ አንድ', 72:'ሰባ ሁለት', 73:'ሰባ ሶስት', 74:'ሰባ አራት', 75:'ሰባ አምስት',
 };
 
+const AUDIO_VERSION = 'v2';
 const getLetter = (num: number) => BINGO_LETTERS[Math.floor((num - 1) / 15)];
 const getAudioSrc = (num: number) => {
-  return `/audio/bingo/bingo_${String(num).padStart(2, '0')}.mp3`;
+  return `/audio/bingo/bingo_${String(num).padStart(2, '0')}.mp3?v=${AUDIO_VERSION}`;
 };
 
 // Pre-generated static Amharic MP3 files in /audio/bingo/
@@ -274,7 +275,8 @@ export default function BingoGame() {
     const preload = async () => {
       const allSrcs = [
         ...Array.from({ length: 75 }, (_, i) => getAudioSrc(i + 1)),
-        '/audio/bingo/bingo_win.mp3',
+        `/audio/bingo/game_start.mp3?v=${AUDIO_VERSION}`,
+        `/audio/bingo/bingo_win.mp3?v=${AUDIO_VERSION}`,
       ];
       // Stagger: 3 files concurrently, small gap between batches
       for (let i = 0; i < allSrcs.length; i += 3) {
@@ -340,8 +342,6 @@ export default function BingoGame() {
   //   - .load() resets the media pipeline fully when src changes
   //   - prevents silent "media session not acquired" failures
   //   - WebAudio is the fallback if HTMLAudio errors
-  const callAudioElRef = useRef<HTMLAudioElement | null>(null);
-
   const playCallAudio = useCallback((num: number) => {
     if (!soundEnabled) return;
     const cleanNum = Number(num);
@@ -354,54 +354,44 @@ export default function BingoGame() {
     const src = getAudioSrc(cleanNum);
     unlockAudio();
 
-    // Create the shared audio element once, reuse it every call
-    if (!callAudioElRef.current) {
-      callAudioElRef.current = new Audio();
+    try {
+      if (callAudioRef.current) {
+        try { callAudioRef.current.pause(); } catch {}
+      }
+      const audio = new Audio(src);
+      audio.volume = Math.min(1.0, Math.max(0.0, volume));
+      audio.onerror = () => { playViaWebAudio(src); };
+      const p = audio.play();
+      if (p !== undefined) {
+        p.catch(() => {
+          playViaWebAudio(src);
+        });
+      }
+      callAudioRef.current = audio;
+    } catch {
+      playViaWebAudio(src);
     }
-    const audio = callAudioElRef.current;
-
-    // Stop and reset — pause() then clear src so browser fully releases media session
-    try { audio.pause(); } catch {}
-    audio.currentTime = 0;
-
-    // Set new source and LOAD before play (required on Android when changing src)
-    audio.src = src;
-    audio.volume = Math.min(1.0, Math.max(0.0, volume));
-
-    // onerror → fall back to WebAudio engine (uses pre-fetched rawBufferCache)
-    audio.onerror = () => { playViaWebAudio(src); };
-
-    // .load() must be called explicitly when src changes on a reused element
-    audio.load();
-
-    const p = audio.play();
-    if (p !== undefined) {
-      p.catch(() => {
-        // Play was blocked (autoplay policy) → use WebAudio which bypasses this
-        playViaWebAudio(src);
-      });
-    }
-
-    callAudioRef.current = audio; // keep ref in sync
   }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
 
   // ── CELEBRATION ──────────────────────────────────────────────────────────────────────────
   // Plays ONLY the "Bingo!" announcement voice (/audio/bingo/bingo_win.mp3) — no synth, no fanfare.
   // Plays at full volume, always on.
-  const specialAudioElRef = useRef<HTMLAudioElement | null>(null);
-
   const playSpecial = useCallback((name: string = 'bingo_win') => {
     if (!soundEnabled) return;
-    const src = `/audio/bingo/${name}.mp3`;
+    const src = `/audio/bingo/${name}.mp3?v=${AUDIO_VERSION}`;
     unlockAudio();
 
     // Stop caller voice and intro immediately so "Bingo!" is loud and clear
+    if (introTimeoutRef.current) {
+      clearTimeout(introTimeoutRef.current);
+      introTimeoutRef.current = null;
+    }
     introPlayingRef.current = false;
     pendingCallRef.current = null;
     try {
-      if (callAudioElRef.current) {
-        callAudioElRef.current.pause();
-        callAudioElRef.current.currentTime = 0;
+      if (callAudioRef.current) {
+        callAudioRef.current.pause();
+        callAudioRef.current.currentTime = 0;
       }
     } catch {}
     try {
@@ -411,19 +401,10 @@ export default function BingoGame() {
       }
     } catch {}
 
-    // Dedicated celebration audio element with explicit .load()
     try {
-      if (!specialAudioElRef.current) {
-        specialAudioElRef.current = new Audio();
-      }
-      const audio = specialAudioElRef.current;
-      try { audio.pause(); } catch {}
-      audio.currentTime = 0;
-      audio.src = src;
+      const audio = new Audio(src);
       audio.volume = 1.0; // Celebration is always full 100% volume
       audio.onerror = () => { playViaWebAudio(src, 1.5); };
-      audio.load();
-
       const p = audio.play();
       if (p !== undefined) {
         p.catch(() => {
@@ -439,6 +420,7 @@ export default function BingoGame() {
   // Plays /audio/bingo/game_start.mp3 once when the game begins.
   // Sequential queuing: while game_start is playing, any ball call is held in pendingCallRef.
   const introPlayingRef = useRef(false);
+  const introTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingCallRef = useRef<number | null>(null);
   const hasStartedAudioGameIdRef = useRef<string | null>(null);
   const prevGameStatusRef = useRef<string | null>(null);
@@ -449,11 +431,17 @@ export default function BingoGame() {
       introPlayingRef.current = false;
       return;
     }
-    const src = '/audio/bingo/game_start.mp3';
+    const src = `/audio/bingo/game_start.mp3?v=${AUDIO_VERSION}`;
     unlockAudio();
     introPlayingRef.current = true;
 
+    if (introTimeoutRef.current) clearTimeout(introTimeoutRef.current);
+
     const onIntroEnd = () => {
+      if (introTimeoutRef.current) {
+        clearTimeout(introTimeoutRef.current);
+        introTimeoutRef.current = null;
+      }
       introPlayingRef.current = false;
       if (pendingCallRef.current !== null) {
         const queuedNum = pendingCallRef.current;
@@ -462,31 +450,25 @@ export default function BingoGame() {
       }
     };
 
+    // HARD SAFETY: Game start intro is ~3.0s. Force unlock after 3200ms no matter what browser does!
+    introTimeoutRef.current = setTimeout(onIntroEnd, 3200);
+
     try {
-      if (!startAudioElRef.current) {
-        startAudioElRef.current = new Audio();
-      }
-      const audio = startAudioElRef.current;
-      try { audio.pause(); } catch {}
-      audio.currentTime = 0;
-      audio.src = src;
+      const audio = new Audio(src);
+      startAudioElRef.current = audio;
       audio.volume = Math.min(1.0, Math.max(0.0, volume));
       audio.onended = onIntroEnd;
       audio.onerror = () => {
         playViaWebAudio(src, 1.2);
-        setTimeout(onIntroEnd, 3000);
       };
-      audio.load();
       const p = audio.play();
       if (p !== undefined) {
         p.catch(() => {
           playViaWebAudio(src, 1.2);
-          setTimeout(onIntroEnd, 3000);
         });
       }
     } catch {
       playViaWebAudio(src, 1.2);
-      setTimeout(onIntroEnd, 3000);
     }
   }, [soundEnabled, volume, unlockAudio, playViaWebAudio, playCallAudio]);
 
@@ -522,6 +504,7 @@ export default function BingoGame() {
     hasCelebratedRef.current = null;
     hasStartedAudioGameIdRef.current = null;
     prevGameStatusRef.current = null;
+    if (introTimeoutRef.current) clearTimeout(introTimeoutRef.current);
     introPlayingRef.current = false;
     pendingCallRef.current = null;
     try {
@@ -649,10 +632,11 @@ export default function BingoGame() {
 
       if (called.length > prevCalledLenRef.current) {
         if (lastNum) {
-          if (introPlayingRef.current) {
-            // Game start intro is still playing — queue this call so sounds never overlap!
+          if (introPlayingRef.current && called.length <= 1) {
+            // Only the very first ball (#1) can be queued behind game_start intro
             pendingCallRef.current = lastNum;
           } else {
+            introPlayingRef.current = false;
             playCallAudio(lastNum);
           }
         }
