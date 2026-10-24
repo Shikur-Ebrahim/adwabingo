@@ -64,7 +64,7 @@ const AMHARIC_NUM: Record<number, string> = {
   71:'ሰባ አንድ', 72:'ሰባ ሁለት', 73:'ሰባ ሶስት', 74:'ሰባ አራት', 75:'ሰባ አምስት',
 };
 
-const AUDIO_VERSION = 'v2';
+const AUDIO_VERSION = 'v3';
 const getLetter = (num: number) => BINGO_LETTERS[Math.floor((num - 1) / 15)];
 const getAudioSrc = (num: number) => {
   return `/audio/bingo/bingo_${String(num).padStart(2, '0')}.mp3?v=${AUDIO_VERSION}`;
@@ -337,16 +337,69 @@ export default function BingoGame() {
     }
   }, [volume]);
 
+  const lastPlayedBallRef = useRef<number | null>(null);
+
+  // ── EXCLUSIVE AUDIO PLAYER: Guarantees single playback, zero double-sound/echo ──────────────
+  const playAudioExclusive = useCallback((src: string, vol: number = 1.0, onEnded?: () => void) => {
+    // 1. Immediately pause and destroy any previous audio
+    if (callAudioRef.current) {
+      try {
+        callAudioRef.current.onended = null;
+        callAudioRef.current.onerror = null;
+        callAudioRef.current.pause();
+        callAudioRef.current.src = '';
+      } catch {}
+      callAudioRef.current = null;
+    }
+
+    let webAudioFired = false;
+    const audio = new Audio(src);
+    callAudioRef.current = audio;
+    audio.volume = Math.min(1.0, Math.max(0.0, vol));
+
+    if (onEnded) {
+      audio.onended = () => {
+        if (!webAudioFired) onEnded();
+      };
+    }
+
+    const fallbackToWebAudio = () => {
+      if (webAudioFired) return;
+      webAudioFired = true;
+      try {
+        audio.onended = null;
+        audio.onerror = null;
+        audio.pause();
+        audio.src = '';
+      } catch {}
+      if (callAudioRef.current === audio) {
+        callAudioRef.current = null;
+      }
+      playViaWebAudio(src, vol);
+      if (onEnded) {
+        setTimeout(onEnded, 3000);
+      }
+    };
+
+    audio.onerror = fallbackToWebAudio;
+
+    const p = audio.play();
+    if (p !== undefined) {
+      p.catch(() => {
+        fallbackToWebAudio();
+      });
+    }
+  }, [playViaWebAudio]);
+
   // ── CALLER SOUND ─────────────────────────────────────────────────────────────────────────
-  // Uses ONE reusable <audio> element. Sets .src then calls .load() before .play().
-  // This is the ONLY reliable pattern on Android WebView / Telegram:
-  //   - .load() resets the media pipeline fully when src changes
-  //   - prevents silent "media session not acquired" failures
-  //   - WebAudio is the fallback if HTMLAudio errors
   const playCallAudio = useCallback((num: number) => {
     if (!soundEnabled) return;
     const cleanNum = Number(num);
     if (!cleanNum || isNaN(cleanNum) || cleanNum < 1 || cleanNum > 75) return;
+
+    // STRICT DEDUP GUARD: Never play the exact same ball number twice!
+    if (lastPlayedBallRef.current === cleanNum) return;
+    lastPlayedBallRef.current = cleanNum;
 
     setLastCallNum(cleanNum);
     setCallAnim(false);
@@ -354,68 +407,37 @@ export default function BingoGame() {
 
     const src = getAudioSrc(cleanNum);
     unlockAudio();
-
-    try {
-      if (callAudioRef.current) {
-        try { callAudioRef.current.pause(); } catch {}
-      }
-      const audio = new Audio(src);
-      audio.volume = Math.min(1.0, Math.max(0.0, volume));
-      audio.onerror = () => { playViaWebAudio(src); };
-      const p = audio.play();
-      if (p !== undefined) {
-        p.catch(() => {
-          playViaWebAudio(src);
-        });
-      }
-      callAudioRef.current = audio;
-    } catch {
-      playViaWebAudio(src);
-    }
-  }, [soundEnabled, volume, unlockAudio, playViaWebAudio]);
+    playAudioExclusive(src, volume);
+  }, [soundEnabled, volume, unlockAudio, playAudioExclusive]);
 
   // ── CELEBRATION ──────────────────────────────────────────────────────────────────────────
-  // Plays ONLY the "Bingo!" announcement voice (/audio/bingo/bingo_win.mp3) — no synth, no fanfare.
+  // Plays stop.mp3 upon BINGO / game finish.
   // Plays at full volume, always on.
   const playSpecial = useCallback((name: string = 'bingo_win') => {
     if (!soundEnabled) return;
     const src = `/audio/bingo/${name}.mp3?v=${AUDIO_VERSION}`;
     unlockAudio();
 
-    // Stop caller voice and intro immediately so "Bingo!" is loud and clear
+    // Stop caller voice and intro immediately
     if (introTimeoutRef.current) {
       clearTimeout(introTimeoutRef.current);
       introTimeoutRef.current = null;
     }
     introPlayingRef.current = false;
     pendingCallRef.current = null;
-    try {
-      if (callAudioRef.current) {
-        callAudioRef.current.pause();
-        callAudioRef.current.currentTime = 0;
-      }
-    } catch {}
-    try {
-      if (startAudioElRef.current) {
-        startAudioElRef.current.pause();
-        startAudioElRef.current.currentTime = 0;
-      }
-    } catch {}
 
-    try {
-      const audio = new Audio(src);
-      audio.volume = 1.0; // Celebration is always full 100% volume
-      audio.onerror = () => { playViaWebAudio(src, 1.5); };
-      const p = audio.play();
-      if (p !== undefined) {
-        p.catch(() => {
-          playViaWebAudio(src, 1.5);
-        });
-      }
-    } catch {
-      playViaWebAudio(src, 1.5);
+    if (startAudioElRef.current) {
+      try {
+        startAudioElRef.current.onended = null;
+        startAudioElRef.current.onerror = null;
+        startAudioElRef.current.pause();
+        startAudioElRef.current.src = '';
+      } catch {}
+      startAudioElRef.current = null;
     }
-  }, [soundEnabled, unlockAudio, playViaWebAudio]);
+
+    playAudioExclusive(src, 1.0);
+  }, [soundEnabled, unlockAudio, playAudioExclusive]);
 
   // ── GAME START INTRO ─────────────────────────────────────────────────────────────────────
   // Plays /audio/bingo/game_start.mp3 once when the game begins.
@@ -454,24 +476,8 @@ export default function BingoGame() {
     // HARD SAFETY: Game start intro is ~3.0s. Force unlock after 3200ms no matter what browser does!
     introTimeoutRef.current = setTimeout(onIntroEnd, 3200);
 
-    try {
-      const audio = new Audio(src);
-      startAudioElRef.current = audio;
-      audio.volume = Math.min(1.0, Math.max(0.0, volume));
-      audio.onended = onIntroEnd;
-      audio.onerror = () => {
-        playViaWebAudio(src, 1.2);
-      };
-      const p = audio.play();
-      if (p !== undefined) {
-        p.catch(() => {
-          playViaWebAudio(src, 1.2);
-        });
-      }
-    } catch {
-      playViaWebAudio(src, 1.2);
-    }
-  }, [soundEnabled, volume, unlockAudio, playViaWebAudio, playCallAudio]);
+    playAudioExclusive(src, volume, onIntroEnd);
+  }, [soundEnabled, volume, unlockAudio, playAudioExclusive, playCallAudio]);
 
 
 
@@ -504,6 +510,7 @@ export default function BingoGame() {
     prevCalledLenRef.current = 0;
     hasCelebratedRef.current = null;
     hasStartedAudioGameIdRef.current = null;
+    lastPlayedBallRef.current = null;
     prevGameStatusRef.current = null;
     if (introTimeoutRef.current) clearTimeout(introTimeoutRef.current);
     introPlayingRef.current = false;
@@ -524,6 +531,7 @@ export default function BingoGame() {
       setMyCartelas([]);
       hasCelebratedRef.current = null;
       hasStartedAudioGameIdRef.current = null;
+      lastPlayedBallRef.current = null;
       prevGameStatusRef.current = null;
       introPlayingRef.current = false;
       pendingCallRef.current = null;
@@ -625,6 +633,7 @@ export default function BingoGame() {
 
       if (isNewGame) {
         hasStartedAudioGameIdRef.current = game.id;
+        lastPlayedBallRef.current = null;
         // Only play game_start if the game is fresh (0 balls called or just transitioned from waiting)
         if (called.length === 0 || transitionedFromWaiting) {
           playGameStart();
@@ -751,7 +760,7 @@ export default function BingoGame() {
       return () => { isMounted = false; };
   }, [game?.status, game?.id, game?.winner_cartela, game?.winner_first_name]);
 
-  // Auto-dismiss celebration after 2 seconds
+  // Auto-dismiss celebration after 3 seconds
   useEffect(() => {
     if (!celebration) return;
     const timer = setTimeout(() => {
@@ -765,7 +774,7 @@ export default function BingoGame() {
       // It will reset to null only when a brand new game id arrives in fetchState().
       fetchState();
       refreshUser();
-    }, 2000);
+    }, 3000);
     return () => clearTimeout(timer);
   }, [celebration]);
 
