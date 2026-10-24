@@ -154,8 +154,9 @@ export default function BingoGame() {
   const [homeGames, setHomeGames] = useState<Record<number, { pool: number; start_at?: string; status: string; players: number }>>({});
   const [homeTimeLeft, setHomeTimeLeft] = useState<Record<number, number>>({});
   const [soundEnabled, setSoundEnabled] = useState(() => {
-    const saved = localStorage.getItem('bingo_sound_enabled');
-    return saved !== null ? saved === 'true' : true; // default ON
+    // v2: default is ALWAYS ON. Wipe any old stored 'false' so every user hears calls.
+    localStorage.setItem('bingo_sound_enabled', 'true');
+    return true;
   });
   const [volume, setVolume] = useState(1.0);
   const [autoMark, setAutoMark] = useState(true); // default: auto-mark called numbers
