@@ -1,4 +1,7 @@
 {
+  "buildCommand": "cd miniapp && npm install && npm run build",
+  "outputDirectory": "miniapp/dist",
+  "framework": "vite",
   "headers": [
     {
       "source": "/audio/(.*)",

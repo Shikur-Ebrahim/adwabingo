@@ -1,0 +1,9 @@
+{
+  "name": "adwabingo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Adwa Bingo Platform",
+  "scripts": {
+    "build": "cd miniapp && npm install && npm run build"
+  }
+}
