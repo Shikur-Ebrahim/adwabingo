@@ -259,9 +259,12 @@ class BingoEngine {
     const cfg = await getSettings();
     const intervalMs = Math.max(1000, Number(cfg.call_interval_ms) || 3000);
     const lastUpdate = new Date(freshGame.updated_at || game.updated_at).getTime();
-    if (!isNaN(lastUpdate) && lastUpdate <= Date.now() && (Date.now() - lastUpdate) < intervalMs) return;
 
     const called: number[] = (freshGame.called_numbers || game.called_numbers || []).map(Number);
+    // Ensure at least 3.5s delay before calling ball #1 so game_start.mp3 finishes playing completely
+    const isFirstBall = called.length === 0;
+    const requiredDelayMs = isFirstBall ? Math.max(3500, intervalMs) : intervalMs;
+    if (!isNaN(lastUpdate) && lastUpdate <= Date.now() && (Date.now() - lastUpdate) < requiredDelayMs) return;
     const pool = Array.from({ length: 75 }, (_, i) => i + 1).filter(n => !called.includes(n));
 
     if (pool.length === 0) {
